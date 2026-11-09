@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+build/
+out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Loom
+run/
+remappedSrc/
+
+# 构建日志
+*.log
+
+# 本地工具状态
+.reasonix/
+
+# OS
+Thumbs.db
+.DS_Store

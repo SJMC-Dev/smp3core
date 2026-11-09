@@ -1,0 +1,51 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	// 第三方模组仓库（SGUI / common-economy-api）
+	maven {
+		name = 'Nucleoid'
+		url = 'https://maven.nucleoid.xyz/'
+	}
+	// LuckPerms API（net.luckperms:api）发布在 Maven Central
+	mavenCentral()
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// SGUI：界面库，随模组内嵌分发
+	implementation include("eu.pb4:sgui:${project.sgui_version}")
+
+	// 通用经济 API：运行时由 Fuji 内嵌提供，仅编译期需要
+	compileOnly "eu.pb4:common-economy-api:${project.common_economy_api_version}"
+
+	// LuckPerms API：运行时由服务端 LuckPerms 提供，仅编译期需要。
+	// 坐标 net.luckperms:api 发布在 Maven Central（https://luckperms.net/wiki/Developer-API）
+	compileOnly "net.luckperms:api:${project.luckperms_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = "UTF-8"
+}
+

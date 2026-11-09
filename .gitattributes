@@ -1,0 +1,8 @@
+# 统一换行符，避免 Windows/Linux 协作出问题
+* text=auto eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+
+# 二进制文件不做换行转换
+*.jar binary
+*.xlsx binary
