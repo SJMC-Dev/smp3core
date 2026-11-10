@@ -19,17 +19,17 @@ import club.sjmc.smp3.Smp3Core;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
- * 通宝账本（按玩家 UUID 记账），持久化到 {@code config/smp3/economy.json}。
+ * 货币账本：按玩家 UUID + 货币 path 记账，持久化到 {@code config/smp3/economy.json}。
  *
- * <p>余额以「原始单位」保存（1 通宝 = {@value Smp3Currency#RAW_PER_UNIT}），
- * 每次变更立即落盘（交易频率低，保证崩溃不丢账）。</p>
+ * <p>余额以「原始单位」保存；每次变更立即落盘（交易频率低，保证崩溃不丢账）。</p>
  */
 public final class Smp3AccountStore {
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path FILE = FabricLoader.getInstance().getConfigDir()
 			.resolve("smp3").resolve("economy.json");
-	private static final Map<UUID, Long> BALANCES = new HashMap<>();
+	/** UUID → (货币 path → 原始值)。 */
+	private static final Map<UUID, Map<String, Long>> BALANCES = new HashMap<>();
 
 	private static boolean loaded;
 
@@ -37,18 +37,23 @@ public final class Smp3AccountStore {
 	}
 
 	/** 读取余额（原始单位）。 */
-	public static long balance(UUID owner) {
+	public static long balance(UUID owner, Smp3Currency currency) {
 		load();
-		return BALANCES.getOrDefault(owner, 0L);
+		Map<String, Long> perCurrency = BALANCES.get(owner);
+		return perCurrency == null ? 0L : perCurrency.getOrDefault(currency.id().getPath(), 0L);
 	}
 
 	/** 写入余额（原始单位）并立即持久化。 */
-	public static void setBalance(UUID owner, long rawValue) {
+	public static void setBalance(UUID owner, Smp3Currency currency, long rawValue) {
 		load();
+		Map<String, Long> perCurrency = BALANCES.computeIfAbsent(owner, key -> new HashMap<>());
 		if (rawValue == 0) {
-			BALANCES.remove(owner);
+			perCurrency.remove(currency.id().getPath());
 		} else {
-			BALANCES.put(owner, rawValue);
+			perCurrency.put(currency.id().getPath(), rawValue);
+		}
+		if (perCurrency.isEmpty()) {
+			BALANCES.remove(owner);
 		}
 		save();
 	}
@@ -69,7 +74,18 @@ public final class Smp3AccountStore {
 				return;
 			}
 			for (Map.Entry<String, JsonElement> entry : balances.entrySet()) {
-				BALANCES.put(UUID.fromString(entry.getKey()), entry.getValue().getAsLong());
+				UUID owner = UUID.fromString(entry.getKey());
+				JsonElement value = entry.getValue();
+				Map<String, Long> perCurrency = new HashMap<>();
+				if (value.isJsonPrimitive()) {
+					// 旧格式：uuid -> 数值，视为通宝余额
+					perCurrency.put(Smp3Currency.TONGBAO.id().getPath(), value.getAsLong());
+				} else {
+					for (Map.Entry<String, JsonElement> currency : value.getAsJsonObject().entrySet()) {
+						perCurrency.put(currency.getKey(), currency.getValue().getAsLong());
+					}
+				}
+				BALANCES.put(owner, perCurrency);
 			}
 		} catch (Exception e) {
 			Smp3Core.LOGGER.error("[SMP3] 读取经济数据失败（{}）：{}", FILE, e.toString());
@@ -79,7 +95,11 @@ public final class Smp3AccountStore {
 	private static void save() {
 		JsonObject root = new JsonObject();
 		JsonObject balances = new JsonObject();
-		BALANCES.forEach((owner, value) -> balances.addProperty(owner.toString(), value));
+		BALANCES.forEach((owner, perCurrency) -> {
+			JsonObject currencyObject = new JsonObject();
+			perCurrency.forEach(currencyObject::addProperty);
+			balances.add(owner.toString(), currencyObject);
+		});
 		root.add("balances", balances);
 
 		try {

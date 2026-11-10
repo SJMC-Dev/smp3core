@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import club.sjmc.smp3.command.ShopCommand;
+import club.sjmc.smp3.command.SignCommand;
 import club.sjmc.smp3.economy.Smp3EconomyProvider;
 import club.sjmc.smp3.item.Smp3Items;
 import club.sjmc.smp3.shop.ShopCatalog;
@@ -31,7 +32,10 @@ public final class Smp3Core implements ModInitializer {
 		Smp3EconomyProvider.register();
 
 		CommandRegistrationCallback.EVENT.register(
-				(dispatcher, registryAccess, environment) -> ShopCommand.register(dispatcher));
+				(dispatcher, registryAccess, environment) -> {
+					ShopCommand.register(dispatcher);
+					SignCommand.register(dispatcher);
+				});
 
 		LOGGER.info("[SMP3] 初始化完成");
 	}

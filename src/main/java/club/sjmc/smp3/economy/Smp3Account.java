@@ -13,23 +13,24 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /**
- * 本模组的通宝账户：按玩家 UUID 记账，读写 {@link Smp3AccountStore}。
+ * 本模组的货币账户：按玩家 UUID + 货币记账，读写 {@link Smp3AccountStore}。
  *
- * <p>余额与交易金额都是「原始单位」（1 通宝 = {@value Smp3Currency#RAW_PER_UNIT}），
- * 展示与解析交给 {@link Smp3Currency}。</p>
+ * <p>余额与交易金额都是「原始单位」，展示与解析交给 {@link Smp3Currency}。</p>
  */
 public final class Smp3Account implements EconomyAccount {
 
 	private static final BigInteger MAX_RAW = BigInteger.valueOf(Long.MAX_VALUE);
 
 	private final GameProfile profile;
+	private final Smp3Currency currency;
 
-	private Smp3Account(GameProfile profile) {
+	private Smp3Account(GameProfile profile, Smp3Currency currency) {
 		this.profile = profile;
+		this.currency = currency;
 	}
 
-	public static Smp3Account of(GameProfile profile) {
-		return new Smp3Account(profile);
+	public static Smp3Account of(GameProfile profile, Smp3Currency currency) {
+		return new Smp3Account(profile, currency);
 	}
 
 	@Override
@@ -45,17 +46,17 @@ public final class Smp3Account implements EconomyAccount {
 
 	@Override
 	public Identifier id() {
-		return Smp3Currency.ID;
+		return currency.id();
 	}
 
 	@Override
 	public BigInteger balance() {
-		return BigInteger.valueOf(Smp3AccountStore.balance(owner()));
+		return BigInteger.valueOf(Smp3AccountStore.balance(owner(), currency));
 	}
 
 	@Override
 	public void setBalance(BigInteger value) {
-		Smp3AccountStore.setBalance(owner(), value.longValueExact());
+		Smp3AccountStore.setBalance(owner(), currency, value.longValueExact());
 	}
 
 	@Override
@@ -85,7 +86,7 @@ public final class Smp3Account implements EconomyAccount {
 
 	@Override
 	public EconomyCurrency currency() {
-		return Smp3Currency.INSTANCE;
+		return currency;
 	}
 
 	private EconomyTransaction transaction(boolean success, BigInteger previous, BigInteger next, BigInteger amount,

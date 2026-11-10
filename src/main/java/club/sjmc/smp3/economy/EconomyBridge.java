@@ -24,7 +24,7 @@ import net.minecraft.server.level.ServerPlayer;
 public final class EconomyBridge {
 
 	/** 结算货币：本模组自有的 smp3:tongbao。 */
-	private static final Identifier CURRENCY_ID = Smp3Currency.ID;
+	private static final Identifier CURRENCY_ID = Smp3Currency.TONGBAO.id();
 
 	/** 避免 Fuji 缺失时每次点击都刷一条告警。 */
 	private static boolean warned;
