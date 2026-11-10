@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import club.sjmc.smp3.command.ShopCommand;
 import club.sjmc.smp3.economy.Smp3EconomyProvider;
+import club.sjmc.smp3.item.Smp3Items;
 import club.sjmc.smp3.shop.ShopCatalog;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -20,6 +21,9 @@ public final class Smp3Core implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		// 注册本模组的物品（必须在注册表冻结前）
+		Smp3Items.init();
+
 		// 条目数据硬编码，这里在注册表就绪后解析物品并建立条目表
 		ShopCatalog.init();
 
