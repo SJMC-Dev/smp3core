@@ -35,6 +35,7 @@ public final class ShopCatalog {
 
 		int[] skipped = {0};
 
+		/* 建筑材料商店暂时停用；恢复时删除本注释块即可
 		CatBuilder stone = new CatBuilder("stone", "石类", "build", TradeDirection.BUY, skipped)
 				.item("granite", STACK, 2, 4 * STACK, UNLIMITED)
 				.item("diorite", STACK, 2, 4 * STACK, UNLIMITED)
@@ -94,6 +95,7 @@ public final class ShopCatalog {
 				.item("magenta_dye", STACK, 4, 0, 2 * STACK);
 
 		ShopSheet build = new ShopSheet("建筑材料商店", List.of(stone.build(), nature.build(), light.build(), dye.build()));
+		*/
 
 		// 回收商店：所有身份共用「每日个人上限」一列
 		CatBuilder ore = new CatBuilder("ore", "矿石", "recycle", TradeDirection.SELL, skipped)
@@ -148,7 +150,7 @@ public final class ShopCatalog {
 
 		ShopSheet recycle = new ShopSheet("回收商店", List.of(ore.build(), block.build(), explore.build()));
 
-		sheets = List.of(build, recycle);
+		sheets = List.of(recycle);
 
 		int entryCount = sheets.stream().mapToInt(ShopSheet::entryCount).sum();
 		Smp3Core.LOGGER.info("[SMP3] 已加载 {} 个商店、{} 个条目（跳过 {} 个无法解析的物品）",

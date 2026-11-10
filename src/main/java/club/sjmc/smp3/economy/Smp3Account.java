@@ -33,10 +33,10 @@ public final class Smp3Account implements EconomyAccount {
 		return new Smp3Account(profile, currency);
 	}
 
+	/** 账户名即货币名：/economy account 用它区分通宝与咖啡印章。 */
 	@Override
 	public Component name() {
-		String playerName = profile.name();
-		return Component.literal(playerName != null ? playerName : profile.id().toString());
+		return currency.name();
 	}
 
 	@Override
