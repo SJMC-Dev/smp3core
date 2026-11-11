@@ -7,6 +7,7 @@ import club.sjmc.smp3.command.ShopCommand;
 import club.sjmc.smp3.command.SignCommand;
 import club.sjmc.smp3.economy.Smp3EconomyProvider;
 import club.sjmc.smp3.item.Smp3Items;
+import club.sjmc.smp3.loot.DailyQuestsLootHandler;
 import club.sjmc.smp3.shop.ShopCatalog;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -28,8 +29,11 @@ public final class Smp3Core implements ModInitializer {
 		// 条目数据硬编码，这里在注册表就绪后解析物品并建立条目表
 		ShopCatalog.init();
 
-		// 向 common-economy-api 注册我方占位货币（验证阶段）
+		// 向 common-economy-api 注册我方货币（通宝 / 咖啡印章）
 		Smp3EconomyProvider.register();
+
+		// 拦截 dailyquests 战利品表，改为固定补偿
+		DailyQuestsLootHandler.register();
 
 		CommandRegistrationCallback.EVENT.register(
 				(dispatcher, registryAccess, environment) -> {
