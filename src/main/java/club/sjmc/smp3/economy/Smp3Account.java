@@ -4,19 +4,14 @@ import java.math.BigInteger;
 import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
-
 import eu.pb4.common.economy.api.EconomyAccount;
 import eu.pb4.common.economy.api.EconomyCurrency;
 import eu.pb4.common.economy.api.EconomyProvider;
 import eu.pb4.common.economy.api.EconomyTransaction;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
-/**
- * 本模组的货币账户：按玩家 UUID + 货币记账，读写 {@link Smp3AccountStore}。
- *
- * <p>余额与交易金额都是「原始单位」，展示与解析交给 {@link Smp3Currency}。</p>
- */
 public final class Smp3Account implements EconomyAccount {
 
 	private static final BigInteger MAX_RAW = BigInteger.valueOf(Long.MAX_VALUE);
@@ -33,7 +28,6 @@ public final class Smp3Account implements EconomyAccount {
 		return new Smp3Account(profile, currency);
 	}
 
-	/** 账户名即货币名：/economy account 用它区分通宝与咖啡印章。 */
 	@Override
 	public Component name() {
 		return currency.name();
@@ -90,7 +84,7 @@ public final class Smp3Account implements EconomyAccount {
 	}
 
 	private EconomyTransaction transaction(boolean success, BigInteger previous, BigInteger next, BigInteger amount,
-			String message) {
+	                                       String message) {
 		return new EconomyTransaction.Simple(success, Component.literal(message), next, previous, amount, this);
 	}
 }

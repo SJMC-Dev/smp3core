@@ -4,42 +4,60 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.mojang.serialization.Codec;
+
+import club.sjmc.smp3.economy.Smp3AccountStore;
+import club.sjmc.smp3.economy.Smp3Currency;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
-/**
- * 全服签到数据，保存于 {@code world/data/sign-mod.dat}。
- */
-public final class SignData extends SavedData {
+final class SignData extends SavedData {
+	static final Gson JSON = new Gson();
 
 	private static final Codec<SignData> CODEC = CompoundTag.CODEC.xmap(SignData::fromTag, SignData::toTag);
 
-	public static final SavedDataType<SignData> TYPE = new SavedDataType<>(
-			Identifier.fromNamespaceAndPath("smp3", "sign-mod"),
-			SignData::new,
-			CODEC,
-			DataFixTypes.SAVED_DATA_COMMAND_STORAGE);
+	public static final SavedDataType<SignData> TYPE =
+	    new SavedDataType<>(Identifier.fromNamespaceAndPath("smp3", "sign-mod"), SignData::new, CODEC,
+		                    DataFixTypes.SAVED_DATA_COMMAND_STORAGE);
 
 	private final Map<UUID, PlayerSignData> players = new HashMap<>();
 
-	/** 取（必要时创建）全服签到数据；数据固定存放在主世界。 */
-	public static SignData get(net.minecraft.server.MinecraftServer server) {
+	public static SignData get(MinecraftServer server) {
 		return server.overworld().getDataStorage().computeIfAbsent(TYPE);
 	}
 
-	/** 取（必要时创建）玩家数据。 */
 	public PlayerSignData of(UUID player) {
-		return players.computeIfAbsent(player, key -> new PlayerSignData());
+		JsonObject committed = Smp3AccountStore.rewardState(player, "sign");
+		PlayerSignData cached = players.get(player);
+		if (committed != null && !committed.equals(JSON.toJsonTree(cached))) {
+			cached = JSON.fromJson(committed, PlayerSignData.class);
+			players.put(player, cached);
+			setDirty();
+		}
+		cached = players.computeIfAbsent(player, key -> new PlayerSignData());
+		cached.receipt = committed;
+		return cached;
 	}
 
-	/** 标记为待保存。 */
-	public void markDirty() {
+	void commit(UUID player, JsonObject expected, PlayerSignData state, Map<Smp3Currency, Integer> credits) {
+		JsonObject next = JSON.toJsonTree(state).getAsJsonObject();
+		Smp3AccountStore.commitReward(player, "sign", expected, next, credits);
+		state.receipt = next;
+		players.put(player, state);
 		setDirty();
+	}
+
+	static PlayerSignData copy(PlayerSignData state) {
+		PlayerSignData copy = JSON.fromJson(JSON.toJsonTree(state), PlayerSignData.class);
+		copy.receipt = state.receipt;
+		return copy;
 	}
 
 	private CompoundTag toTag() {
@@ -50,7 +68,7 @@ public final class SignData extends SavedData {
 		return root;
 	}
 
-	private static SignData fromTag(CompoundTag root) {
+	static SignData fromTag(CompoundTag root) {
 		SignData result = new SignData();
 		CompoundTag entries = root.getCompound("players").orElseGet(CompoundTag::new);
 		for (String key : entries.keySet()) {
@@ -59,7 +77,6 @@ public final class SignData extends SavedData {
 				CompoundTag value = entries.getCompound(key).orElseGet(CompoundTag::new);
 				result.players.put(owner, PlayerSignData.load(value));
 			} catch (IllegalArgumentException e) {
-				// 损坏的 uuid 键直接跳过，不影响其它玩家数据
 			}
 		}
 		return result;

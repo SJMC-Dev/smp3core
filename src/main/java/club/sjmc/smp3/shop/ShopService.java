@@ -5,119 +5,101 @@ import java.util.List;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.economy.EconomyBridge;
-import club.sjmc.smp3.perm.IdentityService;
-import club.sjmc.smp3.quota.QuotaStore;
-import net.minecraft.network.chat.Component;
+import club.sjmc.smp3.economy.Smp3Currency;
+import club.sjmc.smp3.inventory.PlayerItems;
+import club.sjmc.smp3.perm.Permissions;
+
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
-/**
- * 买入与回收的交易流程。
- *
- * <p>所有逻辑都在服务器主线程执行，GUI 点击天然串行。顺序严格按需求文档 §7：</p>
- * <ul>
- *   <li>买入：校验 → 扣款 → 发货 → 记账 → 反馈</li>
- *   <li>回收：校验 → 扣物品 → 入账 → 记账 → 反馈</li>
- * </ul>
- */
 public final class ShopService {
+	public static final String ADVANCED_PERMISSION = "smp.shop.advanced";
 
-	private ShopService() {
+	public enum Status {
+		BOUGHT,
+		SOLD,
+		LOCKED,
+		NO_ECONOMY,
+		NO_MONEY,
+		QUOTA,
+		PAYMENT_FAILED,
+		NOT_ENOUGH_ITEMS,
+		DEPOSIT_FAILED
 	}
 
-	/** 买入（建筑材料商店）。 */
-	public static void buy(ServerPlayer player, ShopEntry entry) {
-		boolean advanced = IdentityService.isAdvanced(player);
+	public record Outcome(Status status, int balance, int remaining, boolean dropped) {
+		Outcome(Status status) { this(status, 0, 0, false); }
+	}
+
+	private ShopService() {}
+
+	public static Outcome buy(ServerPlayer player, ShopEntry entry) {
+		boolean advanced = Permissions.has(player, ShopService.ADVANCED_PERMISSION, true);
 
 		if (entry.isLockedFor(advanced)) {
-			fail(player, entry, "LOCKED", Messages.locked());
-			return;
+			return fail(player, entry, new Outcome(Status.LOCKED), "");
 		}
 
-		Integer balance = EconomyBridge.balance(player);
+		Integer balance = EconomyBridge.balance(player, Smp3Currency.TONGBAO);
 		if (balance == null) {
-			fail(player, entry, "NO_ECONOMY", Messages.noEconomy());
-			return;
+			return fail(player, entry, new Outcome(Status.NO_ECONOMY), "");
 		}
 		if (balance < entry.price()) {
-			fail(player, entry, "NO_MONEY", Messages.notEnoughMoney(entry.price(), balance));
-			return;
+			return fail(player, entry, new Outcome(Status.NO_MONEY, balance, 0, false), "");
 		}
 
 		int used = QuotaStore.used(player, entry);
 		if (entry.exhausted(advanced, used)) {
-			fail(player, entry, "QUOTA", Messages.quotaExhausted(entry, advanced, used));
-			return;
+			return fail(player, entry, new Outcome(Status.QUOTA, 0, entry.remainingItems(advanced, used), false), "");
 		}
 
-		EconomyBridge.Outcome payment = EconomyBridge.withdraw(player, entry.price());
+		EconomyBridge.Outcome payment = EconomyBridge.withdraw(player, Smp3Currency.TONGBAO, entry.price());
 		if (!payment.success()) {
-			fail(player, entry, "PAYMENT_FAILED", Messages.paymentFailed(), payment.message());
-			return;
+			return fail(player, entry, new Outcome(Status.PAYMENT_FAILED),
+			            payment.message() == null ? "" : payment.message().getString());
 		}
 
-		boolean dropped = deliver(player, entry);
+		boolean dropped = PlayerItems.give(player, new ItemStack(entry.icon(), entry.amount()));
 		QuotaStore.add(player, entry, entry.amount());
 
-		player.sendSystemMessage(Messages.bought(player, entry, advanced));
-		if (dropped) {
-			player.sendSystemMessage(Messages.droppedToGround());
-		}
 		log(player, entry, "SUCCESS", balance, payment.balanceAfter(), dropped ? "dropped" : "");
+		return new Outcome(Status.BOUGHT, payment.balanceAfter(),
+		                   entry.remainingItems(advanced, QuotaStore.used(player, entry)), dropped);
 	}
 
-	/** 回收（回收商店）。 */
-	public static void sell(ServerPlayer player, ShopEntry entry) {
-		boolean advanced = IdentityService.isAdvanced(player);
+	public static Outcome sell(ServerPlayer player, ShopEntry entry) {
+		boolean advanced = Permissions.has(player, ShopService.ADVANCED_PERMISSION, true);
 
 		if (entry.isLockedFor(advanced)) {
-			fail(player, entry, "LOCKED", Messages.locked());
-			return;
+			return fail(player, entry, new Outcome(Status.LOCKED), "");
 		}
 
 		Inventory inventory = player.getInventory();
 		int owned = countInInventory(inventory, entry);
 		if (owned < entry.amount()) {
-			fail(player, entry, "NOT_ENOUGH_ITEMS", Messages.notEnoughItems(entry));
-			return;
+			return fail(player, entry, new Outcome(Status.NOT_ENOUGH_ITEMS), "");
 		}
 
 		int used = QuotaStore.used(player, entry);
 		if (entry.exhausted(advanced, used)) {
-			fail(player, entry, "QUOTA", Messages.quotaExhausted(entry, advanced, used));
-			return;
+			return fail(player, entry, new Outcome(Status.QUOTA, 0, entry.remainingItems(advanced, used), false), "");
 		}
 
 		List<ItemStack> removed = removeFromInventory(inventory, entry, entry.amount());
 
-		EconomyBridge.Outcome income = EconomyBridge.deposit(player, entry.price());
+		EconomyBridge.Outcome income = EconomyBridge.deposit(player, Smp3Currency.TONGBAO, entry.price());
 		if (!income.success()) {
-			// 入账失败：把扣掉的物品原样还回去，避免物品凭空消失
-			refundItems(player, removed);
-			fail(player, entry, "DEPOSIT_FAILED", Messages.depositFailed(), income.message());
-			return;
+			removed.forEach(stack -> PlayerItems.give(player, stack.copy()));
+			return fail(player, entry, new Outcome(Status.DEPOSIT_FAILED),
+			            income.message() == null ? "" : income.message().getString());
 		}
 
 		QuotaStore.add(player, entry, entry.amount());
 
-		player.sendSystemMessage(Messages.sold(player, entry, advanced));
 		log(player, entry, "SUCCESS", null, income.balanceAfter(), "");
-	}
-
-	/**
-	 * 发货：优先插入背包，放不下的部分掉在玩家脚下。
-	 *
-	 * @return 是否有物品掉落到地上
-	 */
-	private static boolean deliver(ServerPlayer player, ShopEntry entry) {
-		ItemStack stack = new ItemStack(entry.icon(), entry.amount());
-		boolean fullyAdded = player.getInventory().add(stack);
-		if (fullyAdded || stack.isEmpty()) {
-			return false;
-		}
-		player.spawnAtLocation(player.level(), stack);
-		return true;
+		return new Outcome(Status.SOLD, income.balanceAfter(),
+		                   entry.remainingItems(advanced, QuotaStore.used(player, entry)), false);
 	}
 
 	private static int countInInventory(Inventory inventory, ShopEntry entry) {
@@ -131,7 +113,6 @@ public final class ShopService {
 		return total;
 	}
 
-	/** 从背包扣除指定数量的物品，返回实际扣掉的堆（用于失败退款）。 */
 	private static List<ItemStack> removeFromInventory(Inventory inventory, ShopEntry entry, int amount) {
 		List<ItemStack> removed = new ArrayList<>();
 		int remaining = amount;
@@ -152,33 +133,16 @@ public final class ShopService {
 		return removed;
 	}
 
-	private static void refundItems(ServerPlayer player, List<ItemStack> removed) {
-		for (ItemStack stack : removed) {
-			ItemStack copy = stack.copy();
-			if (!player.getInventory().add(copy) && !copy.isEmpty()) {
-				player.spawnAtLocation(player.level(), copy);
-			}
-		}
+	private static Outcome fail(ServerPlayer player, ShopEntry entry, Outcome result, String detail) {
+		log(player, entry, result.status().name(), null, null, detail);
+		return result;
 	}
 
-	private static void fail(ServerPlayer player, ShopEntry entry, String result, Component message) {
-		fail(player, entry, result, message, null);
-	}
-
-	private static void fail(ServerPlayer player, ShopEntry entry, String result, Component message,
-			Component detail) {
-		player.sendSystemMessage(message);
-		log(player, entry, result, null, null, detail == null ? "" : detail.getString());
-	}
-
-	/** 每次交易输出一行控制台日志。 */
 	private static void log(ServerPlayer player, ShopEntry entry, String result, Integer before, Integer after,
-			String note) {
-		Smp3Core.LOGGER.info(
-				"[SMP3] player={}({}) entry={} dir={} amount={} price={} balance={}->{} 通宝 result={}{}",
-				player.getName().getString(), player.getUUID(), entry.id(), entry.direction(),
-				entry.amount(), entry.price(),
-				before == null ? "-" : before, after == null ? "-" : after,
-				result, note.isEmpty() ? "" : " (" + note + ")");
+	                        String note) {
+		Smp3Core.LOGGER.info("[SMP3] player={}({}) entry={} dir={} amount={} price={} balance={}->{} 通宝 result={}{}",
+		                     player.getName().getString(), player.getUUID(), entry.id(), entry.direction(),
+		                     entry.amount(), entry.price(), before == null ? "-" : before, after == null ? "-" : after,
+		                     result, note.isEmpty() ? "" : " (" + note + ")");
 	}
 }

@@ -3,7 +3,7 @@
 	"id": "smp3",
 	"version": "${version}",
 	"name": "SMP3 Core",
-	"description": "SMP3 服务器核心模组。当前提供商店：用 fuji:tongbao 以固定价格买入建筑材料、回收资源，带身份额度与每日限量。",
+	"description": "SMP3 服务器核心模组：资源商店、每日签到、每日任务与通宝/咖啡印章经济。",
 	"authors": [
 		"SJMC"
 	],
@@ -12,16 +12,21 @@
 	"entrypoints": {
 		"main": [
 			"club.sjmc.smp3.Smp3Core"
+		],
+		"client": [
+			"club.sjmc.smp3.client.Smp3Client"
 		]
 	},
+	"mixins": ["smp3.mixins.json"],
+	"breaks": {"dailyquests": "*"},
 	"depends": {
 		"fabricloader": ">=0.19.5",
 		"fabric-api": "*",
+		"fuji": "*",
 		"minecraft": "~26.3",
 		"java": ">=25"
 	},
 	"suggests": {
-		"fuji": "*",
 		"luckperms": "*"
 	}
 }

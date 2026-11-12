@@ -1,0 +1,10 @@
+BasedOnStyle: LLVM
+Language: Java
+UseTab: ForIndentation
+IndentWidth: 4
+TabWidth: 4
+ColumnLimit: 120
+BreakAfterJavaFieldAnnotations: true
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+SortIncludes: Never

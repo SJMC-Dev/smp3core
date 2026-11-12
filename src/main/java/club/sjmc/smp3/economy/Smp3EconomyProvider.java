@@ -5,33 +5,25 @@ import java.util.Collection;
 import java.util.List;
 
 import com.mojang.authlib.GameProfile;
-
-import club.sjmc.smp3.Smp3Core;
 import eu.pb4.common.economy.api.CommonEconomy;
 import eu.pb4.common.economy.api.EconomyAccount;
 import eu.pb4.common.economy.api.EconomyCurrency;
 import eu.pb4.common.economy.api.EconomyProvider;
+
+import club.sjmc.smp3.Smp3Core;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-/**
- * 本模组的经济提供器：对外提供 smp3:tongbao 与 smp3:coffee_stamp。
- *
- * <p>注册后 Fuji 的 /economy 命令（account / give / take / set / pay / balanceTop）
- * 即可直接操作这些货币，因为它全部通过 common-economy-api 的接口访问。</p>
- */
 public final class Smp3EconomyProvider implements EconomyProvider {
 
-	/** 提供器 id，同时作为货币 id 的命名空间（smp3:xxx）。 */
 	public static final String ID = "smp3";
 	public static final Smp3EconomyProvider INSTANCE = new Smp3EconomyProvider();
 
-	private Smp3EconomyProvider() {
-	}
+	private Smp3EconomyProvider() {}
 
-	/** 注册货币提供器；调用前必须确认 Fuji 已加载（common-economy-api 由它内嵌提供）。 */
 	public static void register() {
 		CommonEconomy.register(ID, INSTANCE);
 		Smp3Core.LOGGER.info("[SMP3] 已注册货币提供器 {}：通宝 + 咖啡印章", ID);

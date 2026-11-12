@@ -1,18 +1,19 @@
 package club.sjmc.smp3.sign;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 
 import net.minecraft.nbt.CompoundTag;
 
-/**
- * 单个玩家的签到数据。
- *
- * <p>日期统一用 {@link java.time.LocalDate#toEpochDay()} 保存，避免时区/格式问题。</p>
- */
 public final class PlayerSignData {
 
-	/** 从未签到过的哨兵值。 */
 	public static final long NEVER_SIGNED = Long.MIN_VALUE;
 
 	private long lastSignEpochDay = NEVER_SIGNED;
@@ -24,80 +25,95 @@ public final class PlayerSignData {
 	private final Set<Integer> serverClaimed = new HashSet<>();
 	private final Set<Integer> monthSignedDays = new HashSet<>();
 
-	public long lastSignEpochDay() {
-		return lastSignEpochDay;
+	final List<Claim> pending = new ArrayList<>();
+	transient JsonObject receipt;
+
+	static final class Claim {
+		final String id;
+		final String month;
+		final int days;
+		final List<Delivery> deliveries;
+
+		Claim(String month, SignRewards.Milestone milestone) {
+			this.month = month;
+			days = milestone.days();
+			id = (month.isEmpty() ? "server" : month) + ":" + days;
+			deliveries = milestone.rewards().stream().map(Delivery::new).toList();
+		}
 	}
 
-	public void setLastSignEpochDay(long epochDay) {
-		this.lastSignEpochDay = epochDay;
+	static final class Delivery {
+		final SignReward reward;
+		Status status = Status.READY;
+
+		Delivery(SignReward reward) { this.reward = reward; }
 	}
 
-	public int streak() {
-		return streak;
-	}
+	enum Status { READY, IN_FLIGHT, DONE }
 
-	public void setStreak(int streak) {
-		this.streak = streak;
-	}
+	public boolean hasPendingRewards() { return !pending.isEmpty(); }
 
-	public String monthKey() {
-		return monthKey;
-	}
-
-	public void setMonthKey(String monthKey) {
-		this.monthKey = monthKey;
-	}
-
-	public int monthTotal() {
-		return monthTotal;
-	}
-
-	public void setMonthTotal(int monthTotal) {
-		this.monthTotal = monthTotal;
-	}
-
-	public int serverTotal() {
-		return serverTotal;
-	}
-
-	public void setServerTotal(int serverTotal) {
-		this.serverTotal = serverTotal;
-	}
-
-	public boolean isMonthClaimed(int days) {
-		return monthClaimed.contains(days);
-	}
-
-	public void markMonthClaimed(int days) {
-		monthClaimed.add(days);
-	}
-
-	/** 跨月时清空当月已领取档位。 */
-	public void clearMonthClaimed() {
+	boolean rotateMonth(LocalDate today) {
+		String key = YearMonth.from(today).toString();
+		if (!monthKey.isEmpty() && key.compareTo(monthKey) <= 0) {
+			return false;
+		}
+		monthKey = key;
+		monthTotal = 0;
 		monthClaimed.clear();
-	}
-
-	/** 本月某一天是否已签到（用于界面日历）。 */
-	public boolean isMonthSigned(int dayOfMonth) {
-		return monthSignedDays.contains(dayOfMonth);
-	}
-
-	public void markMonthSigned(int dayOfMonth) {
-		monthSignedDays.add(dayOfMonth);
-	}
-
-	/** 跨月时清空本月签到记录。 */
-	public void clearMonthSigned() {
 		monthSignedDays.clear();
+		return true;
 	}
 
-	public boolean isServerClaimed(int days) {
-		return serverClaimed.contains(days);
+	void sign(LocalDate today) {
+		streak = lastSignEpochDay == today.minusDays(1).toEpochDay() ? streak + 1 : 1;
+		lastSignEpochDay = today.toEpochDay();
+		monthTotal++;
+		serverTotal++;
+		monthSignedDays.add(today.getDayOfMonth());
+		for (var milestone : SignRewards.MONTH) {
+			if (monthTotal >= milestone.days() && !monthClaimed.contains(milestone.days())) {
+				queue(monthKey, milestone);
+			}
+		}
+		for (var milestone : SignRewards.SERVER) {
+			if (serverTotal >= milestone.days() && !serverClaimed.contains(milestone.days())) {
+				queue("", milestone);
+			}
+		}
 	}
 
-	public void markServerClaimed(int days) {
-		serverClaimed.add(days);
+	private void queue(String month, SignRewards.Milestone milestone) {
+		Claim claim = new Claim(month, milestone);
+		if (pending.stream().noneMatch(existing -> existing.id.equals(claim.id))) {
+			pending.add(claim);
+		}
 	}
+
+	void finish(Claim claim) {
+		if (claim.month.isEmpty()) {
+			serverClaimed.add(claim.days);
+		} else if (claim.month.equals(monthKey)) {
+			monthClaimed.add(claim.days);
+		}
+		pending.remove(claim);
+	}
+
+	public long lastSignEpochDay() { return lastSignEpochDay; }
+
+	public int streak() { return streak; }
+
+	public String monthKey() { return monthKey; }
+
+	public int monthTotal() { return monthTotal; }
+
+	public int serverTotal() { return serverTotal; }
+
+	public boolean isMonthClaimed(int days) { return monthClaimed.contains(days); }
+
+	public boolean isMonthSigned(int dayOfMonth) { return monthSignedDays.contains(dayOfMonth); }
+
+	public boolean isServerClaimed(int days) { return serverClaimed.contains(days); }
 
 	public CompoundTag save() {
 		CompoundTag tag = new CompoundTag();
@@ -109,6 +125,7 @@ public final class PlayerSignData {
 		tag.putIntArray("monthClaimed", toArray(monthClaimed));
 		tag.putIntArray("serverClaimed", toArray(serverClaimed));
 		tag.putIntArray("monthSignedDays", toArray(monthSignedDays));
+		tag.putString("pendingRewards", SignData.JSON.toJson(pending));
 		return tag;
 	}
 
@@ -122,6 +139,9 @@ public final class PlayerSignData {
 		fill(data.monthClaimed, tag.getIntArray("monthClaimed").orElse(new int[0]));
 		fill(data.serverClaimed, tag.getIntArray("serverClaimed").orElse(new int[0]));
 		fill(data.monthSignedDays, tag.getIntArray("monthSignedDays").orElse(new int[0]));
+		List<Claim> pending =
+		    SignData.JSON.fromJson(tag.getStringOr("pendingRewards", "[]"), new TypeToken<List<Claim>>() {}.getType());
+		data.pending.addAll(pending);
 		return data;
 	}
 

@@ -2,24 +2,21 @@ package club.sjmc.smp3.sign;
 
 import club.sjmc.smp3.economy.Smp3Currency;
 
-/**
- * 单个奖励项，支持货币、物品、称号、命令四类。
- */
-public sealed interface SignReward {
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
 
-	/** 发放货币，{@code amount} 为单位数量（通宝/咖啡印章）。 */
-	record Currency(Smp3Currency currency, int amount) implements SignReward {
+public record SignReward(Kind kind, String value, int amount) {
+	public enum Kind { CURRENCY, ITEM, TITLE, COMMAND }
+
+	public static SignReward currency(Smp3Currency currency, int amount) {
+		return new SignReward(Kind.CURRENCY, currency.id().toString(), amount);
 	}
 
-	/** 发放物品，背包满则掉在脚下。 */
-	record Item(net.minecraft.world.item.Item item, int count) implements SignReward {
+	public static SignReward item(Item item, int count) {
+		return new SignReward(Kind.ITEM, BuiltInRegistries.ITEM.getKey(item).toString(), count);
 	}
 
-	/** 通过 LuckPerms 授予称号：fuji.title.obtain.&lt;titleId&gt; = true。 */
-	record Title(String titleId) implements SignReward {
-	}
+	public static SignReward title(String title) { return new SignReward(Kind.TITLE, title, 1); }
 
-	/** 执行命令，{@code <player>} 会被替换成玩家名。 */
-	record Command(String template) implements SignReward {
-	}
+	public static SignReward command(String command) { return new SignReward(Kind.COMMAND, command, 1); }
 }

@@ -1,3 +1,5 @@
 {
-  "item.smp3.any_enchanted_book": "Any Enchanted Book"
+  "item.smp3.any_enchanted_book": "Any Enchanted Book",
+  "key.category.smp3.main": "SMP3",
+  "key.smp3.quest_hud": "Toggle Quest Checklist"
 }

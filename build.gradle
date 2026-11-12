@@ -9,7 +9,21 @@ base {
 	archivesName = project.archives_base_name
 }
 
+loom {
+	splitEnvironmentSourceSets()
+	mods {
+		smp3 {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
 repositories {
+	exclusiveContent {
+		forRepository { maven { url = 'https://api.modrinth.com/maven' } }
+		filter { includeGroup 'maven.modrinth' }
+	}
 	// 第三方模组仓库（SGUI / common-economy-api）
 	maven {
 		name = 'Nucleoid'
@@ -29,6 +43,8 @@ dependencies {
 
 	// 通用经济 API：运行时由 Fuji 内嵌提供，仅编译期需要
 	compileOnly "eu.pb4:common-economy-api:${project.common_economy_api_version}"
+	// 开发运行时加载 Fuji；发布包仍由服务器自行安装 Fuji。
+	runtimeOnly "maven.modrinth:fuji:${project.fuji_version}"
 
 	// LuckPerms API：运行时由服务端 LuckPerms 提供，仅编译期需要。
 	// 坐标 net.luckperms:api 发布在 Maven Central（https://luckperms.net/wiki/Developer-API）
@@ -47,5 +63,39 @@ processResources {
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 25
 	it.options.encoding = "UTF-8"
+}
+
+sourceSets.test.compileClasspath += sourceSets.client.output
+sourceSets.test.runtimeClasspath += sourceSets.client.output
+
+tasks.register('verifyDailyQuests', JavaExec) {
+	dependsOn testClasses
+	classpath = sourceSets.test.runtimeClasspath + configurations.compileClasspath
+	mainClass = 'club.sjmc.smp3.daily.DailyQuestChecks'
+	enableAssertions = true
+}
+
+tasks.named('test') {
+	// 使用上面的原生 Java 断言验证，不额外引入测试框架。
+	failOnNoDiscoveredTests = false
+	dependsOn 'verifyDailyQuests'
+}
+
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = 'smp3-tests'
+		enableClientGameTests = true
+	}
+}
+
+sourceSets.gametest.compileClasspath += sourceSets.client.output
+
+tasks.register('checkJavaFormat', Exec) {
+	group = 'verification'
+	description = 'Check Java formatting with clang-format 23.'
+	commandLine(['clang-format', '--dry-run', '--Werror'] + fileTree('src') {
+		include '**/*.java'
+	}.files.sort().collect { it.path })
 }
 
