@@ -33,7 +33,7 @@ final class QuestHud {
 			graphics.fill(left, y, left + width, y + 20, 0x88000000);
 			graphics.outline(left + 4, y + 4, 12, 12, 0xFFAAAAAA);
 			if (row.entry.complete()) {
-				int pixels = Math.round(8 * row.checkTime / QuestHudState.DURATION);
+				int pixels = Math.round(8 * Math.min(1, row.checkTime / QuestHudState.DURATION));
 				for (int i = 0; i < pixels; i++) {
 					int py = y + 8 + (i < 3 ? i : 4 - i);
 					graphics.fill(left + 6 + i, py, left + 8 + i, py + 2, color);

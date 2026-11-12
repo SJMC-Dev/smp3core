@@ -6,24 +6,15 @@ import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.time.ServerDates;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class DailyQuestService {
-	public enum Status {
-		STALE,
-		COMPLETE,
-		LIMIT_REACHED,
-		NO_CANDIDATE,
-		REROLLED,
-		ALREADY_CLAIMED,
-		INCOMPLETE,
-		CLAIMED,
-		DELIVERY_FAILED
-	}
+	public enum Status { STALE, COMPLETE, LIMIT_REACHED, NO_CANDIDATE, REROLLED }
 
-	public record Outcome(Status status, String taskName, QuestDefinition.Reward reward) {
-		Outcome(Status status) { this(status, null, null); }
-		public boolean success() { return status == Status.REROLLED || status == Status.CLAIMED; }
+	public record Outcome(Status status, String taskName) {
+		Outcome(Status status) { this(status, null); }
+		public boolean success() { return status == Status.REROLLED; }
 	}
 	public final QuestConfig config;
 	private final DailyQuestData data;
@@ -84,30 +75,51 @@ public final class DailyQuestService {
 		data.setDirty();
 		Smp3Core.LOGGER.info("[SMP3] 任务刷新 player={} slot={} admin={} {} -> {}", player.getUUID(), slot + 1, admin,
 		                     previous.definition.id(), day.assignments.get(slot).definition.id());
-		return new Outcome(Status.REROLLED, day.assignments.get(slot).definition.name(), null);
+		return new Outcome(Status.REROLLED, day.assignments.get(slot).definition.name());
 	}
 
-	public Outcome claim(ServerPlayer player, long date, int slot, String token) {
+	void settle(ServerPlayer player) {
 		QuestDay day = state(player);
-		if (!valid(day, date, slot, token))
-			return new Outcome(Status.STALE);
-		QuestDay.Assignment assignment = day.assignments.get(slot);
-		if (assignment.claimed)
-			return new Outcome(Status.ALREADY_CLAIMED);
-		if (!assignment.complete())
-			return new Outcome(Status.INCOMPLETE);
+		long now = player.level().getGameTime();
+		if (day == null || day.date > ServerDates.today().toEpochDay() || now < day.retryAt)
+			return;
 		try {
-			Smp3AccountStore.grantDaily(player.getUUID(), day.date, slot, assignment.reward.tongbao(),
-			                            assignment.reward.coffeeStamp());
-			assignment.claimed = true;
-			day.revision++;
-			data.setDirty();
-			Smp3Core.LOGGER.info("[SMP3] 任务领奖 player={} day={} slot={}", player.getUUID(), day.date, slot + 1);
-			return new Outcome(Status.CLAIMED, null, assignment.reward);
+			// Settle older days first: the ledger keeps the latest paid day and its slot mask.
+			var pending = day.pendingRewards.iterator();
+			while (pending.hasNext()) {
+				var reward = pending.next();
+				pay(player, reward.date(), reward.slot(), reward.name(), reward.reward());
+				pending.remove();
+				data.setDirty();
+			}
+			for (int slot = 0; slot < day.assignments.size(); slot++) {
+				var assignment = day.assignments.get(slot);
+				if (!assignment.complete() || assignment.claimed)
+					continue;
+				pay(player, day.date, slot, assignment.definition.name(), assignment.reward);
+				assignment.claimed = true;
+				day.revision++;
+				data.setDirty();
+			}
+			day.retryAt = 0;
+			day.rewardFailureReported = false;
 		} catch (RuntimeException e) {
-			Smp3Core.LOGGER.error("[SMP3] 每日任务奖励提交失败 player={}", player.getUUID(), e);
-			return new Outcome(Status.DELIVERY_FAILED);
+			day.retryAt = now + 100;
+			if (!day.rewardFailureReported) {
+				day.rewardFailureReported = true;
+				Smp3Core.LOGGER.error("[SMP3] 每日任务奖励提交失败，将自动重试 player={}", player.getUUID(), e);
+				player.sendSystemMessage(Component.literal("任务奖励暂未到账，将自动重试"));
+			}
 		}
+	}
+
+	private static void pay(ServerPlayer player, long date, int slot, String name, QuestDefinition.Reward reward) {
+		if (Smp3AccountStore.dailyClaimed(player.getUUID(), date, slot))
+			return;
+		Smp3AccountStore.grantDaily(player.getUUID(), date, slot, reward.tongbao(), reward.coffeeStamp());
+		Smp3Core.LOGGER.info("[SMP3] 任务奖励到账 player={} day={} slot={}", player.getUUID(), date, slot + 1);
+		player.sendSystemMessage(Component.literal("已完成「" + name + "」，奖励到账：通宝 x " + reward.tongbao() +
+		                                           "，咖啡印章 x " + reward.coffeeStamp()));
 	}
 
 	private static boolean valid(QuestDay day, long date, int slot, String token) {

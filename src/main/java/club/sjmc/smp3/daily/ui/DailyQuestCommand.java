@@ -25,27 +25,21 @@ public final class DailyQuestCommand {
 	private DailyQuestCommand() {}
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+		var reset =
+		    Commands.literal("reset")
+		        .executes(context -> reset(context.getSource(), EntityArgument.getPlayer(context, "player"), -1))
+		        .then(Commands.argument("slot", IntegerArgumentType.integer(1, 4))
+				          .suggests((context,
+				                     builder) -> SharedSuggestionProvider.suggest(List.of("1", "2", "3", "4"), builder))
+				          .executes(context
+				                    -> reset(context.getSource(), EntityArgument.getPlayer(context, "player"),
+				                             IntegerArgumentType.getInteger(context, "slot") - 1)));
 		var command = dispatcher.register(
 		    Commands.literal("dailyquest")
-		        .executes(context -> {
-			        ServerPlayer player = context.getSource().getPlayerOrException();
-			        return DailyQuestGui.show(player) ? 1 : 0;
-		        })
+		        .executes(context -> DailyQuestGui.show(context.getSource().getPlayerOrException()) ? 1 : 0)
 		        .then(Commands.argument("player", EntityArgument.player())
 				          .requires(DailyQuestCommand::mayReset)
-				          .then(Commands.literal("reset")
-				                    .executes(
-		                                context
-		                                -> reset(context.getSource(), EntityArgument.getPlayer(context, "player"), -1))
-				                    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 4))
-				                              .suggests((context, builder)
-				                                            -> SharedSuggestionProvider.suggest(
-		                                                        List.of("1", "2", "3", "4"), builder))
-				                              .executes(
-		                                          context
-		                                          -> reset(context.getSource(),
-												           EntityArgument.getPlayer(context, "player"),
-												           IntegerArgumentType.getInteger(context, "slot") - 1))))));
+				          .then(reset)));
 		dispatcher.register(Commands.literal("dailyquests").executes(command.getCommand()).redirect(command));
 	}
 
@@ -59,10 +53,6 @@ public final class DailyQuestCommand {
 	}
 
 	private static int reset(CommandSourceStack source, ServerPlayer target, int requested) {
-		if (!mayReset(source)) {
-			source.sendFailure(Component.literal("缺少权限：" + RESET_PERMISSION));
-			return 0;
-		}
 		DailyQuestService service = DailyQuestModule.current();
 		QuestDay day = service == null ? null : service.state(target);
 		if (day == null) {

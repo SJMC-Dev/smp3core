@@ -6,7 +6,8 @@ import java.util.List;
 import club.sjmc.smp3.daily.QuestHudPayload;
 
 final class QuestHudState {
-	static final float DURATION = .2F;
+	static final float DURATION = .5F;
+	private static final float COMPLETION_DURATION = DURATION + 2;
 	private long date;
 	private float hideTime = -1;
 	private boolean showing;
@@ -19,7 +20,7 @@ final class QuestHudState {
 
 		Row(QuestHudPayload.Entry entry) {
 			this.entry = entry;
-			checkTime = entry.complete() ? DURATION : 0;
+			checkTime = entry.complete() ? COMPLETION_DURATION : 0;
 		}
 	}
 
@@ -76,10 +77,14 @@ final class QuestHudState {
 			return;
 		}
 		for (Row row : rows) {
-			if (row.entry.complete())
-				row.checkTime = Math.min(DURATION, row.checkTime + seconds);
+			float remaining = seconds;
+			if (row.entry.complete()) {
+				float check = Math.min(remaining, COMPLETION_DURATION - row.checkTime);
+				row.checkTime += check;
+				remaining -= check;
+			}
 			if (row.slideTime >= 0)
-				row.slideTime += seconds;
+				row.slideTime += remaining;
 		}
 		rows.removeIf(row -> row.slideTime >= DURATION);
 	}
@@ -88,7 +93,7 @@ final class QuestHudState {
 		if (hideTime >= 0)
 			hideTime = showing ? -1 : DURATION;
 		rows.removeIf(row -> row.entry.claimed());
-		rows.forEach(row -> row.checkTime = row.entry.complete() ? DURATION : 0);
+		rows.forEach(row -> row.checkTime = row.entry.complete() ? COMPLETION_DURATION : 0);
 	}
 
 	void clear() {

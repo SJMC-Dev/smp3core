@@ -21,9 +21,9 @@ public record QuestDefinition(String id, String name, String description, String
 	boolean supports(int tier) { return !tiered() || tiers.stream().anyMatch(value -> value.tier == tier); }
 
 	int target(int tier) {
-		return tiered() ? tiers.stream().filter(value -> value.tier == tier).findFirst().orElseThrow().count
-		: count == null ? 1
-		                : count;
+		if (!tiered())
+			return count == null ? 1 : count;
+		return tiers.stream().filter(value -> value.tier == tier).findFirst().orElseThrow().count;
 	}
 
 	QuestDefinition snapshot(int target) {

@@ -13,20 +13,38 @@ public final class QuestDay {
 	final int tier;
 	int rerollsUsed;
 	final List<Assignment> assignments = new ArrayList<>();
+	List<PendingReward> pendingRewards = new ArrayList<>();
 	transient int revision;
+	transient long retryAt;
+	transient boolean rewardFailureReported;
+
+	record PendingReward(long date, int slot, String name, QuestDefinition.Reward reward) {}
 
 	QuestDay(long date, int xpLevel, QuestConfig config, RandomGenerator random) {
 		this.date = date;
 		this.xpLevel = xpLevel;
 		this.tier = config.tier(xpLevel);
 		for (String difficulty : QuestConfig.TIERS) {
-			QuestDefinition definition = choose(config, difficulty, Set.of(), random);
+			QuestDefinition definition = choose(config, difficulty, random);
 			assignments.add(new Assignment(definition, this.tier, config.rewards().get(difficulty)));
 		}
 	}
 
 	static QuestDay forDate(QuestDay previous, long date, int level, QuestConfig config, RandomGenerator random) {
-		return previous == null || date > previous.date ? new QuestDay(date, level, config, random) : previous;
+		if (previous == null)
+			return new QuestDay(date, level, config, random);
+		if (date <= previous.date)
+			return previous;
+		QuestDay next = new QuestDay(date, level, config, random);
+		next.pendingRewards.addAll(previous.pendingRewards);
+		for (int slot = 0; slot < previous.assignments.size(); slot++) {
+			Assignment task = previous.assignments.get(slot);
+			if (task.complete() && !task.claimed)
+				next.pendingRewards.add(new PendingReward(previous.date, slot, task.definition.name(), task.reward));
+		}
+		next.retryAt = previous.retryAt;
+		next.rewardFailureReported = previous.rewardFailureReported;
+		return next;
 	}
 
 	public static final class Assignment {
@@ -79,7 +97,7 @@ public final class QuestDay {
 		Assignment old = assignments.get(slot);
 		if (!old.token.equals(token) || old.complete() || (!admin && remaining(config) == 0))
 			return false;
-		QuestDefinition next = choose(config, old.definition.difficulty(), Set.of(old.definition.id()), random);
+		QuestDefinition next = choose(config, old.definition.difficulty(), random);
 		if (next == null)
 			return false;
 		assignments.set(slot, new Assignment(next, tier, old.reward));
@@ -92,12 +110,11 @@ public final class QuestDay {
 	public boolean canReroll(int slot, QuestConfig config) {
 		Assignment assignment = assignments.get(slot);
 		return !assignment.complete() && remaining(config) > 0 &&
-		    !candidates(config, assignment.definition.difficulty(), Set.of(assignment.definition.id())).isEmpty();
+		    !candidates(config, assignment.definition.difficulty()).isEmpty();
 	}
 
-	private QuestDefinition choose(QuestConfig config, String difficulty, Set<String> excluded,
-	                               RandomGenerator random) {
-		List<QuestDefinition> choices = candidates(config, difficulty, excluded);
+	private QuestDefinition choose(QuestConfig config, String difficulty, RandomGenerator random) {
+		List<QuestDefinition> choices = candidates(config, difficulty);
 		if (choices.isEmpty())
 			return null;
 		Set<String> categories = new HashSet<>();
@@ -108,8 +125,8 @@ public final class QuestDay {
 		return choices.get(random.nextInt(choices.size()));
 	}
 
-	private List<QuestDefinition> candidates(QuestConfig config, String difficulty, Set<String> excluded) {
-		Set<String> used = new HashSet<>(excluded);
+	private List<QuestDefinition> candidates(QuestConfig config, String difficulty) {
+		Set<String> used = new HashSet<>();
 		assignments.forEach(a -> used.add(a.definition.id()));
 		return config.tasks()
 		    .stream()

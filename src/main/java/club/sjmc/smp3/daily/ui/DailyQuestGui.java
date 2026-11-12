@@ -2,7 +2,6 @@ package club.sjmc.smp3.daily.ui;
 
 import java.time.LocalDate;
 
-import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
 
@@ -27,24 +26,26 @@ public final class DailyQuestGui extends SimpleGui {
 	private int revision = -1;
 
 	private DailyQuestGui(ServerPlayer player, DailyQuestService service) {
-		super(MenuType.GENERIC_9x6, player, false);
+		super(MenuType.GENERIC_9x4, player, false);
 		this.service = service;
 		setTitle(GuiStyle.text("每日任务", GuiStyle.TITLE));
 	}
 
 	public static boolean show(ServerPlayer player) {
 		DailyQuestService service = DailyQuestModule.current();
-		if (service == null || service.state(player) == null) {
-			player.sendSystemMessage(GuiStyle.text("每日任务不可用，请联系管理员", GuiStyle.ERROR));
-			return false;
-		}
-		return new DailyQuestGui(player, service).open();
+		if (service != null && new DailyQuestGui(player, service).open())
+			return true;
+		player.sendSystemMessage(GuiStyle.text("每日任务不可用，请联系管理员", GuiStyle.ERROR));
+		return false;
 	}
 
 	@Override
 	public boolean open() {
-		refresh();
-		return shown != null && super.open();
+		QuestDay current = service.state(player);
+		if (current == null)
+			return false;
+		refresh(current);
+		return super.open();
 	}
 
 	@Override
@@ -55,37 +56,39 @@ public final class DailyQuestGui extends SimpleGui {
 			return;
 		}
 		if (current != shown || current.revision() != revision)
-			refresh();
+			refresh(current);
 	}
 
-	private void refresh() {
-		shown = service.state(player);
-		if (shown == null)
-			return;
+	private void refresh(QuestDay current) {
+		shown = current;
 		revision = shown.revision();
-		GuiStyle.fill(this, 54);
+		GuiStyle.fill(this, 36);
 		long complete = shown.assignments().stream().filter(QuestDay.Assignment::complete).count();
 		long claimed = shown.assignments().stream().filter(a -> a.claimed()).count();
 		setSlot(4, GuiStyle.item(Items.CLOCK, "每日任务", GuiStyle.TITLE)
 		               .addLoreLine(GuiStyle.text(LocalDate.ofEpochDay(shown.date).toString(), GuiStyle.MUTED))
 		               .addLoreLine(GuiStyle.text("已完成 " + complete + "/4", GuiStyle.MUTED))
-		               .addLoreLine(GuiStyle.text("已领取 " + claimed + "/4", GuiStyle.MUTED))
+		               .addLoreLine(GuiStyle.text("奖励已到账 " + claimed + "/4", GuiStyle.MUTED))
 		               .addLoreLine(GuiStyle.text("剩余刷新 " + shown.remaining(service.config) + "/" +
 		                                              service.config.dailyRerollLimit(),
 		                                          GuiStyle.MUTED))
 		               .addLoreLine(GuiStyle.text("每日 00:00 重置 (" + ServerDates.zone() + ")", GuiStyle.MUTED))
-		               .addLoreLine(GuiStyle.text("未领取奖励次日失效", GuiStyle.MUTED))
+		               .addLoreLine(GuiStyle.text("完成后自动发放奖励", GuiStyle.MUTED))
 		               .build());
 		for (int slot = 0; slot < 4; slot++)
 			task(slot);
-		setSlot(53, GuiStyle.close(this::close));
+		setSlot(35, GuiStyle.close(this::close));
 	}
 
 	private void task(int slot) {
 		QuestDay.Assignment task = shown.assignments().get(slot);
 		long date = shown.date;
 		int column = 1 + slot * 2;
-		ChatFormatting color = task.claimed() ? GuiStyle.MUTED : task.complete() ? GuiStyle.READY : GuiStyle.ACTIVE;
+		DyeColor accent = slot == 0 ? DyeColor.LIGHT_BLUE : slot == 1 ? DyeColor.LIME : DyeColor.WHITE;
+		var background =
+		    GuiStyle.item(Items.STAINED_GLASS_PANE.pick(accent), " ", GuiStyle.MUTED).hideTooltip().build();
+		setSlot(column, background);
+		ChatFormatting color = task.claimed() ? GuiStyle.READY : GuiStyle.ACTIVE;
 		String status = status(task);
 		Item icon = BuiltInRegistries.ITEM.getValue(Identifier.parse(task.definition.icon()));
 		GuiElementBuilder objective =
@@ -95,20 +98,22 @@ public final class DailyQuestGui extends SimpleGui {
 		QuestText.lore(task).forEach(objective::addLoreLine);
 		setSlot(9 + column, objective.build());
 		setSlot(18 + column, GuiStyle
-		                         .item(Items.WOOL.pick(task.claimed()    ? DyeColor.GRAY
-		                                               : task.complete() ? DyeColor.LIME
+		                         .item(Items.WOOL.pick(task.claimed()    ? DyeColor.LIME
+		                                               : task.complete() ? DyeColor.ORANGE
 		                                                                 : DyeColor.WHITE),
 		                               status, color)
+		                         .addLoreLine(GuiStyle.text("通宝 x " + task.reward.tongbao(), GuiStyle.MUTED))
+		                         .addLoreLine(GuiStyle.text("咖啡印章 x " + task.reward.coffeeStamp(), GuiStyle.MUTED))
 		                         .build());
-		if (!task.claimed())
-			setSlot(27 + column, reward(task, date, slot));
-		if (task.complete())
+		if (task.complete()) {
+			setSlot(27 + column, background);
 			return;
+		}
 		boolean available = shown.canReroll(slot, service.config);
 		String reason = shown.remaining(service.config) == 0 ? "今日刷新次数已用完" : "没有可替换的同难度任务";
 		var reroll = GuiStyle.item(available ? Items.ARROW : Items.BARRIER, available ? "更换任务" : reason,
 		                           available ? GuiStyle.ACTIVE : GuiStyle.MUTED);
-		setSlot(45 + column, GuiStyle
+		setSlot(27 + column, GuiStyle
 		                         .onLeftClick(reroll,
 		                                      () -> {
 			                                      if (available) {
@@ -118,24 +123,14 @@ public final class DailyQuestGui extends SimpleGui {
 		                         .build());
 	}
 
-	private GuiElement reward(QuestDay.Assignment task, long date, int slot) {
-		return GuiStyle
-		    .onLeftClick(GuiStyle.item(Items.CHEST, "任务奖励", GuiStyle.TITLE)
-		                     .glow(task.complete())
-		                     .addLoreLine(GuiStyle.text("通宝 x " + task.reward.tongbao(), GuiStyle.MUTED))
-		                     .addLoreLine(GuiStyle.text("咖啡印章 x " + task.reward.coffeeStamp(), GuiStyle.MUTED))
-		                     .addLoreLine(GuiStyle.text(task.complete() ? "左键领取" : "完成后领取", GuiStyle.MUTED)),
-		                 () -> {
-			                 feedback(service.claim(player, date, slot, task.token));
-			                 refresh();
-		                 })
-		    .build();
-	}
-
 	private void confirm(long date, int slot, QuestDay.Assignment task) {
 		QuestDay current = service.state(player);
-		if (current == null || current.date != date || !current.assignments().get(slot).token.equals(task.token)) {
-			refresh();
+		if (current == null) {
+			close();
+			return;
+		}
+		if (current.date != date || !current.assignments().get(slot).token.equals(task.token)) {
+			refresh(current);
 			return;
 		}
 		SimpleGui confirmation = new SimpleGui(MenuType.GENERIC_9x3, player, false) {
@@ -174,8 +169,8 @@ public final class DailyQuestGui extends SimpleGui {
 
 	private static String status(QuestDay.Assignment task) {
 		if (task.claimed())
-			return "已领取";
-		String state = task.complete() ? "可领取" : "未完成";
+			return "奖励已到账";
+		String state = task.complete() ? "已完成，奖励待发放" : "未完成";
 		return task.target == 1 ? state : state + " (" + task.progress() + "/" + task.target + ")";
 	}
 }

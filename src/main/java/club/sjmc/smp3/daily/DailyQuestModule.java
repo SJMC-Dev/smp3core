@@ -42,13 +42,13 @@ public final class DailyQuestModule {
 			hudSnapshots.clear();
 		});
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-			if (instance != null)
+			if (instance != null) {
+				instance.settle(handler.player);
 				syncHud(handler.player, instance.state(handler.player));
+			}
 		});
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-			if (instance != null)
-				hudSnapshots.remove(handler.player.getUUID());
-		});
+		ServerPlayConnectionEvents.DISCONNECT.register(
+		    (handler, server) -> hudSnapshots.remove(handler.player.getUUID()));
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (instance == null || server.getTickCount() % 5 != 0)
 				return;
@@ -60,6 +60,7 @@ public final class DailyQuestModule {
 				                                                              QuestEventType.BIOME_VISITED.id()))) {
 					DailyQuestEvents.explore(player);
 				}
+				instance.settle(player);
 				syncHud(player, day);
 			}
 		});

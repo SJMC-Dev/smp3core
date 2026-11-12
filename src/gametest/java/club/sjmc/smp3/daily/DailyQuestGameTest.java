@@ -3,6 +3,8 @@ package club.sjmc.smp3.daily;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
+import java.util.stream.Collectors;
 
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -11,6 +13,7 @@ import eu.pb4.sgui.api.SguiUtils;
 import eu.pb4.sgui.api.gui.SimpleGui;
 import io.netty.channel.embedded.EmbeddedChannel;
 
+import club.sjmc.smp3.FeatureChecks;
 import club.sjmc.smp3.daily.ui.DailyQuestGui;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
@@ -25,6 +28,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -156,8 +160,8 @@ public final class DailyQuestGameTest {
 			                         .get(DataComponents.LORE)
 			                         .lines()
 			                         .stream()
-			                         .map(net.minecraft.network.chat.Component::getString)
-			                         .collect(java.util.stream.Collectors.joining());
+			                         .map(Component::getString)
+			                         .collect(Collectors.joining());
 			test.assertTrue(description.contains("16") && description.contains("任意木材") &&
 			                    !description.contains("{count}"),
 			                "任务说明未使用目标快照替换占位符");
@@ -221,11 +225,35 @@ public final class DailyQuestGameTest {
 			DailyQuestEvents.explore(player);
 			test.assertTrue(task.complete(), "探索目标未完成");
 
-			long before = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO);
-			test.assertTrue(service.claim(player, day.date, 0, task.token).success(), "领奖失败");
-			test.assertTrue(!service.claim(player, day.date, 0, task.token).success(), "重复领奖被接受");
-			test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO) == before + 2000,
-			                "重复或错误到账");
+			var data = DailyQuestData.get(server);
+			QuestDay yesterday = new QuestDay(day.date - 1, player.experienceLevel, service.config, new Random(1));
+			yesterday.assignments.clear();
+			yesterday.assignments.add(task);
+			data.players.put(player.getUUID(), yesterday);
+			day = service.state(player);
+			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"));
+			task.progress = task.target;
+			day.assignments.set(0, task);
+			long stampsBefore = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP);
+			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, Long.MAX_VALUE);
+			service.settle(player);
+			test.assertTrue(!task.claimed && day.pendingRewards.size() == 1 && day.retryAt > level.getGameTime() &&
+			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == stampsBefore,
+			                "Failed automatic payment lost a pending reward or partially credited currency");
+			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
+			service.settle(player);
+			test.assertTrue(!task.claimed, "Automatic reward retry ignored its cooldown");
+			day = QuestConfig.JSON.fromJson(QuestConfig.JSON.toJson(day), QuestDay.class);
+			data.players.put(player.getUUID(), day);
+			task = day.assignments.getFirst();
+			service.settle(player);
+			service.settle(player);
+			test.assertTrue(task.claimed && day.pendingRewards.isEmpty() &&
+			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO) ==
+			                        2 * Smp3Currency.rawUnits(task.reward.tongbao()) &&
+			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) ==
+			                        stampsBefore + 200,
+			                "Automatic reward recovery duplicated or lost old/new day payments");
 			task.claimed = false;
 			task.progress = 0;
 			test.assertTrue(service.state(player).assignments.getFirst().claimed, "账本回执未恢复领取状态");
@@ -234,29 +262,22 @@ public final class DailyQuestGameTest {
 			day.rerollsUsed = service.config.dailyRerollLimit();
 			var commands = server.getCommands().getDispatcher();
 			String playerName = player.getGameProfile().name();
+			var console = server.createCommandSourceStack();
 			for (String root : List.of("dailyquest", "dailyquests")) {
-				for (String prefix : List.of("", playerName.substring(0, 2)))
-					test.assertTrue(commands
-					                    .getCompletionSuggestions(
-					                        commands.parse(root + " " + prefix, server.createCommandSourceStack()))
-					                    .join()
-					                    .getList()
-					                    .stream()
-					                    .anyMatch(s -> s.getText().equals(playerName)),
+				for (String prefix : List.of("", playerName.substring(0, 2))) {
+					var parsed = commands.parse(root + " " + prefix, console);
+					var suggestions = commands.getCompletionSuggestions(parsed).join().getList();
+					test.assertTrue(suggestions.stream().anyMatch(s -> s.getText().equals(playerName)),
 					                "Online player completion missing: " + root);
-				for (var entry : Map.of(root + " " + playerName + " r", List.of("reset"),
-				                        root + " " + playerName + " reset ", List.of("1", "2", "3", "4"))
-				                     .entrySet())
-					test.assertTrue(
-					    commands
-					        .getCompletionSuggestions(commands.parse(entry.getKey(), server.createCommandSourceStack()))
-					        .join()
-					        .getList()
-					        .stream()
-					        .map(s -> s.getText())
-					        .toList()
-					        .equals(entry.getValue()),
-					    "Command argument completion missing: " + entry.getKey());
+				}
+				var completions = Map.of(root + " " + playerName + " r", List.of("reset"),
+				                         root + " " + playerName + " reset ", List.of("1", "2", "3", "4"));
+				for (var entry : completions.entrySet()) {
+					var parsed = commands.parse(entry.getKey(), console);
+					var suggestions = commands.getCompletionSuggestions(parsed).join().getList();
+					test.assertTrue(suggestions.stream().map(s -> s.getText()).toList().equals(entry.getValue()),
+					                "Command argument completion missing: " + entry.getKey());
+				}
 			}
 			String reset = "dailyquest " + player.getGameProfile().name() + " reset";
 			for (String invalid : List.of(reset + " 0", reset + " 5", "dailyquest nobody-online reset")) {
@@ -288,7 +309,7 @@ public final class DailyQuestGameTest {
 			day.rerollsUsed = 0;
 			test.assertTrue(DailyQuestGui.show(player), "每日任务 GUI 打开失败");
 			SimpleGui overview = (SimpleGui)SguiUtils.getCurrentGui(player);
-			overview.getGuiElement(50).getGuiCallback().click(50, ClickType.MOUSE_LEFT, ContainerInput.PICKUP,
+			overview.getGuiElement(32).getGuiCallback().click(32, ClickType.MOUSE_LEFT, ContainerInput.PICKUP,
 			                                                  overview);
 			SimpleGui confirmation = (SimpleGui)SguiUtils.getCurrentGui(player);
 			test.assertTrue(confirmation != overview && day.rerollsUsed == 0, "进入确认页消耗额度");
@@ -299,7 +320,7 @@ public final class DailyQuestGameTest {
 			test.assertTrue(SguiUtils.getCurrentGui(player) == overview, "管理员刷新后确认页未返回总览");
 			staleConfirm.getGuiCallback().click(12, ClickType.MOUSE_LEFT, ContainerInput.PICKUP, confirmation);
 			test.assertTrue(day.assignments.get(2) == old && day.rerollsUsed == 0, "旧确认回调修改新任务");
-			overview.getGuiElement(50).getGuiCallback().click(50, ClickType.MOUSE_LEFT, ContainerInput.PICKUP,
+			overview.getGuiElement(32).getGuiCallback().click(32, ClickType.MOUSE_LEFT, ContainerInput.PICKUP,
 			                                                  overview);
 			player.closeContainer();
 			test.assertTrue(day.rerollsUsed == 0 && day.assignments.get(2) == old, "关闭确认页消耗额度");
@@ -309,11 +330,16 @@ public final class DailyQuestGameTest {
 			player.closeContainer();
 			SignGui.open(player);
 			player.closeContainer();
-			club.sjmc.smp3.FeatureChecks.run(test, player);
-			DailyQuestData data = DailyQuestData.get(server);
+			FeatureChecks.run(test, player);
+			data = DailyQuestData.get(server);
+			var savedDay = data.players.get(player.getUUID());
+			var pendingRewards = savedDay.pendingRewards;
+			// Older saves omit the pending-reward list.
+			savedDay.pendingRewards = null;
 			data.setDirty();
 			var storage = server.overworld().getDataStorage();
 			storage.saveAndJoin();
+			savedDay.pendingRewards = pendingRewards;
 			var cache = storage.getClass().getDeclaredField("cache");
 			cache.setAccessible(true);
 			((Map<?, ?>) cache.get(storage)).values().remove(Optional.of(data));

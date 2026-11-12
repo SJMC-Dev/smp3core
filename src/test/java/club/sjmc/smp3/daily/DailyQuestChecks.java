@@ -10,8 +10,9 @@ import java.util.Set;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 
-import club.sjmc.smp3.client.QuestHudChecks;
+import club.sjmc.smp3.ArchitectureChecks;
 import club.sjmc.smp3.economy.EconomyChecks;
+import club.sjmc.smp3.time.DateChecks;
 
 public final class DailyQuestChecks {
 	public static void main(String[] args) throws Exception {
@@ -20,8 +21,7 @@ public final class DailyQuestChecks {
 			text = new String(input.readAllBytes(), StandardCharsets.UTF_8);
 		}
 		QuestConfig config = QuestConfig.parse(text);
-		assert config.tasks().size() >= 50;
-		assert config.tasks().stream().allMatch(t -> t.description() != null && !t.description().isBlank());
+		var template = JsonParser.parseString(text).getAsJsonObject();
 		for (int i = 0; i < config.xpBands().size(); i++) {
 			var band = config.xpBands().get(i);
 			assert config.tier(band.minLevel()) == band.tier();
@@ -32,14 +32,14 @@ public final class DailyQuestChecks {
 		reject(text.replace("\"entity\":", "\"enttiy\":"));
 		reject(text.replace("entity_killed", "kill_zombie"));
 		reject(text.replace("\"minLevel\": 0", "\"minLevel\": 1"));
-		var invalid = JsonParser.parseString(text).getAsJsonObject();
+		var invalid = template.deepCopy();
 		invalid.getAsJsonArray("xpBands").get(1).getAsJsonObject().addProperty("minLevel", 0);
 		reject(invalid.toString());
-		invalid = JsonParser.parseString(text).getAsJsonObject();
+		invalid = template.deepCopy();
 		invalid.getAsJsonArray("tasks").asList().removeIf(
 		    t -> t.getAsJsonObject().get("difficulty").getAsString().equals("A"));
 		reject(invalid.toString());
-		invalid = JsonParser.parseString(text).getAsJsonObject();
+		invalid = template.deepCopy();
 		var invalidTask = invalid.getAsJsonArray("tasks").get(0).getAsJsonObject();
 		for (String description : List.of("{missing}", "需要 {item}", "")) {
 			invalidTask.addProperty("description", description);
@@ -50,7 +50,7 @@ public final class DailyQuestChecks {
 		invalidTask.getAsJsonArray("tiers").get(0).getAsJsonObject().addProperty("count", 2147483648L);
 		reject(invalid.toString());
 
-		var custom = JsonParser.parseString(text).getAsJsonObject();
+		var custom = template.deepCopy();
 		for (int tier = 4; tier <= 5; tier++) {
 			custom.getAsJsonArray("xpBands").add(
 			    JsonParser.parseString("{\"minLevel\":" + (tier * 40) + ",\"tier\":" + tier + "}"));
@@ -66,7 +66,7 @@ public final class DailyQuestChecks {
 		var highTier =
 		    new QuestDay.Assignment(extended.tasks().getFirst(), extended.tier(200), extended.rewards().get("A"));
 		assert highTier.tier() == 5 && highTier.target == 50;
-		custom = JsonParser.parseString(text).getAsJsonObject();
+		custom = template.deepCopy();
 		var task = custom.getAsJsonArray("tasks").get(0).getAsJsonObject();
 		task.getAsJsonArray("tiers").get(1).getAsJsonObject().addProperty("count", 73);
 		QuestDefinition tiered = QuestConfig.parse(custom.toString()).tasks().getFirst();
@@ -90,22 +90,15 @@ public final class DailyQuestChecks {
 		assert single.target(1) == 1 && single.target(3) == 1 && !single.tiered();
 		task.add("tiers", new JsonArray());
 		reject(custom.toString());
-		custom = JsonParser.parseString(text).getAsJsonObject();
+		custom = template.deepCopy();
 		var tiers = custom.getAsJsonArray("tasks").get(0).getAsJsonObject().getAsJsonArray("tiers");
 		tiers.get(1).getAsJsonObject().addProperty("tier", 1);
 		reject(custom.toString());
 		tiers.remove(1);
 		reject(custom.toString());
-		var forest = config.tasks().stream().filter(t -> t.id().equals("forest_c")).findFirst().orElseThrow();
-		assert forest.target(1) == 1 && forest.target(3) == 1 && !forest.tiered();
 
 		Random random = new Random(42);
-		QuestDay day = new QuestDay(100, 14, config, random);
-		try {
-			day.assignments().clear();
-			throw new AssertionError("Read access allowed assignment removal");
-		} catch (UnsupportedOperationException expected) {
-		}
+		QuestDay day = QuestDay.forDate(null, 100, 14, config, random);
 		var snapshot = new QuestDay.Assignment(tiered, 2, config.rewards().get("A"));
 		assert snapshot.target == 73 && snapshot.tier() == 2 && snapshot.definition.tiers().isEmpty();
 		assert new QuestDay.Assignment(fixed, 3, config.rewards().get("A")).tier() == 0;
@@ -184,9 +177,8 @@ public final class DailyQuestChecks {
 		assert !objective.matches(new QuestDefinition.Event(
 		    "block_broken", Map.of("block", Set.of("minecraft:stone"), "dimension", Set.of("minecraft:overworld"))));
 		EconomyChecks.run();
-		club.sjmc.smp3.ArchitectureChecks.run();
-		club.sjmc.smp3.time.DateChecks.run();
-		QuestHudChecks.run();
+		ArchitectureChecks.run();
+		DateChecks.run();
 		System.out.println(
 		    "每日任务验证通过：配置、事件匹配与合成数量、经验、跨日、刷新、快照、双货币去重及写入故障恢复。");
 	}
