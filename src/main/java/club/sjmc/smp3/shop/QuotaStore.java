@@ -15,17 +15,18 @@ public final class QuotaStore {
 
 	private QuotaStore() {}
 
-	public static int used(ServerPlayer player, ShopEntry entry) {
-		return stateFor(player.getUUID()).usedItems.getOrDefault(entry.id(), 0);
+	public static int used(ServerPlayer player, ShopEntry entry) { return used(player, entry, ServerDates.today()); }
+
+	static int used(ServerPlayer player, ShopEntry entry, LocalDate today) {
+		return stateFor(player.getUUID(), today).usedItems.getOrDefault(entry.id(), 0);
 	}
 
-	static void add(ServerPlayer player, ShopEntry entry, int items) {
-		PlayerState state = stateFor(player.getUUID());
+	static void add(ServerPlayer player, ShopEntry entry, int items, LocalDate today) {
+		PlayerState state = stateFor(player.getUUID(), today);
 		state.usedItems.merge(entry.id(), items, Integer::sum);
 	}
 
-	private static PlayerState stateFor(UUID playerId) {
-		LocalDate today = ServerDates.today();
+	private static PlayerState stateFor(UUID playerId, LocalDate today) {
 		PlayerState state = STATES.get(playerId);
 		if (state == null) {
 			state = new PlayerState(today);

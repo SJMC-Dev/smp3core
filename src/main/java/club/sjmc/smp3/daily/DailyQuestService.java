@@ -27,11 +27,12 @@ public final class DailyQuestService {
 		this.random = random;
 	}
 
-	public QuestDay state(ServerPlayer player) {
+	public QuestDay state(ServerPlayer player) { return state(player, ServerDates.today().toEpochDay()); }
+
+	private QuestDay state(ServerPlayer player, long today) {
 		if (failed)
 			return null;
 		try {
-			long today = ServerDates.today().toEpochDay();
 			QuestDay previous = data.players.get(player.getUUID());
 			QuestDay day = QuestDay.forDate(previous, today, player.experienceLevel, config, random);
 			if (day != previous) {
@@ -56,14 +57,16 @@ public final class DailyQuestService {
 	}
 
 	public void record(ServerPlayer player, QuestDefinition.Event event) {
-		QuestDay day = state(player);
-		if (day != null && day.date == ServerDates.today().toEpochDay() && day.record(event))
+		long today = ServerDates.today().toEpochDay();
+		QuestDay day = state(player, today);
+		if (day != null && day.date == today && day.record(event))
 			data.setDirty();
 	}
 
 	public Outcome reroll(ServerPlayer player, long date, int slot, String token, boolean admin) {
-		QuestDay day = state(player);
-		if (!valid(day, date, slot, token))
+		long today = ServerDates.today().toEpochDay();
+		QuestDay day = state(player, today);
+		if (!valid(day, today, date, slot, token))
 			return new Outcome(Status.STALE);
 		QuestDay.Assignment previous = day.assignments.get(slot);
 		if (previous.complete())
@@ -79,9 +82,10 @@ public final class DailyQuestService {
 	}
 
 	void settle(ServerPlayer player) {
-		QuestDay day = state(player);
+		long today = ServerDates.today().toEpochDay();
+		QuestDay day = state(player, today);
 		long now = player.level().getGameTime();
-		if (day == null || day.date > ServerDates.today().toEpochDay() || now < day.retryAt)
+		if (day == null || day.date > today || now < day.retryAt)
 			return;
 		try {
 			// Settle older days first: the ledger keeps the latest paid day and its slot mask.
@@ -122,8 +126,8 @@ public final class DailyQuestService {
 		                                           "，咖啡印章 x " + reward.coffeeStamp()));
 	}
 
-	private static boolean valid(QuestDay day, long date, int slot, String token) {
-		return day != null && date == ServerDates.today().toEpochDay() && day.date == date && slot >= 0 && slot < 4 &&
+	private static boolean valid(QuestDay day, long today, long date, int slot, String token) {
+		return day != null && date == today && day.date == date && slot >= 0 && slot < 4 &&
 		    day.assignments.get(slot).token.equals(token);
 	}
 }

@@ -52,8 +52,8 @@ public final class SignGui extends SimpleGui {
 
 	private boolean refresh() {
 		try {
-			state = SignService.state(player);
 			shownDate = ServerDates.today();
+			state = SignService.state(player);
 			populate(shownDate);
 			return true;
 		} catch (RuntimeException e) {
@@ -74,7 +74,7 @@ public final class SignGui extends SimpleGui {
 	private GuiElement infoElement() {
 		return new GuiElementBuilder(new ItemStack(Items.CLOCK))
 		    .setName(Component.literal("签到信息").withStyle(GuiStyle.TITLE))
-		    .addLoreLine(GuiStyle.text("每日 00:00 重置 (" + ServerDates.zone() + ")", GuiStyle.MUTED))
+		    .addLoreLine(GuiStyle.resetInfo())
 		    .addLoreLine(Component.literal("连续 " + state.streak() + " 天").withStyle(GuiStyle.MUTED))
 		    .addLoreLine(Component.literal("本月 " + state.monthTotal() + " 天").withStyle(GuiStyle.MUTED))
 		    .addLoreLine(Component.literal("累计 " + state.serverTotal() + " 天").withStyle(GuiStyle.MUTED))

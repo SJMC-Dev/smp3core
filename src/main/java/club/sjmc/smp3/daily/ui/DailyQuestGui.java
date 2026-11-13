@@ -9,7 +9,6 @@ import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.DailyQuestService;
 import club.sjmc.smp3.daily.QuestDay;
 import club.sjmc.smp3.gui.GuiStyle;
-import club.sjmc.smp3.time.ServerDates;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -72,7 +71,7 @@ public final class DailyQuestGui extends SimpleGui {
 		               .addLoreLine(GuiStyle.text("剩余刷新 " + shown.remaining(service.config) + "/" +
 		                                              service.config.dailyRerollLimit(),
 		                                          GuiStyle.MUTED))
-		               .addLoreLine(GuiStyle.text("每日 00:00 重置 (" + ServerDates.zone() + ")", GuiStyle.MUTED))
+		               .addLoreLine(GuiStyle.resetInfo())
 		               .addLoreLine(GuiStyle.text("完成后自动发放奖励", GuiStyle.MUTED))
 		               .build());
 		for (int slot = 0; slot < 4; slot++)

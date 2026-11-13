@@ -1,5 +1,7 @@
 package club.sjmc.smp3.shop.ui;
 
+import java.time.LocalDate;
+
 import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 
@@ -10,6 +12,7 @@ import club.sjmc.smp3.shop.ShopCategory;
 import club.sjmc.smp3.shop.ShopEntry;
 import club.sjmc.smp3.shop.ShopService;
 import club.sjmc.smp3.shop.TradeDirection;
+import club.sjmc.smp3.time.ServerDates;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,6 +23,7 @@ public final class EntryListGui extends ShopGui {
 
 	private final ShopCategory category;
 	private final ShopGui parent;
+	private LocalDate shownDate;
 
 	public EntryListGui(ServerPlayer player, ShopCategory category, ShopGui parent) {
 		super(player, Component.literal(category.name()));
@@ -28,7 +32,14 @@ public final class EntryListGui extends ShopGui {
 	}
 
 	@Override
+	public void onTick() {
+		if (!ServerDates.today().equals(shownDate))
+			populate();
+	}
+
+	@Override
 	protected void populate() {
+		shownDate = ServerDates.today();
 		clearContent();
 		setBackButton(parent);
 
@@ -57,7 +68,8 @@ public final class EntryListGui extends ShopGui {
 		        .addLoreLine(Component.literal(pricePrefix + ShopMessages.price(entry)).withStyle(GuiStyle.MUTED))
 		        .addLoreLine(
 		            Component.literal("今日剩余 " + ShopMessages.remaining(entry, entry.remainingItems(advanced, used)))
-		                .withStyle(GuiStyle.MUTED));
+		                .withStyle(GuiStyle.MUTED))
+		        .addLoreLine(GuiStyle.resetInfo());
 
 		if (locked) {
 			builder.addLoreLine(Component.literal("当前身份不可交易").withStyle(GuiStyle.ERROR));

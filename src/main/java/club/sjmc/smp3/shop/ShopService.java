@@ -1,5 +1,6 @@
 package club.sjmc.smp3.shop;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +9,7 @@ import club.sjmc.smp3.economy.EconomyBridge;
 import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.inventory.PlayerItems;
 import club.sjmc.smp3.perm.Permissions;
+import club.sjmc.smp3.time.ServerDates;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -35,6 +37,7 @@ public final class ShopService {
 	private ShopService() {}
 
 	public static Outcome buy(ServerPlayer player, ShopEntry entry) {
+		LocalDate today = ServerDates.today();
 		boolean advanced = Permissions.has(player, ShopService.ADVANCED_PERMISSION, true);
 
 		if (entry.isLockedFor(advanced)) {
@@ -49,7 +52,7 @@ public final class ShopService {
 			return fail(player, entry, new Outcome(Status.NO_MONEY, balance, 0, false), "");
 		}
 
-		int used = QuotaStore.used(player, entry);
+		int used = QuotaStore.used(player, entry, today);
 		if (entry.exhausted(advanced, used)) {
 			return fail(player, entry, new Outcome(Status.QUOTA, 0, entry.remainingItems(advanced, used), false), "");
 		}
@@ -61,14 +64,15 @@ public final class ShopService {
 		}
 
 		boolean dropped = PlayerItems.give(player, new ItemStack(entry.icon(), entry.amount()));
-		QuotaStore.add(player, entry, entry.amount());
+		QuotaStore.add(player, entry, entry.amount(), today);
 
 		log(player, entry, "SUCCESS", balance, payment.balanceAfter(), dropped ? "dropped" : "");
-		return new Outcome(Status.BOUGHT, payment.balanceAfter(),
-		                   entry.remainingItems(advanced, QuotaStore.used(player, entry)), dropped);
+		return new Outcome(Status.BOUGHT, payment.balanceAfter(), entry.remainingItems(advanced, used + entry.amount()),
+		                   dropped);
 	}
 
 	public static Outcome sell(ServerPlayer player, ShopEntry entry) {
+		LocalDate today = ServerDates.today();
 		boolean advanced = Permissions.has(player, ShopService.ADVANCED_PERMISSION, true);
 
 		if (entry.isLockedFor(advanced)) {
@@ -81,7 +85,7 @@ public final class ShopService {
 			return fail(player, entry, new Outcome(Status.NOT_ENOUGH_ITEMS), "");
 		}
 
-		int used = QuotaStore.used(player, entry);
+		int used = QuotaStore.used(player, entry, today);
 		if (entry.exhausted(advanced, used)) {
 			return fail(player, entry, new Outcome(Status.QUOTA, 0, entry.remainingItems(advanced, used), false), "");
 		}
@@ -95,11 +99,11 @@ public final class ShopService {
 			            income.message() == null ? "" : income.message().getString());
 		}
 
-		QuotaStore.add(player, entry, entry.amount());
+		QuotaStore.add(player, entry, entry.amount(), today);
 
 		log(player, entry, "SUCCESS", null, income.balanceAfter(), "");
-		return new Outcome(Status.SOLD, income.balanceAfter(),
-		                   entry.remainingItems(advanced, QuotaStore.used(player, entry)), false);
+		return new Outcome(Status.SOLD, income.balanceAfter(), entry.remainingItems(advanced, used + entry.amount()),
+		                   false);
 	}
 
 	private static int countInInventory(Inventory inventory, ShopEntry entry) {

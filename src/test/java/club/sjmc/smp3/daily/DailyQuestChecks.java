@@ -123,6 +123,8 @@ public final class DailyQuestChecks {
 		completed.claimed = true;
 		assert !day.reroll(1, completed.token, true, config, random);
 
+		var unfinished = day.assignments.stream().filter(a -> !a.complete() && a.target > 1).findFirst().orElseThrow();
+		unfinished.progress = unfinished.target - 1;
 		assert QuestDay.forDate(day, 100, 40, config, random) == day;
 		assert QuestDay.forDate(day, 99, 40, config, random) == day;
 		QuestDay next = QuestDay.forDate(day, 101, config.xpBands().getLast().minLevel(), config, random);

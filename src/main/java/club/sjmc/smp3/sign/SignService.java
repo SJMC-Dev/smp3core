@@ -21,11 +21,13 @@ public final class SignService {
 
 	private SignService() {}
 
-	public static PlayerSignData state(ServerPlayer player) {
+	public static PlayerSignData state(ServerPlayer player) { return state(player, ServerDates.today()); }
+
+	private static PlayerSignData state(ServerPlayer player, LocalDate today) {
 		SignData data = SignData.get(player.level().getServer());
 		PlayerSignData state = data.of(player.getUUID());
 		PlayerSignData next = SignData.copy(state);
-		if (next.rotateMonth(ServerDates.today())) {
+		if (next.rotateMonth(today)) {
 			commit(player, next, Map.of());
 			return next;
 		}
@@ -36,7 +38,7 @@ public final class SignService {
 		List<Outcome> outcomes = new ArrayList<>();
 		try {
 			LocalDate today = ServerDates.today();
-			PlayerSignData state = state(player);
+			PlayerSignData state = state(player, today);
 			if (!today.equals(shownDate) || today.toEpochDay() < state.lastSignEpochDay()) {
 				return List.of(new Outcome(Status.DATE_CHANGED));
 			}
@@ -52,7 +54,7 @@ public final class SignService {
 			} else if (!state.hasPendingRewards()) {
 				return List.of(new Outcome(Status.ALREADY_SIGNED));
 			}
-			deliverPending(player, outcomes);
+			deliverPending(player, today, outcomes);
 		} catch (RuntimeException e) {
 			Smp3Core.LOGGER.error("[SMP3] 签到提交失败 player={}", player.getUUID(), e);
 			outcomes.add(new Outcome(Status.SAVE_FAILED));
@@ -60,8 +62,8 @@ public final class SignService {
 		return outcomes;
 	}
 
-	private static void deliverPending(ServerPlayer player, List<Outcome> outcomes) {
-		PlayerSignData state = SignData.copy(state(player));
+	private static void deliverPending(ServerPlayer player, LocalDate today, List<Outcome> outcomes) {
+		PlayerSignData state = SignData.copy(state(player, today));
 		for (var claim : List.copyOf(state.pending)) {
 			Map<Smp3Currency, Integer> credits = new HashMap<>();
 			for (var delivery : claim.deliveries) {

@@ -1,9 +1,13 @@
 package club.sjmc.smp3.gui;
 
+import java.time.format.DateTimeFormatter;
+
 import eu.pb4.sgui.api.ClickType;
 import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
+
+import club.sjmc.smp3.time.ServerDates;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -12,6 +16,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
 public final class GuiStyle {
+	private static final DateTimeFormatter RESET_TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm");
 	public static final ChatFormatting TITLE = ChatFormatting.WHITE;
 	public static final ChatFormatting ACTIVE = ChatFormatting.WHITE;
 	public static final ChatFormatting READY = ChatFormatting.GREEN;
@@ -22,6 +27,11 @@ public final class GuiStyle {
 
 	public static Component text(String value, ChatFormatting color) {
 		return Component.literal(value).withStyle(color);
+	}
+
+	public static Component resetInfo() {
+		var next = ServerDates.nextReset();
+		return text("下次重置 " + next.format(RESET_TIME) + " (" + next.getZone() + ")", MUTED);
 	}
 
 	public static GuiElementBuilder item(Item icon, String name, ChatFormatting color) {
