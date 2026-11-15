@@ -9,6 +9,9 @@ import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.DailyQuestService;
 import club.sjmc.smp3.daily.QuestDay;
 import club.sjmc.smp3.gui.GuiStyle;
+import club.sjmc.smp3.reward.RewardItems;
+import club.sjmc.smp3.reward.RewardService;
+import club.sjmc.smp3.reward.ui.RewardsGui;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -23,6 +26,7 @@ public final class DailyQuestGui extends SimpleGui {
 	private final DailyQuestService service;
 	private QuestDay shown;
 	private int revision = -1;
+	private long pending = -1;
 
 	private DailyQuestGui(ServerPlayer player, DailyQuestService service) {
 		super(MenuType.GENERIC_9x4, player, false);
@@ -54,11 +58,15 @@ public final class DailyQuestGui extends SimpleGui {
 			close();
 			return;
 		}
-		if (current != shown || current.revision() != revision)
+		if (current != shown || current.revision() != revision || pending != pendingCount())
 			refresh(current);
 	}
 
+	private long pendingCount() {
+		return RewardService.pending(player).stream().mapToLong(stack -> stack.getCount()).sum();
+	}
 	private void refresh(QuestDay current) {
+		pending = pendingCount();
 		shown = current;
 		revision = shown.revision();
 		GuiStyle.fill(this, 36);
@@ -67,7 +75,7 @@ public final class DailyQuestGui extends SimpleGui {
 		setSlot(4, GuiStyle.item(Items.CLOCK, "每日任务", GuiStyle.TITLE)
 		               .addLoreLine(GuiStyle.text(LocalDate.ofEpochDay(shown.date).toString(), GuiStyle.MUTED))
 		               .addLoreLine(GuiStyle.text("已完成 " + complete + "/4", GuiStyle.MUTED))
-		               .addLoreLine(GuiStyle.text("奖励已到账 " + claimed + "/4", GuiStyle.MUTED))
+		               .addLoreLine(GuiStyle.text("奖励已结算 " + claimed + "/4", GuiStyle.MUTED))
 		               .addLoreLine(GuiStyle.text("剩余刷新 " + shown.remaining(service.config) + "/" +
 		                                              service.config.dailyRerollLimit(),
 		                                          GuiStyle.MUTED))
@@ -76,6 +84,9 @@ public final class DailyQuestGui extends SimpleGui {
 		               .build());
 		for (int slot = 0; slot < 4; slot++)
 			task(slot);
+		if (pending > 0)
+			setSlot(31, GuiStyle.button(Items.CHEST, "待领取物品 x " + pending, GuiStyle.ACTIVE,
+			                            () -> RewardsGui.pending(player)));
 		setSlot(35, GuiStyle.close(this::close));
 	}
 
@@ -96,13 +107,27 @@ public final class DailyQuestGui extends SimpleGui {
 		        .addLoreLine(GuiStyle.text("难度 " + task.definition.difficulty(), GuiStyle.MUTED));
 		QuestText.lore(task).forEach(objective::addLoreLine);
 		setSlot(9 + column, objective.build());
-		setSlot(18 + column, GuiStyle
-		                         .item(Items.WOOL.pick(task.claimed()    ? DyeColor.LIME
+		var rewardIcon = GuiStyle.item(Items.WOOL.pick(task.claimed()    ? DyeColor.LIME
 		                                               : task.complete() ? DyeColor.ORANGE
 		                                                                 : DyeColor.WHITE),
-		                               status, color)
-		                         .addLoreLine(GuiStyle.text("通宝 x " + task.reward.tongbao(), GuiStyle.MUTED))
-		                         .addLoreLine(GuiStyle.text("咖啡印章 x " + task.reward.coffeeStamp(), GuiStyle.MUTED))
+		                               status, color);
+		if (task.reward.tongbao() > 0)
+			rewardIcon.addLoreLine(GuiStyle.text("通宝 x " + task.reward.tongbao(), GuiStyle.MUTED));
+		if (task.reward.coffeeStamp() > 0)
+			rewardIcon.addLoreLine(GuiStyle.text("咖啡印章 x " + task.reward.coffeeStamp(), GuiStyle.MUTED));
+		var rewardItems =
+		    task.reward.items().stream().map(item -> RewardItems.stack(item, player.registryAccess())).toList();
+		rewardItems.forEach(item
+		                    -> rewardIcon.addLoreLine(GuiStyle.text(
+		                        item.getHoverName().getString() + " x " + item.getCount(), GuiStyle.MUTED)));
+		if (!rewardItems.isEmpty())
+			rewardIcon.addLoreLine(GuiStyle.text("点击查看物品奖励", GuiStyle.MUTED));
+		setSlot(18 + column, GuiStyle
+		                         .onLeftClick(rewardIcon,
+		                                      () -> {
+			                                      if (!rewardItems.isEmpty())
+				                                      RewardsGui.preview(player, rewardItems);
+		                                      })
 		                         .build());
 		if (task.complete()) {
 			setSlot(27 + column, background);
@@ -168,7 +193,7 @@ public final class DailyQuestGui extends SimpleGui {
 
 	private static String status(QuestDay.Assignment task) {
 		if (task.claimed())
-			return "奖励已到账";
+			return "奖励已结算";
 		String state = task.complete() ? "已完成，奖励待发放" : "未完成";
 		return task.target == 1 ? state : state + " (" + task.progress() + "/" + task.target + ")";
 	}

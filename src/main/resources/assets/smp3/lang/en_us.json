@@ -2,5 +2,7 @@
   "item.smp3.any_enchanted_book": "Any Enchanted Book",
   "key.category.smp3.main": "SMP3",
   "key.smp3.quest_hud": "Toggle Quest Checklist",
-  "key.smp3.server_info": "Open Server Handbook (Preview)"
+  "key.smp3.server_info": "Open Server Handbook (Preview)",
+  "item.smp3.choice_pack": "Choice Supply Pack",
+  "item.smp3.random_pack": "Random Supply Pouch"
 }

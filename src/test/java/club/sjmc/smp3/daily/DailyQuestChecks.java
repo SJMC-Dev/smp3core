@@ -1,7 +1,9 @@
 package club.sjmc.smp3.daily;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -11,9 +13,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 
 import club.sjmc.smp3.ArchitectureChecks;
-import club.sjmc.smp3.watchdog.hotspot.HotspotChecks;
 import club.sjmc.smp3.economy.EconomyChecks;
 import club.sjmc.smp3.time.DateChecks;
+import club.sjmc.smp3.watchdog.hotspot.HotspotChecks;
 
 public final class DailyQuestChecks {
 	public static void main(String[] args) throws Exception {
@@ -23,18 +25,22 @@ public final class DailyQuestChecks {
 		}
 		QuestConfig config = QuestConfig.parse(text);
 		var template = JsonParser.parseString(text).getAsJsonObject();
-		for (int i = 0; i < config.xpBands().size(); i++) {
-			var band = config.xpBands().get(i);
-			assert config.tier(band.minLevel()) == band.tier();
+		for (int i = 0; i < config.progression().bands().size(); i++) {
+			var band = config.progression().bands().get(i);
+			assert config.progression().tier(band.minScore()) == band.tier();
 			if (i > 0)
-				assert config.tier(band.minLevel() - 1) == config.xpBands().get(i - 1).tier();
+				assert config.progression().tier(band.minScore() - 1) == config.progression().bands().get(i - 1).tier();
 		}
 		reject(text.replace("\"dailyRerollLimit\": 4", "\"dailyRerollLimit\": -1"));
 		reject(text.replace("\"entity\":", "\"enttiy\":"));
 		reject(text.replace("entity_killed", "kill_zombie"));
-		reject(text.replace("\"minLevel\": 0", "\"minLevel\": 1"));
+		reject(text.replace("\"minScore\": 0", "\"minScore\": 1"));
 		var invalid = template.deepCopy();
-		invalid.getAsJsonArray("xpBands").get(1).getAsJsonObject().addProperty("minLevel", 0);
+		invalid.getAsJsonObject("progression")
+		    .getAsJsonArray("bands")
+		    .get(1)
+		    .getAsJsonObject()
+		    .addProperty("minScore", 0);
 		reject(invalid.toString());
 		invalid = template.deepCopy();
 		invalid.getAsJsonArray("tasks").asList().removeIf(
@@ -53,8 +59,9 @@ public final class DailyQuestChecks {
 
 		var custom = template.deepCopy();
 		for (int tier = 4; tier <= 5; tier++) {
-			custom.getAsJsonArray("xpBands").add(
-			    JsonParser.parseString("{\"minLevel\":" + (tier * 40) + ",\"tier\":" + tier + "}"));
+			custom.getAsJsonObject("progression")
+			    .getAsJsonArray("bands")
+			    .add(JsonParser.parseString("{\"minScore\":" + (tier == 4 ? 80 : 100) + ",\"tier\":" + tier + "}"));
 			for (var entry : custom.getAsJsonArray("tasks")) {
 				var definition = entry.getAsJsonObject();
 				if (definition.has("tiers"))
@@ -63,9 +70,9 @@ public final class DailyQuestChecks {
 			}
 		}
 		QuestConfig extended = QuestConfig.parse(custom.toString());
-		assert extended.tier(160) == 4 && extended.tier(200) == 5;
-		var highTier =
-		    new QuestDay.Assignment(extended.tasks().getFirst(), extended.tier(200), extended.rewards().get("A"));
+		assert extended.progression().tier(80) == 4 && extended.progression().tier(100) == 5;
+		var highTier = new QuestDay.Assignment(extended.tasks().getFirst(), extended.progression().tier(100),
+		                                       extended.rewards().get("A"));
 		assert highTier.tier() == 5 && highTier.target == 50;
 		custom = template.deepCopy();
 		var task = custom.getAsJsonArray("tasks").get(0).getAsJsonObject();
@@ -98,19 +105,62 @@ public final class DailyQuestChecks {
 		tiers.remove(1);
 		reject(custom.toString());
 
+		assert config.progression().score(0, 10000) == 20;
+		assert config.progression().score(12000, 10000) == 100;
+		assert config.progression().score(0, 0) == 0;
+		var gatedJson = template.deepCopy();
+		var gatedTask = gatedJson.getAsJsonArray("tasks").get(0).getAsJsonObject();
+		gatedTask.add("requires", JsonParser.parseString("[\"diamonds\",\"nether_access\"]"));
+		gatedTask.add("rewards",
+		              JsonParser.parseString(
+		                  "{\"base\":false,\"tongbao\":7,\"items\":[{\"id\":\"minecraft:bread\",\"count\":2}]}"));
+		QuestDefinition gated = QuestConfig.parse(gatedJson.toString()).tasks().getFirst();
+		QuestDefinition alternative =
+		    config.tasks()
+		        .stream()
+		        .filter(t -> t.difficulty().equals("A") && !t.id().equals(gated.id()) && t.requires().isEmpty())
+		        .findFirst()
+		        .orElseThrow();
+		var pool = new ArrayList<>(config.tasks().stream().filter(t -> !t.difficulty().equals("A")).toList());
+		pool.add(gated);
+		pool.add(alternative);
+		var gatedConfig = new QuestConfig(4, config.progression(), config.milestones(), config.rewards(), pool);
+		var met = new HashSet<>(Set.of("diamonds"));
+		var gatedDay = new QuestDay(100, 0, 0, met, gatedConfig, new Random(1));
+		assert gatedDay.assignments.getFirst().definition.id().equals(alternative.id());
+		met.add("nether_access");
+		assert !gatedDay.reroll(0, gatedDay.assignments.getFirst().token, true, gatedConfig, new Random(1));
+		var eligible = QuestDay.forDate(gatedDay, 101, 0, 0, met, gatedConfig, new Random(1));
+		if (!eligible.assignments.getFirst().definition.id().equals(gated.id()))
+			assert eligible.reroll(0, eligible.assignments.getFirst().token, true, gatedConfig, new Random(1));
+		assert eligible.assignments.getFirst().definition.id().equals(gated.id());
+		var customReward = eligible.assignments.getFirst().reward;
+		assert customReward.tongbao() == 7 && customReward.coffeeStamp() == 0 &&
+		    customReward.items().getFirst().get("count").getAsInt() == 2;
+		gatedTask.getAsJsonObject("rewards").addProperty("base", true);
+		var withBase = QuestConfig.parse(gatedJson.toString()).tasks().getFirst().reward(config.rewards().get("A"));
+		assert withBase.tongbao() == 7 + config.rewards().get("A").tongbao() &&
+		    withBase.coffeeStamp() == config.rewards().get("A").coffeeStamp();
+		assert customReward.tongbao() == 7;
+		var unknown = template.deepCopy();
+		unknown.getAsJsonArray("tasks").get(0).getAsJsonObject().add("requires",
+		                                                             JsonParser.parseString("[\"missing\"]"));
+		reject(unknown.toString());
 		Random random = new Random(42);
-		QuestDay day = QuestDay.forDate(null, 100, 14, config, random);
+		QuestDay day = QuestDay.forDate(null, 100, 14, 0, Set.of(), config, random);
 		var snapshot = new QuestDay.Assignment(tiered, 2, config.rewards().get("A"));
 		assert snapshot.target == 73 && snapshot.tier() == 2 && snapshot.definition.tiers().isEmpty();
 		assert new QuestDay.Assignment(fixed, 3, config.rewards().get("A")).tier() == 0;
 		assert day.assignments.stream().map(a -> a.definition.id()).distinct().count() == 4;
 		assert day.assignments.stream().map(a -> a.definition.difficulty()).toList().equals(QuestConfig.TIERS);
-		QuestDay other = new QuestDay(100, 40, config, random);
+		QuestDay other = new QuestDay(100, 40, 0, Set.of(), config, random);
 		for (int i = 0; i < 4; i++)
 			assert day.reroll(0, day.assignments.getFirst().token, false, config, random);
 		assert day.remaining(config) == 0 && other.remaining(config) == 4;
 		assert !day.reroll(0, day.assignments.getFirst().token, false, config, random);
-		var changedBands = new QuestConfig(4, List.of(new QuestConfig.XpBand(0, 3)), config.rewards(), config.tasks());
+		var changedBands =
+		    new QuestConfig(4, new QuestConfig.Progression(.8, .2, 120, 100, List.of(new QuestConfig.Band(0, 3))),
+			                config.milestones(), config.rewards(), config.tasks());
 		assert day.reroll(0, day.assignments.getFirst().token, true, changedBands, random);
 		assert day.tier == 1 && day.assignments.getFirst().tier() <= 1;
 		String oldToken = day.assignments.getFirst().token;
@@ -126,9 +176,9 @@ public final class DailyQuestChecks {
 
 		var unfinished = day.assignments.stream().filter(a -> !a.complete() && a.target > 1).findFirst().orElseThrow();
 		unfinished.progress = unfinished.target - 1;
-		assert QuestDay.forDate(day, 100, 40, config, random) == day;
-		assert QuestDay.forDate(day, 99, 40, config, random) == day;
-		QuestDay next = QuestDay.forDate(day, 101, config.xpBands().getLast().minLevel(), config, random);
+		assert QuestDay.forDate(day, 100, 40, 0, Set.of(), config, random) == day;
+		assert QuestDay.forDate(day, 99, 40, 0, Set.of(), config, random) == day;
+		QuestDay next = QuestDay.forDate(day, 101, 120, 100, Set.of(), config, random);
 		assert next != day && next.rerollsUsed == 0 && next.tier == 3;
 		assert next.assignments.stream().noneMatch(a -> a.claimed || a.progress != 0);
 		QuestDay restored = QuestConfig.JSON.fromJson(QuestConfig.JSON.toJson(day), QuestDay.class);
@@ -138,17 +188,18 @@ public final class DailyQuestChecks {
 		assert restored.assignments.getFirst().definition.description().equals(
 		    day.assignments.getFirst().definition.description());
 
-		QuestConfig noRerolls = new QuestConfig(0, config.xpBands(), config.rewards(), config.tasks());
+		QuestConfig noRerolls =
+		    new QuestConfig(0, config.progression(), config.milestones(), config.rewards(), config.tasks());
 		assert !next.reroll(0, next.assignments.getFirst().token, false, noRerolls, random);
 		assert next.reroll(0, next.assignments.getFirst().token, true, noRerolls, random);
-		QuestConfig noAlternatives = new QuestConfig(4, config.xpBands(), config.rewards(),
+		QuestConfig noAlternatives = new QuestConfig(4, config.progression(), config.milestones(), config.rewards(),
 		                                             next.assignments.stream().map(a -> a.definition).toList());
 		String unchanged = next.assignments.getFirst().token;
 		assert !next.reroll(0, unchanged, true, noAlternatives, random);
 		assert next.assignments.getFirst().token.equals(unchanged) && next.rerollsUsed == 0;
 
 		for (QuestDefinition definition : config.tasks()) {
-			QuestDay fixture = new QuestDay(100, 15, config, random);
+			QuestDay fixture = new QuestDay(100, 15, 0, Set.of(), config, random);
 			fixture.assignments.clear();
 			var assignment = new QuestDay.Assignment(definition, 1, config.rewards().get(definition.difficulty()));
 			fixture.assignments.add(assignment);
@@ -184,7 +235,7 @@ public final class DailyQuestChecks {
 		HotspotChecks.run();
 		DateChecks.run();
 		System.out.println(
-		    "每日任务验证通过：配置、事件匹配与合成数量、经验、跨日、刷新、快照、双货币去重及写入故障恢复。");
+		    "每日任务验证通过：配置、事件匹配与合成数量、成长档位、跨日、刷新、快照、双货币去重及写入故障恢复。");
 	}
 
 	private static void reject(String text) {

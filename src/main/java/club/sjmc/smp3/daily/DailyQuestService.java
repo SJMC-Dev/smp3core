@@ -1,13 +1,19 @@
 package club.sjmc.smp3.daily;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.random.RandomGenerator;
 
 import club.sjmc.smp3.Smp3Core;
-import club.sjmc.smp3.economy.Smp3AccountStore;
+import club.sjmc.smp3.reward.Reward;
+import club.sjmc.smp3.reward.RewardItems;
+import club.sjmc.smp3.reward.RewardService;
 import club.sjmc.smp3.time.ServerDates;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stats;
 
 public final class DailyQuestService {
 	public enum Status { STALE, COMPLETE, LIMIT_REACHED, NO_CANDIDATE, REROLLED }
@@ -34,14 +40,43 @@ public final class DailyQuestService {
 			return null;
 		try {
 			QuestDay previous = data.players.get(player.getUUID());
-			QuestDay day = QuestDay.forDate(previous, today, player.experienceLevel, config, random);
+			var progress = RewardService.progress(player);
+			if (previous != null && player.level().getGameTime() < previous.retryAt)
+				return previous;
+			if (previous != null) {
+				for (int slot = 0; slot < previous.assignments.size(); slot++) {
+					var task = previous.assignments.get(slot);
+					if (progress.completed(previous.date, slot))
+						task.progress = task.target;
+					if (task.complete() && !progress.completed(previous.date, slot)) {
+						try {
+							RewardService.complete(player, previous.date, slot, task.definition.name(), task.reward);
+						} catch (RuntimeException e) {
+							retry(player, previous, e);
+							return previous;
+						}
+					}
+				}
+			}
+			QuestDay day = previous;
+			if (previous == null || today > previous.date) {
+				var milestones = new HashSet<String>();
+				config.milestones().forEach((name, id) -> {
+					var advancement = player.level().getServer().getAdvancements().get(Identifier.parse(id));
+					if (advancement != null && player.getAdvancements().getOrStartProgress(advancement).isDone())
+						milestones.add(name);
+				});
+				day = QuestDay.forDate(previous, today, RewardService.progress(player).completed(),
+				                       player.getStats().getValue(Stats.CUSTOM.get(Stats.PLAY_TIME)) / 72000.0,
+				                       milestones, config, random);
+			}
 			if (day != previous) {
 				data.players.put(player.getUUID(), day);
 				data.setDirty();
 			}
 			for (int slot = 0; slot < day.assignments.size(); slot++) {
 				QuestDay.Assignment assignment = day.assignments.get(slot);
-				if (!assignment.claimed && Smp3AccountStore.dailyClaimed(player.getUUID(), day.date, slot)) {
+				if (!assignment.claimed && progress.paid(day.date, slot)) {
 					assignment.progress = assignment.target;
 					assignment.claimed = true;
 					day.revision++;
@@ -59,8 +94,20 @@ public final class DailyQuestService {
 	public void record(ServerPlayer player, QuestDefinition.Event event) {
 		long today = ServerDates.today().toEpochDay();
 		QuestDay day = state(player, today);
-		if (day != null && day.date == today && day.record(event))
+		if (day != null && day.date == today && day.record(event)) {
 			data.setDirty();
+			if (player.level().getGameTime() >= day.retryAt) {
+				try {
+					for (int slot = 0; slot < day.assignments.size(); slot++) {
+						var task = day.assignments.get(slot);
+						if (task.complete())
+							RewardService.complete(player, day.date, slot, task.definition.name(), task.reward);
+					}
+				} catch (RuntimeException e) {
+					retry(player, day, e);
+				}
+			}
+		}
 	}
 
 	public Outcome reroll(ServerPlayer player, long date, int slot, String token, boolean admin) {
@@ -88,42 +135,56 @@ public final class DailyQuestService {
 		if (day == null || day.date > today || now < day.retryAt)
 			return;
 		try {
-			// Settle older days first: the ledger keeps the latest paid day and its slot mask.
-			var pending = day.pendingRewards.iterator();
-			while (pending.hasNext()) {
-				var reward = pending.next();
-				pay(player, reward.date(), reward.slot(), reward.name(), reward.reward());
-				pending.remove();
-				data.setDirty();
-			}
+			for (var reward : RewardService.ready(player))
+				pay(player, reward);
+			var progress = RewardService.progress(player);
 			for (int slot = 0; slot < day.assignments.size(); slot++) {
 				var assignment = day.assignments.get(slot);
-				if (!assignment.complete() || assignment.claimed)
-					continue;
-				pay(player, day.date, slot, assignment.definition.name(), assignment.reward);
-				assignment.claimed = true;
-				day.revision++;
-				data.setDirty();
+				if (!assignment.claimed && progress.paid(day.date, slot)) {
+					assignment.claimed = true;
+					day.revision++;
+					data.setDirty();
+				}
 			}
 			day.retryAt = 0;
+			RewardService.deliver(player);
 			day.rewardFailureReported = false;
 		} catch (RuntimeException e) {
-			day.retryAt = now + 100;
-			if (!day.rewardFailureReported) {
-				day.rewardFailureReported = true;
-				Smp3Core.LOGGER.error("[SMP3] 每日任务奖励提交失败，将自动重试 player={}", player.getUUID(), e);
-				player.sendSystemMessage(Component.literal("任务奖励暂未到账，将自动重试"));
-			}
+			retry(player, day, e);
 		}
 	}
 
-	private static void pay(ServerPlayer player, long date, int slot, String name, QuestDefinition.Reward reward) {
-		if (Smp3AccountStore.dailyClaimed(player.getUUID(), date, slot))
+	private static void retry(ServerPlayer player, QuestDay day, RuntimeException error) {
+		day.retryAt = player.level().getGameTime() + 100;
+		if (!day.rewardFailureReported) {
+			day.rewardFailureReported = true;
+			Smp3Core.LOGGER.error("[SMP3] 每日任务奖励提交失败，将自动重试 player={}", player.getUUID(), error);
+			player.sendSystemMessage(Component.literal("任务奖励暂未到账，将自动重试"));
+		}
+	}
+
+	private static void pay(ServerPlayer player, RewardService.DailyReward entitlement) {
+		long date = entitlement.day();
+		int slot = entitlement.slot();
+		String name = entitlement.name();
+		Reward reward = entitlement.reward();
+		if (RewardService.progress(player).paid(date, slot))
 			return;
-		Smp3AccountStore.grantDaily(player.getUUID(), date, slot, reward.tongbao(), reward.coffeeStamp());
+		RewardService.grant(player, entitlement);
 		Smp3Core.LOGGER.info("[SMP3] 任务奖励到账 player={} day={} slot={}", player.getUUID(), date, slot + 1);
-		player.sendSystemMessage(Component.literal("已完成「" + name + "」，奖励到账：通宝 x " + reward.tongbao() +
-		                                           "，咖啡印章 x " + reward.coffeeStamp()));
+		RewardService.deliver(player);
+		var parts = new ArrayList<String>();
+		if (reward.tongbao() > 0)
+			parts.add("通宝 x " + reward.tongbao());
+		if (reward.coffeeStamp() > 0)
+			parts.add("咖啡印章 x " + reward.coffeeStamp());
+		reward.items().forEach(item -> {
+			var stack = RewardItems.stack(item, player.registryAccess());
+			parts.add(stack.getHoverName().getString() + " x " + stack.getCount());
+		});
+		player.sendSystemMessage(Component.literal(
+		    "已完成「" + name + "」" + (parts.isEmpty() ? "" : "，奖励已结算：" + String.join("，", parts)) +
+		    (RewardService.pending(player).isEmpty() ? "" : "；背包不足，剩余物品保留待领取")));
 	}
 
 	private static boolean valid(QuestDay day, long today, long date, int slot, String token) {

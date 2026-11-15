@@ -1,6 +1,5 @@
 package club.sjmc.smp3.daily;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -26,10 +25,6 @@ final class DailyQuestData extends SavedData {
 	private static DailyQuestData decode(String text) {
 		DailyQuestData data = new DailyQuestData();
 		Map<UUID, QuestDay> saved = JSON.fromJson(text, new TypeToken<Map<UUID, QuestDay>>() {}.getType());
-		for (QuestDay day : saved.values()) {
-			if (day.pendingRewards == null)
-				day.pendingRewards = new ArrayList<>();
-		}
 		data.players.putAll(saved);
 		return data;
 	}

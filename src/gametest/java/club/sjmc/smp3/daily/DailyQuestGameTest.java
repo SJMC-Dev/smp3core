@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.gson.JsonObject;
@@ -17,6 +18,7 @@ import club.sjmc.smp3.FeatureChecks;
 import club.sjmc.smp3.daily.ui.DailyQuestGui;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
+import club.sjmc.smp3.reward.RewardService;
 import club.sjmc.smp3.shop.ui.SheetListGui;
 import club.sjmc.smp3.sign.ui.SignGui;
 
@@ -34,8 +36,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
+import net.minecraft.util.Prediction;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.entity.monster.piglin.PiglinAi;
 import net.minecraft.world.entity.projectile.FishingHook;
@@ -52,6 +57,8 @@ import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -202,33 +209,55 @@ public final class DailyQuestGameTest {
 			PiglinAi.mobInteract(level, piglin, player, InteractionHand.MAIN_HAND);
 			barter.invoke(null, level, piglin, true);
 			test.assertTrue(task.progress == 1, "猪灵完成交易未计数");
+			var gold = player.drop(new ItemStack(Items.GOLD_INGOT, 3), true, Prediction.SERVER_ONLY);
+			test.assertTrue(gold.getAttached(BarterAttribution.OWNER).equals(player.getUUID()) &&
+			                    ItemStack.isSameItemSameComponents(gold.getItem(), new ItemStack(Items.GOLD_INGOT)),
+			                "Dropped gold attribution changed its stack");
+			var pickup =
+			    PiglinAi.class.getDeclaredMethod("pickUpItem", ServerLevel.class, Piglin.class, ItemEntity.class);
+			pickup.setAccessible(true);
+			pickup.invoke(null, level, piglin, gold);
+			var savedPiglin = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
+			piglin.saveWithoutId(savedPiglin);
+			piglin.removeAttached(BarterAttribution.OWNER);
+			piglin.load(
+			    TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), savedPiglin.buildResult()));
+			barter.invoke(null, level, piglin, true);
+			test.assertTrue(task.progress == 2 && gold.getItem().getCount() == 2 &&
+			                    gold.getAttached(BarterAttribution.OWNER).equals(player.getUUID()),
+			                "Ground barter or pending ownership persistence failed");
+			QuestUpdateChecks.ownership(test, player, gold);
 
+			select(player, "forest_c");
 			QuestDay day = service.state(player);
 			var forest =
 			    service.config.tasks().stream().filter(t -> t.id().equals("forest_c")).findFirst().orElseThrow();
 			JsonObject conditions = new JsonObject();
 			conditions.addProperty("dimension", "minecraft:the_nether");
-			var exploration =
-			    new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
-				                    new QuestDefinition.Objective("biome_visited", conditions), null, List.of());
+			var exploration = new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
+			                                      new QuestDefinition.Objective("biome_visited", conditions), null,
+			                                      List.of(), List.of(), null);
 			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"));
 			day.assignments.set(0, task);
 			DailyQuestEvents.explore(player);
 			test.assertTrue(task.progress == 0, "错误维度探索被计数");
 			conditions.remove("dimension");
 			conditions.addProperty("biome", level.getBiome(player.blockPosition()).getRegisteredName());
-			exploration =
-			    new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
-				                    new QuestDefinition.Objective("biome_visited", conditions), null, List.of());
+			exploration = new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
+			                                  new QuestDefinition.Objective("biome_visited", conditions), null,
+			                                  List.of(), List.of(), null);
 			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"));
 			day.assignments.set(0, task);
 			DailyQuestEvents.explore(player);
 			test.assertTrue(task.complete(), "探索目标未完成");
 
 			var data = DailyQuestData.get(server);
-			QuestDay yesterday = new QuestDay(day.date - 1, player.experienceLevel, service.config, new Random(1));
+			QuestDay yesterday = new QuestDay(day.date - 1, 0, 0, Set.of(), service.config, new Random(1));
 			yesterday.assignments.clear();
 			yesterday.assignments.add(task);
+			Smp3AccountStore.commitReward(player.getUUID(), "questsAndPacks",
+			                              Smp3AccountStore.rewardState(player.getUUID(), "questsAndPacks"),
+			                              new JsonObject(), Map.of());
 			data.players.put(player.getUUID(), yesterday);
 			day = service.state(player);
 			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"));
@@ -237,7 +266,8 @@ public final class DailyQuestGameTest {
 			long stampsBefore = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP);
 			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, Long.MAX_VALUE);
 			service.settle(player);
-			test.assertTrue(!task.claimed && day.pendingRewards.size() == 1 && day.retryAt > level.getGameTime() &&
+			test.assertTrue(!task.claimed && RewardService.ready(player).size() == 2 &&
+			                    day.retryAt > level.getGameTime() &&
 			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == stampsBefore,
 			                "Failed automatic payment lost a pending reward or partially credited currency");
 			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
@@ -248,7 +278,7 @@ public final class DailyQuestGameTest {
 			task = day.assignments.getFirst();
 			service.settle(player);
 			service.settle(player);
-			test.assertTrue(task.claimed && day.pendingRewards.isEmpty() &&
+			test.assertTrue(task.claimed && RewardService.ready(player).isEmpty() &&
 			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO) ==
 			                        2 * Smp3Currency.rawUnits(task.reward.tongbao()) &&
 			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) ==
@@ -330,16 +360,13 @@ public final class DailyQuestGameTest {
 			player.closeContainer();
 			SignGui.open(player);
 			player.closeContainer();
+			QuestUpdateChecks.rewards(test, player);
 			FeatureChecks.run(test, player);
 			data = DailyQuestData.get(server);
 			var savedDay = data.players.get(player.getUUID());
-			var pendingRewards = savedDay.pendingRewards;
-			// Older saves omit the pending-reward list.
-			savedDay.pendingRewards = null;
 			data.setDirty();
 			var storage = server.overworld().getDataStorage();
 			storage.saveAndJoin();
-			savedDay.pendingRewards = pendingRewards;
 			var cache = storage.getClass().getDeclaredField("cache");
 			cache.setAccessible(true);
 			((Map<?, ?>) cache.get(storage)).values().remove(Optional.of(data));
@@ -361,6 +388,10 @@ public final class DailyQuestGameTest {
 	private static QuestDay.Assignment select(ServerPlayer player, String id) {
 		DailyQuestService service = DailyQuestModule.current();
 		QuestDay day = service.state(player);
+		Smp3AccountStore.commitReward(player.getUUID(), "questsAndPacks",
+		                              Smp3AccountStore.rewardState(player.getUUID(), "questsAndPacks"),
+		                              new JsonObject(), Map.of());
+		player.removeAttached(RewardService.APPLIED);
 		QuestDefinition definition =
 		    service.config.tasks().stream().filter(t -> t.id().equals(id)).findFirst().orElseThrow();
 		QuestDay.Assignment assignment =

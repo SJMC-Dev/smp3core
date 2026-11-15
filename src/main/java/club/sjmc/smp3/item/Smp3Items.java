@@ -1,6 +1,8 @@
 package club.sjmc.smp3.item;
 
 import club.sjmc.smp3.Smp3Core;
+import club.sjmc.smp3.reward.PackItem;
+import club.sjmc.smp3.reward.RewardItems;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -21,7 +23,18 @@ public final class Smp3Items {
 	    Registry.register(BuiltInRegistries.ITEM, ANY_ENCHANTED_BOOK_ID,
 		                  new AnyEnchantedBookItem(new Item.Properties().setId(ANY_ENCHANTED_BOOK_KEY)));
 
+	public static final Item CHOICE_PACK = pack("choice_pack", true);
+	public static final Item RANDOM_PACK = pack("random_pack", false);
+	private static Item pack(String name, boolean choice) {
+		var id = Identifier.fromNamespaceAndPath("smp3", name);
+		return Registry.register(
+		    BuiltInRegistries.ITEM, id,
+		    new PackItem(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id)), choice));
+	}
 	private Smp3Items() {}
 
-	public static void init() { Smp3Core.LOGGER.info("[SMP3] 已注册物品 {}", ANY_ENCHANTED_BOOK_ID); }
+	public static void init() {
+		RewardItems.register();
+		Smp3Core.LOGGER.info("[SMP3] 已注册物品 {}", ANY_ENCHANTED_BOOK_ID);
+	}
 }

@@ -7,41 +7,40 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.random.RandomGenerator;
 
+import club.sjmc.smp3.reward.Reward;
+
 public final class QuestDay {
 	public final long date;
-	public final int xpLevel;
+	public final long completedQuests;
+	public final double playtimeHours;
+	final Set<String> milestones;
 	final int tier;
 	int rerollsUsed;
 	final List<Assignment> assignments = new ArrayList<>();
-	List<PendingReward> pendingRewards = new ArrayList<>();
 	transient int revision;
 	transient long retryAt;
 	transient boolean rewardFailureReported;
 
-	record PendingReward(long date, int slot, String name, QuestDefinition.Reward reward) {}
-
-	QuestDay(long date, int xpLevel, QuestConfig config, RandomGenerator random) {
+	QuestDay(long date, long completedQuests, double playtimeHours, Set<String> milestones, QuestConfig config,
+	         RandomGenerator random) {
 		this.date = date;
-		this.xpLevel = xpLevel;
-		this.tier = config.tier(xpLevel);
+		this.completedQuests = completedQuests;
+		this.playtimeHours = playtimeHours;
+		this.milestones = Set.copyOf(milestones);
+		this.tier = config.progression().tier(config.progression().score(completedQuests, playtimeHours));
 		for (String difficulty : QuestConfig.TIERS) {
 			QuestDefinition definition = choose(config, difficulty, random);
 			assignments.add(new Assignment(definition, this.tier, config.rewards().get(difficulty)));
 		}
 	}
 
-	static QuestDay forDate(QuestDay previous, long date, int level, QuestConfig config, RandomGenerator random) {
+	static QuestDay forDate(QuestDay previous, long date, long completed, double hours, Set<String> milestones,
+	                        QuestConfig config, RandomGenerator random) {
 		if (previous == null)
-			return new QuestDay(date, level, config, random);
+			return new QuestDay(date, completed, hours, milestones, config, random);
 		if (date <= previous.date)
 			return previous;
-		QuestDay next = new QuestDay(date, level, config, random);
-		next.pendingRewards.addAll(previous.pendingRewards);
-		for (int slot = 0; slot < previous.assignments.size(); slot++) {
-			Assignment task = previous.assignments.get(slot);
-			if (task.complete() && !task.claimed)
-				next.pendingRewards.add(new PendingReward(previous.date, slot, task.definition.name(), task.reward));
-		}
+		QuestDay next = new QuestDay(date, completed, hours, milestones, config, random);
 		next.retryAt = previous.retryAt;
 		next.rewardFailureReported = previous.rewardFailureReported;
 		return next;
@@ -52,15 +51,15 @@ public final class QuestDay {
 		public final QuestDefinition definition;
 		public final int target;
 		private final int tier;
-		public final QuestDefinition.Reward reward;
+		public final Reward reward;
 		int progress;
 		boolean claimed;
 
-		Assignment(QuestDefinition definition, int tier, QuestDefinition.Reward reward) {
+		Assignment(QuestDefinition definition, int tier, Reward reward) {
 			this.target = definition.target(tier);
 			this.tier = definition.tiered() ? tier : 0;
 			this.definition = definition.snapshot(target);
-			this.reward = reward;
+			this.reward = definition.reward(reward);
 		}
 
 		public int tier() { return tier; }
@@ -100,7 +99,7 @@ public final class QuestDay {
 		QuestDefinition next = choose(config, old.definition.difficulty(), random);
 		if (next == null)
 			return false;
-		assignments.set(slot, new Assignment(next, tier, old.reward));
+		assignments.set(slot, new Assignment(next, tier, config.rewards().get(next.difficulty())));
 		if (!admin)
 			rerollsUsed++;
 		revision++;
@@ -130,7 +129,9 @@ public final class QuestDay {
 		assignments.forEach(a -> used.add(a.definition.id()));
 		return config.tasks()
 		    .stream()
-		    .filter(t -> t.difficulty().equals(difficulty) && t.supports(this.tier) && !used.contains(t.id()))
+		    .filter(t
+		            -> t.difficulty().equals(difficulty) && t.supports(this.tier) &&
+		                   milestones.containsAll(t.requires()) && !used.contains(t.id()))
 		    .toList();
 	}
 }

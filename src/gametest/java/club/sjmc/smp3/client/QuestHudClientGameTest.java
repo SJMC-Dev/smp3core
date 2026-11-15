@@ -10,12 +10,16 @@ import com.mojang.blaze3d.platform.InputConstants;
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.QuestDefinition;
 import club.sjmc.smp3.daily.ui.DailyQuestGui;
+import club.sjmc.smp3.reward.RewardItems;
+import club.sjmc.smp3.reward.ui.PackGui;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.server.players.NameAndId;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.inventory.ChestMenu;
 
 public final class QuestHudClientGameTest implements FabricClientGameTest {
 	@Override
@@ -77,6 +81,28 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.waitFor(
 			    client -> Smp3Client.HUD.state.rows.stream().noneMatch(row -> row.entry.token().equals(token)));
 			context.takeScreenshot("quest-hud-claimed");
+			for (String taskId : List.of("craft_planks_a", "piglin_c")) {
+				world.getServer().runOnServer(server -> {
+					var player = world.getConnection().getServerPlayer();
+					var reward = DailyQuestModule.current()
+					                 .config.tasks()
+					                 .stream()
+					                 .filter(t -> t.id().equals(taskId))
+					                 .findFirst()
+					                 .orElseThrow()
+					                 .rewards()
+					                 .items()
+					                 .getFirst();
+					player.setItemInHand(InteractionHand.MAIN_HAND, RewardItems.stack(reward, player.registryAccess()));
+					PackGui.open(player, InteractionHand.MAIN_HAND);
+				});
+				context.waitForScreen(AbstractContainerScreen.class);
+				hoverSlot(context, 12);
+				context.takeScreenshot(taskId.equals("piglin_c") ? "random-pack" : "choice-pack");
+				world.getServer().runOnServer(server -> world.getConnection().getServerPlayer().closeContainer());
+				context.waitFor(client -> client.gui.screen() == null);
+			}
+			context.takeScreenshot("reward-pack-item");
 			context.getInput().resizeWindow(1280, 800);
 			context.runOnClient(client -> Smp3Client.PREVIEW.enable());
 			context.waitTicks(3);
@@ -134,7 +160,8 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 		var position = context.computeOnClient(client -> {
 			var window = client.getWindow();
 			double x = (window.getGuiScaledWidth() - 176) / 2 + 8 + slot % 9 * 18 + 8;
-			double y = (window.getGuiScaledHeight() - 186) / 2 + 18 + slot / 9 * 18 + 8;
+			int rows = ((ChestMenu)((AbstractContainerScreen<?>)client.gui.screen()).getMenu()).getRowCount();
+			double y = (window.getGuiScaledHeight() - (114 + rows * 18)) / 2 + 18 + slot / 9 * 18 + 8;
 			return new double[] {x * window.getScreenWidth() / window.getGuiScaledWidth(),
 			                     y * window.getScreenHeight() / window.getGuiScaledHeight()};
 		});

@@ -8,11 +8,27 @@ import java.util.regex.Pattern;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-public record QuestDefinition(String id, String name, String description, String category, String difficulty,
-                              String icon, Objective objective, Integer count, List<Tier> tiers) {
+import club.sjmc.smp3.reward.Reward;
+
+public record
+    QuestDefinition(String id, String name, String description, String category, String difficulty, String icon,
+	                Objective objective, Integer count, List<Tier> tiers, List<String> requires, Extras rewards) {
 	public static final Pattern DESCRIPTION_FIELD = Pattern.compile("\\{([^{}]*)}");
 
-	public QuestDefinition { tiers = tiers == null ? List.of() : List.copyOf(tiers); }
+	public QuestDefinition {
+		tiers = tiers == null ? List.of() : List.copyOf(tiers);
+		requires = requires == null ? List.of() : List.copyOf(requires);
+	}
+	public record Extras(Boolean base, int tongbao, int coffeeStamp, List<JsonObject> items) {
+		public Extras { items = items == null ? List.of() : items.stream().map(JsonObject::deepCopy).toList(); }
+	}
+	public Reward reward(Reward base) {
+		if (rewards == null)
+			return base;
+		boolean include = !Boolean.FALSE.equals(rewards.base);
+		return new Reward(Math.addExact(include ? base.tongbao() : 0, rewards.tongbao),
+		                  Math.addExact(include ? base.coffeeStamp() : 0, rewards.coffeeStamp), rewards.items);
+	}
 
 	public record Tier(int tier, int count) {}
 
@@ -27,10 +43,9 @@ public record QuestDefinition(String id, String name, String description, String
 	}
 
 	QuestDefinition snapshot(int target) {
-		return new QuestDefinition(id, name, description, category, difficulty, icon, objective, target, List.of());
+		return new QuestDefinition(id, name, description, category, difficulty, icon, objective, target, List.of(),
+		                           requires, rewards);
 	}
-
-	public record Reward(int tongbao, int coffeeStamp) {}
 
 	public record Event(String type, Map<String, Set<String>> facts, int amount) {
 		public Event(String type, Map<String, Set<String>> facts) { this(type, facts, 1); }

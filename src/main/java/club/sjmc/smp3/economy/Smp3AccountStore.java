@@ -33,14 +33,6 @@ public final class Smp3AccountStore {
 		Holder.LEDGER.set(owner, currency.id().getPath(), rawValue);
 	}
 
-	public static boolean dailyClaimed(UUID owner, long day, int slot) {
-		return Holder.LEDGER.claimed(owner, day, slot);
-	}
-
-	public static void grantDaily(UUID owner, long day, int slot, int tongbao, int stamps) {
-		Holder.LEDGER.grant(owner, day, slot, tongbao, stamps);
-	}
-
 	public static JsonObject rewardState(UUID owner, String key) { return Holder.LEDGER.rewardState(owner, key); }
 
 	public static void commitReward(UUID owner, String key, JsonObject expected, JsonObject state,
@@ -54,11 +46,8 @@ public final class Smp3AccountStore {
 		private static final Gson JSON = new GsonBuilder().setPrettyPrinting().create();
 		private final Path file;
 		private Map<UUID, Map<String, Long>> balances = new HashMap<>();
-		private Map<UUID, Receipt> receipts = new HashMap<>();
 		private Map<UUID, JsonObject> rewardStates = new HashMap<>();
 		private boolean loaded;
-
-		private record Receipt(long day, int slots) {}
 
 		Ledger(Path file) { this.file = file; }
 
@@ -76,28 +65,7 @@ public final class Smp3AccountStore {
 				next.remove(currency);
 			else
 				next.put(currency, value);
-			commit(owner, next, receipts.get(owner));
-		}
-
-		synchronized boolean claimed(UUID owner, long day, int slot) {
-			load();
-			Receipt receipt = receipts.get(owner);
-			return receipt != null && (receipt.day > day || receipt.day == day && (receipt.slots & 1 << slot) != 0);
-		}
-
-		synchronized void grant(UUID owner, long day, int slot, int tongbao, int stamps) {
-			if (slot < 0 || slot >= 4 || tongbao < 0 || stamps < 0)
-				throw new IllegalArgumentException("无效任务奖励");
-			if (claimed(owner, day, slot))
-				return;
-			Map<String, Long> next = new HashMap<>(balances.getOrDefault(owner, Map.of()));
-			next.put("tongbao",
-			         Math.addExact(next.getOrDefault("tongbao", 0L), tongbao * (long)Smp3Currency.RAW_PER_UNIT));
-			next.put("coffee_stamp",
-			         Math.addExact(next.getOrDefault("coffee_stamp", 0L), stamps * (long)Smp3Currency.RAW_PER_UNIT));
-			Receipt previous = receipts.get(owner);
-			int slots = previous != null && previous.day == day ? previous.slots : 0;
-			commit(owner, next, new Receipt(day, slots | 1 << slot));
+			commit(owner, next, rewardStates);
 		}
 
 		synchronized JsonObject rewardState(UUID owner, String key) {
@@ -123,7 +91,7 @@ public final class Smp3AccountStore {
 			JsonObject player = rewardStates.getOrDefault(owner, new JsonObject()).deepCopy();
 			player.add(key, state.deepCopy());
 			nextStates.put(owner, player);
-			commit(owner, next, receipts.get(owner), nextStates);
+			commit(owner, next, nextStates);
 		}
 
 		private void load() {
@@ -136,7 +104,6 @@ public final class Smp3AccountStore {
 			try {
 				JsonObject root = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
 				Map<UUID, Map<String, Long>> loadedBalances = new HashMap<>();
-				Map<UUID, Receipt> loadedReceipts = new HashMap<>();
 				for (var entry : root.getAsJsonObject("balances").entrySet()) {
 					Map<String, Long> currencies = new HashMap<>();
 					JsonElement value = entry.getValue();
@@ -146,12 +113,6 @@ public final class Smp3AccountStore {
 						value.getAsJsonObject().entrySet().forEach(
 						    c -> currencies.put(c.getKey(), c.getValue().getAsLong()));
 					loadedBalances.put(UUID.fromString(entry.getKey()), currencies);
-				}
-				if (root.has("dailyClaims")) {
-					for (var entry : root.getAsJsonObject("dailyClaims").entrySet()) {
-						loadedReceipts.put(UUID.fromString(entry.getKey()),
-						                   JSON.fromJson(entry.getValue(), Receipt.class));
-					}
 				}
 				Map<UUID, JsonObject> loadedStates = new HashMap<>();
 				if (root.has("rewardStates")) {
@@ -163,30 +124,20 @@ public final class Smp3AccountStore {
 				}
 				rewardStates = loadedStates;
 				balances = loadedBalances;
-				receipts = loadedReceipts;
 				loaded = true;
 			} catch (IOException | RuntimeException e) {
 				throw new IllegalStateException("读取经济账本失败: " + file, e);
 			}
 		}
 
-		private void commit(UUID owner, Map<String, Long> currencies, Receipt receipt) {
-			commit(owner, currencies, receipt, rewardStates);
-		}
-
-		private void commit(UUID owner, Map<String, Long> currencies, Receipt receipt,
-		                    Map<UUID, JsonObject> nextStates) {
+		private void commit(UUID owner, Map<String, Long> currencies, Map<UUID, JsonObject> nextStates) {
 			Map<UUID, Map<String, Long>> nextBalances = new HashMap<>(balances);
 			if (currencies.isEmpty())
 				nextBalances.remove(owner);
 			else
 				nextBalances.put(owner, currencies);
-			Map<UUID, Receipt> nextReceipts = new HashMap<>(receipts);
-			if (receipt != null)
-				nextReceipts.put(owner, receipt);
 			JsonObject root = new JsonObject();
 			root.add("balances", JSON.toJsonTree(nextBalances));
-			root.add("dailyClaims", JSON.toJsonTree(nextReceipts));
 			root.add("rewardStates", JSON.toJsonTree(nextStates));
 			try {
 				Files.createDirectories(file.getParent());
@@ -194,7 +145,6 @@ public final class Smp3AccountStore {
 				Files.writeString(temporary, JSON.toJson(root));
 				Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 				balances = nextBalances;
-				receipts = nextReceipts;
 				rewardStates = nextStates;
 			} catch (IOException e) {
 				throw new IllegalStateException("保存经济账本失败: " + file, e);

@@ -17,16 +17,19 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import club.sjmc.smp3.reward.Reward;
+import club.sjmc.smp3.reward.RewardItems;
+
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 
-public record QuestConfig(int dailyRerollLimit, List<XpBand> xpBands, Map<String, QuestDefinition.Reward> rewards,
-                          List<QuestDefinition> tasks) {
+public record QuestConfig(int dailyRerollLimit, Progression progression, Map<String, String> milestones,
+                          Map<String, Reward> rewards, List<QuestDefinition> tasks) {
 	public QuestConfig {
-		xpBands = List.copyOf(xpBands);
+		milestones = Map.copyOf(milestones);
 		rewards = Map.copyOf(rewards);
 		tasks = List.copyOf(tasks);
 	}
@@ -34,7 +37,22 @@ public record QuestConfig(int dailyRerollLimit, List<XpBand> xpBands, Map<String
 	static final Gson JSON = new GsonBuilder().setPrettyPrinting().create();
 	public static final List<String> TIERS = List.of("A", "B", "C", "C");
 
-	public record XpBand(int minLevel, int tier) {}
+	public record Band(double minScore, int tier) {}
+	public record Progression(double questWeight, double timeWeight, long questCap, double hourCap, List<Band> bands) {
+		public Progression { bands = List.copyOf(bands); }
+		public double score(long completed, double hours) {
+			return (questWeight * Math.min(completed / (double)questCap, 1) +
+			        timeWeight * Math.min(hours / hourCap, 1)) /
+			    (questWeight + timeWeight) * 100;
+		}
+		public int tier(double score) {
+			int tier = bands.getFirst().tier;
+			for (Band band : bands)
+				if (score >= band.minScore)
+					tier = band.tier;
+			return tier;
+		}
+	}
 
 	public static QuestConfig load(Path path, RegistryAccess registries, Set<String> dimensions) throws IOException {
 		if (!Files.exists(path)) {
@@ -56,14 +74,23 @@ public record QuestConfig(int dailyRerollLimit, List<XpBand> xpBands, Map<String
 
 	public static QuestConfig parse(String text) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
-		fields(root, "配置", "dailyRerollLimit", "xpBands", "rewards", "tasks");
+		fields(root, "配置", "dailyRerollLimit", "progression", "milestones", "rewards", "tasks");
 		integer(root.get("dailyRerollLimit"), "dailyRerollLimit");
-		for (var element : root.getAsJsonArray("xpBands")) {
-			var band = element.getAsJsonObject();
-			fields(band, "经验档位", "minLevel", "tier");
-			integer(band.get("minLevel"), "xpBands.minLevel");
-			integer(band.get("tier"), "xpBands.tier");
+		var progression = root.getAsJsonObject("progression");
+		fields(progression, "progression", "questWeight", "timeWeight", "questCap", "hourCap", "bands");
+		integer(progression.get("questCap"), "progression.questCap");
+		for (var entry : progression.getAsJsonArray("bands")) {
+			var band = entry.getAsJsonObject();
+			fields(band, "progression.bands", "minScore", "tier");
+			integer(band.get("tier"), "progression.bands.tier");
 		}
+		root.getAsJsonObject("milestones").entrySet().forEach(e -> {
+			try {
+				Identifier.parse(e.getValue().getAsString());
+			} catch (RuntimeException error) {
+				throw new IllegalArgumentException("milestones." + e.getKey() + ": invalid advancement ID", error);
+			}
+		});
 		fields(root.getAsJsonObject("rewards"), "奖励", "A", "B", "C");
 		for (var reward : root.getAsJsonObject("rewards").entrySet()) {
 			fields(reward.getValue().getAsJsonObject(), "奖励." + reward.getKey(), "tongbao", "coffeeStamp");
@@ -73,10 +100,29 @@ public record QuestConfig(int dailyRerollLimit, List<XpBand> xpBands, Map<String
 			String at = "任务 " + task.get("id");
 			require(!(task.has("count") && task.has("tiers")), at + ": count 与 tiers 不能同时存在");
 			fields(task, at, "id", "name", "category", "difficulty", "icon", "objective",
-			       task.has("description") ? "description" : null,
+			       task.has("description") ? "description" : null, task.has("requires") ? "requires" : null,
+			       task.has("rewards") ? "rewards" : null,
 			       task.has("count")   ? "count"
 			       : task.has("tiers") ? "tiers"
 			                           : null);
+			if (task.has("requires")) {
+				require(task.get("requires").isJsonArray(), at + ".requires must be an array");
+				for (var ref : task.getAsJsonArray("requires"))
+					require(ref.isJsonPrimitive() && ref.getAsJsonPrimitive().isString(),
+					        at + ".requires must contain names");
+			}
+			if (task.has("rewards")) {
+				var extra = task.getAsJsonObject("rewards");
+				require(Set.of("base", "tongbao", "coffeeStamp", "items").containsAll(extra.keySet()),
+				        at + ".rewards: unknown field");
+				if (extra.has("base"))
+					require(extra.get("base").isJsonPrimitive() && extra.get("base").getAsJsonPrimitive().isBoolean(),
+					        at + ".rewards.base must be boolean");
+				for (String currency : List.of("tongbao", "coffeeStamp"))
+					if (extra.has(currency))
+						require(integer(extra.get(currency), at + ".rewards." + currency) >= 0,
+						        at + ": negative reward");
+			}
 			if (task.has("description")) {
 				var description = task.get("description");
 				require(description.isJsonPrimitive() && description.getAsJsonPrimitive().isString() &&
@@ -132,11 +178,20 @@ public record QuestConfig(int dailyRerollLimit, List<XpBand> xpBands, Map<String
 
 	private void validate() {
 		require(dailyRerollLimit >= 0, "dailyRerollLimit 必须非负");
-		require(!xpBands.isEmpty() && xpBands.getFirst().minLevel == 0, "经验档位必须从 0 开始");
-		int previous = -1;
-		for (XpBand band : xpBands) {
-			require(band.minLevel > previous && band.tier > 0, "经验等级阈值必须递增且 tier 为正数");
-			previous = band.minLevel;
+		require(Double.isFinite(progression.questWeight) && Double.isFinite(progression.timeWeight) &&
+		            progression.questWeight >= 0 && progression.timeWeight >= 0 &&
+		            Double.isFinite(progression.questWeight + progression.timeWeight) &&
+		            progression.questWeight + progression.timeWeight > 0,
+		        "progression weights must be finite, nonnegative and have a positive sum");
+		require(progression.questCap > 0 && Double.isFinite(progression.hourCap) && progression.hourCap > 0,
+		        "progression caps must be positive");
+		require(!progression.bands.isEmpty() && progression.bands.getFirst().minScore == 0,
+		        "progression bands must start at zero");
+		double previous = -1;
+		for (Band band : progression.bands) {
+			require(Double.isFinite(band.minScore) && band.minScore > previous && band.minScore <= 100 && band.tier > 0,
+			        "Invalid progression band");
+			previous = band.minScore;
 		}
 		for (var reward : rewards.values())
 			require(reward.tongbao() >= 0 && reward.coffeeStamp() >= 0, "奖励不能为负数");
@@ -147,7 +202,10 @@ public record QuestConfig(int dailyRerollLimit, List<XpBand> xpBands, Map<String
 			require(task.name() != null && !task.name().isBlank() && task.category() != null &&
 			            !task.category().isBlank(),
 			        task.id() + ": 名称和类别不能为空");
+			require(milestones.keySet().containsAll(task.requires()),
+			        task.id() + ".requires: unknown milestone reference " + task.requires());
 			require(rewards.containsKey(task.difficulty()), task.id() + ": 难度必须为 A/B/C");
+			task.reward(rewards.get(task.difficulty()));
 			require(task.count() == null || task.count() > 0, task.id() + ": count 须为正整数");
 			if (task.description() != null) {
 				var fields = QuestDefinition.DESCRIPTION_FIELD.matcher(task.description());
@@ -164,13 +222,14 @@ public record QuestConfig(int dailyRerollLimit, List<XpBand> xpBands, Map<String
 				require(tier.tier() > 0 && tier.count() > 0 && tiers.add(tier.tier()),
 				        task.id() + ": 档位重复或数量无效");
 			}
-			for (var band : xpBands) {
+			for (var band : progression.bands) {
 				require(task.supports(band.tier), task.id() + ": 缺少档位 " + band.tier);
 			}
 		}
 		for (String tier : List.of("A", "B", "C")) {
 			long minimum = (tier.equals("C") ? 2 : 1) + (dailyRerollLimit > 0 ? 1 : 0);
-			require(tasks.stream().filter(t -> t.difficulty().equals(tier)).count() >= minimum,
+			require(tasks.stream().filter(t -> t.difficulty().equals(tier) && t.requires().isEmpty()).count() >=
+			            minimum,
 			        tier + " 档任务不足 " + minimum + " 个");
 		}
 	}
@@ -198,6 +257,14 @@ public record QuestConfig(int dailyRerollLimit, List<XpBand> xpBands, Map<String
 					}
 				}
 				validateStates(task, registries.lookupOrThrow(Registries.BLOCK));
+				if (task.rewards() != null)
+					for (int i = 0; i < task.rewards().items().size(); i++) {
+						try {
+							RewardItems.validate(task.rewards().items().get(i), registries);
+						} catch (RuntimeException e) {
+							throw new IllegalArgumentException("rewards.items[" + i + "]: " + e.getMessage(), e);
+						}
+					}
 			} catch (RuntimeException e) {
 				throw new IllegalArgumentException("任务 " + task.id() + ": " + e.getMessage(), e);
 			}
@@ -227,14 +294,6 @@ public record QuestConfig(int dailyRerollLimit, List<XpBand> xpBands, Map<String
 			        });
 			require(supported, "无效方块状态: " + property.getKey() + "=" + property.getValue());
 		}
-	}
-
-	public int tier(int level) {
-		int result = xpBands.getFirst().tier;
-		for (XpBand band : xpBands)
-			if (level >= band.minLevel)
-				result = band.tier;
-		return result;
 	}
 
 	private static int integer(JsonElement value, String at) {
