@@ -12,6 +12,8 @@ import club.sjmc.smp3.shop.ShopCatalog;
 import club.sjmc.smp3.shop.ui.ShopCommand;
 import club.sjmc.smp3.sign.ui.SignCommand;
 import club.sjmc.smp3.time.ServerDates;
+import club.sjmc.smp3.watchdog.WatchdogModule;
+import club.sjmc.smp3.watchdog.ui.SmpPerfCommand;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -36,11 +38,13 @@ public final class Smp3Core implements ModInitializer {
 		Smp3EconomyProvider.register();
 
 		DailyQuestModule.register();
+		WatchdogModule.register();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			ShopCommand.register(dispatcher);
 			SignCommand.register(dispatcher);
 			DailyQuestCommand.register(dispatcher);
+			SmpPerfCommand.register(dispatcher);
 		});
 
 		LOGGER.info("[SMP3] 初始化完成");

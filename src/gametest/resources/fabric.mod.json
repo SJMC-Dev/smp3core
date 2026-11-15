@@ -4,8 +4,19 @@
   "version": "1.0.0",
   "environment": "*",
   "entrypoints": {
-    "fabric-gametest": ["club.sjmc.smp3.daily.DailyQuestGameTest"],
-    "fabric-client-gametest": ["club.sjmc.smp3.client.QuestHudClientGameTest"]
+    "fabric-gametest": [
+      "club.sjmc.smp3.daily.DailyQuestGameTest",
+      "club.sjmc.smp3.watchdog.WatchdogGameTest",
+      "club.sjmc.smp3.watchdog.WatchdogRuntimeTest"
+    ],
+    "fabric-client-gametest": [
+      "club.sjmc.smp3.client.QuestHudClientGameTest"
+    ]
   },
-  "depends": {"smp3": "*"}
+  "depends": {
+    "smp3": "*"
+  },
+  "mixins": [
+    "smp3-tests.mixins.json"
+  ]
 }

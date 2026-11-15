@@ -96,3 +96,28 @@ tasks.register('checkJavaFormat', Exec) {
 	}.files.sort().collect { it.path })
 }
 
+def watchdogBaseline = project.hasProperty('watchdogBaseline')
+if (project.hasProperty('watchdogBenchmark')) {
+	tasks.named('runGameTest') {
+		systemProperty 'smp3.watchdog.benchmark', 'true'
+		systemProperty 'smp3.watchdog.baseline', watchdogBaseline.toString()
+	}
+}
+
+processResources {
+	inputs.property 'watchdogBaseline', watchdogBaseline
+	doLast {
+		if (watchdogBaseline) {
+			def target = destinationDirectory.file('smp3.mixins.json').get().asFile
+			def config = new groovy.json.JsonSlurper().parse(target)
+			config.mixins.removeAll { it.startsWith('Watchdog') && it != 'WatchdogEntityCallbacksMixin' }
+			target.text = groovy.json.JsonOutput.toJson(config)
+		}
+	}
+}
+
+if (watchdogBaseline) {
+	tasks.named('jar') {
+		doFirst { throw new GradleException('Baseline timing hooks are disabled; build release JARs without watchdogBaseline.') }
+	}
+}

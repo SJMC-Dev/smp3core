@@ -2,6 +2,20 @@
   "required": true,
   "package": "club.sjmc.smp3.mixin",
   "compatibilityLevel": "JAVA_25",
-  "mixins": ["CraftingQuestMixin", "PlacementQuestMixin", "FishingQuestMixin", "TradeQuestMixin", "PiglinQuestMixin"],
-  "injectors": {"defaultRequire": 1}
+  "mixins": [
+    "CraftingQuestMixin",
+    "PlacementQuestMixin",
+    "FishingQuestMixin",
+    "TradeQuestMixin",
+    "PiglinQuestMixin",
+    "WatchdogEntityCallbacksMixin",
+    "WatchdogLevelMixin",
+    "WatchdogNeighborMixin",
+    "WatchdogPlayerMixin",
+    "WatchdogServerLevelMixin",
+    "WatchdogServerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

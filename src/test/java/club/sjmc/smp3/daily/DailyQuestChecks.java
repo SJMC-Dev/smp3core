@@ -11,6 +11,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 
 import club.sjmc.smp3.ArchitectureChecks;
+import club.sjmc.smp3.watchdog.hotspot.HotspotChecks;
 import club.sjmc.smp3.economy.EconomyChecks;
 import club.sjmc.smp3.time.DateChecks;
 
@@ -180,6 +181,7 @@ public final class DailyQuestChecks {
 		    "block_broken", Map.of("block", Set.of("minecraft:stone"), "dimension", Set.of("minecraft:overworld"))));
 		EconomyChecks.run();
 		ArchitectureChecks.run();
+		HotspotChecks.run();
 		DateChecks.run();
 		System.out.println(
 		    "每日任务验证通过：配置、事件匹配与合成数量、经验、跨日、刷新、快照、双货币去重及写入故障恢复。");
