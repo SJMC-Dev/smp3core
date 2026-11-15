@@ -1,5 +1,6 @@
 {
   "item.smp3.any_enchanted_book": "任意附魔书",
   "key.category.smp3.main": "SMP3",
-  "key.smp3.quest_hud": "显示/隐藏任务清单"
+  "key.smp3.quest_hud": "显示/隐藏任务清单",
+  "key.smp3.server_info": "打开服务器手册（预览）"
 }

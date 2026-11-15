@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.QuestDefinition;
 import club.sjmc.smp3.daily.ui.DailyQuestGui;
@@ -75,9 +77,55 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.waitFor(
 			    client -> Smp3Client.HUD.state.rows.stream().noneMatch(row -> row.entry.token().equals(token)));
 			context.takeScreenshot("quest-hud-claimed");
+			context.getInput().resizeWindow(1280, 800);
+			context.runOnClient(client -> Smp3Client.PREVIEW.enable());
+			context.waitTicks(3);
+			context.takeScreenshot("hud-preview");
+			context.runOnClient(client -> {
+				Smp3Client.PREVIEW.coins.add(125);
+				Smp3Client.PREVIEW.stamps.add(-1);
+			});
+			context.waitTicks(8);
+			context.takeScreenshot("hud-preview-balances");
+			context.getInput().pressKey(options -> options.keyChat);
+			context.getInput().typeChars("/smpinfo");
+			context.getInput().pressKey(InputConstants.KEY_RETURN);
+			context.waitForScreen(ServerBookScreen.class);
+			context.takeScreenshot("hud-preview-book");
+			context.runOnClient(client -> {
+				Smp3Client.PREVIEW.selected = 2;
+				client.gui.setScreen(new ServerBookScreen());
+			});
+			context.waitTicks(2);
+			context.takeScreenshot("hud-preview-rules");
+			context.clickScreenButton("HUD 设置");
+			context.waitTicks(2);
+			context.takeScreenshot("hud-preview-layout");
+			context.runOnClient(client -> {
+				Smp3Client.layout.currency.x = .25F;
+				Smp3Client.layout.currency.y = .6F;
+				Smp3Client.layout.currency.scale = 1;
+			});
+			context.waitTicks(2);
+			context.takeScreenshot("hud-preview-adjusted");
+			context.clickScreenButton("恢复默认");
+			context.getInput().resizeWindow(640, 480);
+			context.runOnClient(client -> client.gui.setScreen(new ServerBookScreen()));
+			context.waitTicks(3);
+			context.takeScreenshot("hud-preview-narrow");
+			context.clickScreenButton("服规");
+			context.getInput().setCursorPos(80, 180);
+			context.getInput().pressMouse(0);
+			context.waitTicks(2);
+			context.takeScreenshot("hud-preview-narrow-detail");
+			context.clickScreenButton("我已阅读并确认");
+			context.runOnClient(client -> {
+				if (Smp3Client.PREVIEW.unread(2))
+					throw new AssertionError("Preview acknowledgement not applied");
+			});
 		}
 		context.runOnClient(client -> {
-			if (!Smp3Client.HUD.state.rows.isEmpty())
+			if (Smp3Client.PREVIEW.enabled || !Smp3Client.HUD.state.rows.isEmpty())
 				throw new AssertionError("断开后残留任务");
 		});
 	}
