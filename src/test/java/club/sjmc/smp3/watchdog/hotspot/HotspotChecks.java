@@ -7,11 +7,17 @@ import club.sjmc.smp3.watchdog.WatchdogConfig;
 public final class HotspotChecks {
 	public static void run() {
 		var defaults = WatchdogConfig.parse(WatchdogConfig.DEFAULTS);
+		assert defaults.mode() == WatchdogConfig.Mode.WHITELIST_FIRST;
+		assert WatchdogConfig.parse(WatchdogConfig.DEFAULTS.replace("  \"mode\": \"whitelist-first\",\n", "")).mode() ==
+		    defaults.mode();
 		assert !defaults.enabled() && defaults.rules().getFirst().entitiesPerChunk() == 256;
 		for (String invalid :
 		     List.of(WatchdogConfig.DEFAULTS.replace("false", "0"), WatchdogConfig.DEFAULTS.replace("128", "256"),
 		             WatchdogConfig.DEFAULTS.replace("240", "-1"), WatchdogConfig.DEFAULTS.replace("240", "1.5"),
-		             WatchdogConfig.DEFAULTS.replace("blacklist", "mode"))) {
+		             WatchdogConfig.DEFAULTS.replace("blacklist", "unknown"),
+		             WatchdogConfig.DEFAULTS.replace("whitelist-first", "unknown"),
+		             WatchdogConfig.DEFAULTS.replace("\"whitelist-first\"", "true"),
+		             WatchdogConfig.DEFAULTS.replace("\"whitelist-first\"", "null"))) {
 			try {
 				WatchdogConfig.parse(invalid);
 				throw new AssertionError("Invalid watchdog configuration accepted");
@@ -51,7 +57,7 @@ public final class HotspotChecks {
 
 		HotspotRecorder nested = new HotspotRecorder(10);
 		nested.beginTick(true);
-		int parent = nested.enter("world", 0, "parent", HotspotRecorder.Kind.BLOCK);
+		int parent = nested.enter("world", 0, "parent", HotspotRecorder.Kind.BLOCK_EVENT);
 		int child = nested.enter("world", 0, "child", HotspotRecorder.Kind.NEIGHBOR);
 		nested.exit(child);
 		nested.exit(parent);
@@ -61,7 +67,7 @@ public final class HotspotChecks {
 		assert calls.rows().stream().mapToLong(HotspotReport.Row::nanos).sum() <= calls.total();
 		nested.beginTick(true);
 		for (int i = 0; i < 20_001; i++) {
-			int token = nested.enter("world", 0, "parent", HotspotRecorder.Kind.BLOCK);
+			int token = nested.enter("world", 0, "parent", HotspotRecorder.Kind.BLOCK_EVENT);
 			nested.exit(token);
 		}
 		nested.endTick();

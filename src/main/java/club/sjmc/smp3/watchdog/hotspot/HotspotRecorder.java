@@ -10,7 +10,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 public final class HotspotRecorder {
-	public enum Kind { ENTITY, BLOCK_ENTITY, BLOCK, FLUID, NEIGHBOR, SHAPE, PLAYER }
+	public enum Kind { ENTITY, BLOCK_ENTITY, BLOCK, BLOCK_EVENT, FLUID, NEIGHBOR, SHAPE, PLAYER }
 	record Group(String dimension, long chunk, String type, Kind kind) {}
 	private static final int MAX_SEGMENTS = 262_144;
 	private static final int MAX_GROUPS = 8192;

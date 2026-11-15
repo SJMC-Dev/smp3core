@@ -16,10 +16,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 
-public record WatchdogConfig(boolean enabled, List<String> blacklist, List<String> whitelist, List<Rule> rules) {
+public record
+    WatchdogConfig(boolean enabled, Mode mode, List<String> blacklist, List<String> whitelist, List<Rule> rules) {
 	public static final String DEFAULTS = """
 		{
 		  "enabled": false,
+		  "mode": "whitelist-first",
 		  "blacklist": [],
 		  "whitelist": [],
 		  "rules": [
@@ -28,9 +30,13 @@ public record WatchdogConfig(boolean enabled, List<String> blacklist, List<Strin
 		  ]
 		}
 		""";
+	public enum Mode { WHITELIST_FIRST, BLACKLIST_FIRST }
 	public record Rule(int entitiesPerChunk, int minimumAgeSeconds) {}
-	public record Policy(boolean enabled, Set<Item> blacklist, Set<Item> whitelist, List<Rule> rules) {
-		public boolean eligible(Item item) { return whitelist.contains(item) || !blacklist.contains(item); }
+	public record Policy(boolean enabled, Mode mode, Set<Item> blacklist, Set<Item> whitelist, List<Rule> rules) {
+		public boolean eligible(Item item) {
+			return mode == Mode.WHITELIST_FIRST ? whitelist.contains(item) || !blacklist.contains(item)
+			                                    : whitelist.contains(item) && !blacklist.contains(item);
+		}
 		public int minimumAge(int count) {
 			for (Rule rule : rules)
 				if (count >= rule.entitiesPerChunk())
@@ -41,7 +47,16 @@ public record WatchdogConfig(boolean enabled, List<String> blacklist, List<Strin
 
 	public static WatchdogConfig parse(String text) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
-		fields(root, Set.of("enabled", "blacklist", "whitelist", "rules"));
+		if (!root.has("mode"))
+			root.addProperty("mode", "whitelist-first");
+		fields(root, Set.of("enabled", "mode", "blacklist", "whitelist", "rules"));
+		if (!root.get("mode").isJsonPrimitive() || !root.getAsJsonPrimitive("mode").isString())
+			throw new IllegalArgumentException("mode: expected whitelist-first or blacklist-first");
+		Mode mode = switch (root.get("mode").getAsString()) {
+			case "whitelist-first" -> Mode.WHITELIST_FIRST;
+			case "blacklist-first" -> Mode.BLACKLIST_FIRST;
+			default -> throw new IllegalArgumentException("mode: expected whitelist-first or blacklist-first");
+		};
 		if (!root.get("enabled").isJsonPrimitive() || !root.getAsJsonPrimitive("enabled").isBoolean())
 			throw new IllegalArgumentException("enabled: expected boolean");
 		List<Rule> rules = new ArrayList<>();
@@ -62,12 +77,12 @@ public record WatchdogConfig(boolean enabled, List<String> blacklist, List<Strin
 		if (rules.isEmpty() || rules.size() > 64)
 			throw new IllegalArgumentException("rules: expected 1–64 entries");
 		rules.sort(Comparator.comparingInt(Rule::entitiesPerChunk).reversed());
-		return new WatchdogConfig(root.get("enabled").getAsBoolean(), list(root, "blacklist"), list(root, "whitelist"),
-		                          List.copyOf(rules));
+		return new WatchdogConfig(root.get("enabled").getAsBoolean(), mode, list(root, "blacklist"),
+		                          list(root, "whitelist"), List.copyOf(rules));
 	}
 
 	public Policy resolve() {
-		return new Policy(enabled, resolve(blacklist, "blacklist"), resolve(whitelist, "whitelist"), rules);
+		return new Policy(enabled, mode, resolve(blacklist, "blacklist"), resolve(whitelist, "whitelist"), rules);
 	}
 
 	private static Set<Item> resolve(List<String> entries, String field) {

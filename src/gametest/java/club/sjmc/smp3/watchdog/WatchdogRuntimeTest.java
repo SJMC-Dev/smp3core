@@ -36,6 +36,7 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RepeaterBlock;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
+import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 public final class WatchdogRuntimeTest {
@@ -50,20 +51,22 @@ public final class WatchdogRuntimeTest {
 		                   .thenIdle(200)
 		                   .thenWaitUntil(() -> test.assertTrue(!run.occupied(), "Previous recording pending"))
 		                   .thenExecute(run::initialize);
-		for (String scenario : List.of("players", "mobs", "items", "redstone", "hoppers", "mixed", "producer")) {
+		for (String scenario :
+		     System.getProperty("smp3.watchdog.scenarios", "players,mobs,items,redstone,pistons,hoppers,mixed,producer")
+		         .split(",")) {
 			for (boolean cleanup :
 			     scenario.equals("items") || scenario.equals("producer") ? List.of(false, true) : List.of(false)) {
+				if (cleanup && Boolean.getBoolean("smp3.watchdog.baseline"))
+					continue;
 				for (int repeat = 0; repeat < 2; repeat++) {
 					for (boolean recording : repeat == 0 ? List.of(false, true) : List.of(true, false)) {
-						if (recording && Boolean.getBoolean("smp3.watchdog.baseline"))
-							continue;
 						int repetition = repeat;
 						sequence.thenExecute(() -> run.prepare(scenario, cleanup, recording, repetition))
 						    .thenWaitUntil(() -> test.assertTrue(run.configured(cleanup), "Cleanup toggle pending"))
 						    .thenIdle(40)
 						    .thenExecute(run::start)
 						    .thenWaitUntil(
-						        () -> test.assertTrue(!recording || run.recording(), "Recorder startup pending"))
+						        () -> test.assertTrue(!run.profiling || run.recording(), "Recorder startup pending"))
 						    .thenExecute(() -> run.measuring = true)
 						    .thenWaitUntil(()
 							                   -> test.assertTrue(run.ticks.size() >= 100 && !run.occupied(),
@@ -83,17 +86,17 @@ public final class WatchdogRuntimeTest {
 		final WatchdogModule module = WatchdogModule.current();
 		final Path file = FabricLoader.getInstance().getConfigDir().resolve("smp3/watchdog.json");
 		final List<Entity> entities = new ArrayList<>();
-		final List<BlockPos> blocks = new ArrayList<>(), clocks = new ArrayList<>();
+		final List<BlockPos> blocks = new ArrayList<>(), clocks = new ArrayList<>(), pistons = new ArrayList<>();
 		final List<ServerPlayer> players = new ArrayList<>();
 		final List<EmbeddedChannel> channels = new ArrayList<>();
 		final List<Long> ticks = new ArrayList<>();
 		final List<String> messages = new ArrayList<>();
-		final Field occupied, recorder, config, age;
+		final Field occupied, recorder, config, age, instance;
 		final ItemCleanupService cleaner;
 		final CommandSourceStack console;
 		byte[] original;
 		String scenario;
-		boolean cleanup, profiling, measuring;
+		boolean cleanup, profiling, measuring, tracking;
 		int repeat, generated;
 		long beforeRemoved, beforeQuantity, beforeWork;
 
@@ -101,6 +104,7 @@ public final class WatchdogRuntimeTest {
 			this.test = test;
 			level = test.getLevel();
 			occupied = field(WatchdogModule.class, "occupied");
+			instance = field(WatchdogModule.class, "instance");
 			recorder = field(WatchdogModule.class, "recorder");
 			config = field(WatchdogModule.class, "config");
 			age = field(ItemEntity.class, "age");
@@ -139,7 +143,9 @@ public final class WatchdogRuntimeTest {
 			clear();
 			this.scenario = scenario;
 			this.cleanup = cleanup;
-			this.profiling = profiling;
+			// Baseline windows alternate tracking; normal windows alternate recording.
+			this.profiling = profiling && !Boolean.getBoolean("smp3.watchdog.baseline");
+			tracking = !profiling || !Boolean.getBoolean("smp3.watchdog.baseline");
 			this.repeat = repeat;
 			messages.clear();
 			generated = 0;
@@ -174,6 +180,14 @@ public final class WatchdogRuntimeTest {
 					place(pos, Blocks.REPEATER.defaultBlockState().setValue(RepeaterBlock.FACING, Direction.NORTH));
 					clocks.add(pos);
 				}
+			if (scenario.equals("pistons"))
+				for (int i = 0; i < 64; i++) {
+					BlockPos pos = new BlockPos(-96 + i % 4 * 3, 100 + i / 16 * 5, -96 + i / 4 % 4 * 3);
+					place(pos.above(2), Blocks.AIR.defaultBlockState());
+					place(pos.above(), Blocks.STONE.defaultBlockState());
+					place(pos, Blocks.STICKY_PISTON.defaultBlockState().setValue(PistonBaseBlock.FACING, Direction.UP));
+					pistons.add(pos);
+				}
 		}
 
 		void place(BlockPos pos, BlockState state) {
@@ -202,6 +216,14 @@ public final class WatchdogRuntimeTest {
 			beforeRemoved = stats.removedEntities();
 			beforeQuantity = stats.removedItems();
 			beforeWork = stats.processingNanos();
+			if (!tracking) {
+				cleaner.clear();
+				try {
+					instance.set(null, null);
+				} catch (IllegalAccessException e) {
+					throw new RuntimeException(e);
+				}
+			}
 			if (profiling)
 				test.assertTrue(module.top(console, 5, 0) == 1, "Benchmark recording rejected");
 		}
@@ -222,6 +244,12 @@ public final class WatchdogRuntimeTest {
 					                                         ? Blocks.REDSTONE_BLOCK.defaultBlockState()
 															 : Blocks.AIR.defaultBlockState());
 				}
+			if (test.getTick() % 4 == 0)
+				for (BlockPos pos : pistons)
+					level.setBlockAndUpdate(pos.south(), test.getTick() % 8 == 0
+					                                         ? Blocks.REDSTONE_BLOCK.defaultBlockState()
+															 : Blocks.AIR.defaultBlockState());
+
 			for (ServerPlayer player : players)
 				player.doTick();
 			for (EmbeddedChannel channel : channels)
@@ -234,14 +262,24 @@ public final class WatchdogRuntimeTest {
 			var stats = cleaner.statistics();
 			String result =
 			    String.format(Locale.ROOT,
-				              "WATCHDOG BENCH %s cleanup=%s top=%s repeat=%d mean=%.3f p95=%.3f p99=%.3f "
+				              "WATCHDOG BENCH %s cleanup=%s top=%s tracking=%s repeat=%d mean=%.3f p95=%.3f p99=%.3f "
 			                      + "remaining=%d removed=%d quantity=%d cleanupMs=%.3f",
-				              scenario, cleanup, profiling, repeat, Arrays.stream(sorted).average().orElseThrow() / 1e6,
-				              sorted[94] / 1e6, sorted[98] / 1e6,
+				              scenario, cleanup, profiling, tracking, repeat,
+				              Arrays.stream(sorted).average().orElseThrow() / 1e6, sorted[94] / 1e6, sorted[98] / 1e6,
 				              entities.stream().filter(e -> e instanceof ItemEntity && e.isAlive()).count(),
 				              stats.removedEntities() - beforeRemoved, stats.removedItems() - beforeQuantity,
 				              (stats.processingNanos() - beforeWork) / 1e6);
 			Smp3Core.LOGGER.info(result);
+			if (!tracking) {
+				try {
+					instance.set(null, module);
+				} catch (IllegalAccessException e) {
+					throw new RuntimeException(e);
+				}
+				for (Entity entity : entities)
+					if (entity instanceof ItemEntity item && item.isAlive())
+						cleaner.add(item);
+			}
 			if (profiling) {
 				messages.forEach(line -> Smp3Core.LOGGER.info("WATCHDOG REPORT {}: {}", scenario, line));
 				String expected = switch (scenario) {
@@ -249,6 +287,7 @@ public final class WatchdogRuntimeTest {
 					case "mobs" -> "minecraft:zombie";
 					case "hoppers" -> "minecraft:hopper";
 					case "redstone" -> "minecraft:repeater";
+					case "pistons" -> "minecraft:sticky_piston) — block event";
 					default -> "minecraft:item";
 				};
 				test.assertTrue(
@@ -270,6 +309,8 @@ public final class WatchdogRuntimeTest {
 			entities.clear();
 			clocks.forEach(pos -> level.setBlockAndUpdate(pos.south(), Blocks.AIR.defaultBlockState()));
 			clocks.clear();
+			pistons.forEach(pos -> level.setBlockAndUpdate(pos.south(), Blocks.AIR.defaultBlockState()));
+			pistons.clear();
 			for (BlockPos pos : blocks.reversed()) {
 				if (level.getBlockEntity(pos) instanceof HopperBlockEntity hopper)
 					hopper.clearContent();

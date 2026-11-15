@@ -110,7 +110,8 @@ public final class HotspotReport {
 		}
 		if (shown == 0)
 			lines.add("No measured groups above the display threshold.");
-		lines.add("Coverage: entity/block-entity and scheduled/neighbor updates; other game work and external delays "
+		lines.add("Coverage: entity/block-entity ticks, scheduled/neighbor updates and block events; other game work "
+		          + "and external delays "
 		          + "remain Unattributed. Counts are update invocations.");
 		return List.copyOf(lines);
 	}
@@ -128,6 +129,7 @@ public final class HotspotReport {
 			case PLAYER -> "player update";
 			case BLOCK_ENTITY -> "block-entity tick";
 			case BLOCK -> "scheduled block tick";
+			case BLOCK_EVENT -> "block event";
 			case FLUID -> "scheduled fluid tick";
 			case NEIGHBOR -> "neighbor update";
 			case SHAPE -> "neighbor shape update";

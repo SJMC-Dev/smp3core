@@ -100,6 +100,7 @@ def watchdogBaseline = project.hasProperty('watchdogBaseline')
 if (project.hasProperty('watchdogBenchmark')) {
 	tasks.named('runGameTest') {
 		systemProperty 'smp3.watchdog.benchmark', 'true'
+		systemProperty 'smp3.watchdog.scenarios', providers.gradleProperty('watchdogScenarios').getOrElse('players,mobs,items,redstone,pistons,hoppers,mixed,producer')
 		systemProperty 'smp3.watchdog.baseline', watchdogBaseline.toString()
 	}
 }

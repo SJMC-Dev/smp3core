@@ -2,7 +2,9 @@ package club.sjmc.smp3.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
 
 import club.sjmc.smp3.watchdog.WatchdogModule;
 import club.sjmc.smp3.watchdog.hotspot.HotspotRecorder;
@@ -12,7 +14,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 
 @Mixin(ServerLevel.class)
@@ -80,6 +84,24 @@ public abstract class WatchdogServerLevelMixin {
 		                           BuiltInRegistries.FLUID.getKey(fluid), HotspotRecorder.Kind.FLUID);
 		try {
 			original.call(pos, fluid);
+		} finally {
+			recorder.exit(token);
+		}
+	}
+
+	@WrapOperation(method = "doBlockEvent",
+	               at = @At(value = "INVOKE",
+	                        target = "Lnet/minecraft/world/level/block/state/BlockState;triggerEvent(Lnet/minecraft/"
+	                                 + "world/level/Level;Lnet/minecraft/core/BlockPos;II)Z"))
+	private boolean
+	smp3$blockEvent(BlockState state, Level level, BlockPos pos, int type, int data, Operation<Boolean> original) {
+		HotspotRecorder recorder = WatchdogModule.active(level);
+		if (recorder == null)
+			return original.call(state, level, pos, type, data);
+		int token = recorder.enter(level.dimension().identifier(), ChunkPos.pack(pos),
+		                           BuiltInRegistries.BLOCK.getKey(state.getBlock()), HotspotRecorder.Kind.BLOCK_EVENT);
+		try {
+			return original.call(state, level, pos, type, data);
 		} finally {
 			recorder.exit(token);
 		}
