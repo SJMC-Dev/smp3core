@@ -174,6 +174,8 @@ public final class DailyQuestGameTest {
 			                "任务说明未使用目标快照替换占位符");
 			player.closeContainer();
 
+			ProductionChecks.run(test, player, pos);
+
 			task = select(player, "fishing_b");
 			player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.FISHING_ROD));
 			FishingHook empty = new FishingHook(player, level, 0, 0);
