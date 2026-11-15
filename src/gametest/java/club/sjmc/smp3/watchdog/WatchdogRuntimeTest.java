@@ -13,6 +13,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.watchdog.cleanup.ItemCleanupService;
 
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSource;
@@ -47,6 +48,8 @@ public final class WatchdogRuntimeTest {
 			return;
 		}
 		var run = new Workload(test);
+		boolean idle = Boolean.getBoolean("smp3.watchdog.idle");
+		ServerTickEvents.START_SERVER_TICK.register(server -> run.measure());
 		var sequence = test.startSequence()
 		                   .thenIdle(200)
 		                   .thenWaitUntil(() -> test.assertTrue(!run.occupied(), "Previous recording pending"))
@@ -56,14 +59,17 @@ public final class WatchdogRuntimeTest {
 		         .split(",")) {
 			for (boolean cleanup :
 			     scenario.equals("items") || scenario.equals("producer") ? List.of(false, true) : List.of(false)) {
-				if (cleanup && Boolean.getBoolean("smp3.watchdog.baseline"))
+				if (cleanup && idle)
 					continue;
-				for (int repeat = 0; repeat < 2; repeat++) {
-					for (boolean recording : repeat == 0 ? List.of(false, true) : List.of(true, false)) {
+				for (int repeat = 0; repeat < (idle ? 4 : 2); repeat++) {
+					for (boolean recording : idle          ? List.of(false)
+					                         : repeat == 0 ? List.of(false, true)
+					                                       : List.of(true, false)) {
 						int repetition = repeat;
 						sequence.thenExecute(() -> run.prepare(scenario, cleanup, recording, repetition))
 						    .thenWaitUntil(() -> test.assertTrue(run.configured(cleanup), "Cleanup toggle pending"))
-						    .thenIdle(40)
+						    .thenExecute(run::populate)
+						    .thenIdle(100)
 						    .thenExecute(run::start)
 						    .thenWaitUntil(
 						        () -> test.assertTrue(!run.profiling || run.recording(), "Recorder startup pending"))
@@ -91,20 +97,20 @@ public final class WatchdogRuntimeTest {
 		final List<EmbeddedChannel> channels = new ArrayList<>();
 		final List<Long> ticks = new ArrayList<>();
 		final List<String> messages = new ArrayList<>();
-		final Field occupied, recorder, config, age, instance;
+		final Field occupied, recorder, config, age;
 		final ItemCleanupService cleaner;
 		final CommandSourceStack console;
 		byte[] original;
 		String scenario;
-		boolean cleanup, profiling, measuring, tracking;
-		int repeat, generated;
-		long beforeRemoved, beforeQuantity, beforeWork;
+		boolean cleanup, profiling, measuring, populated;
+		int repeat, generated, workloadTicks;
+		long remaining;
+		ItemCleanupService.Statistics before, after;
 
 		Workload(GameTestHelper test) throws Exception {
 			this.test = test;
 			level = test.getLevel();
 			occupied = field(WatchdogModule.class, "occupied");
-			instance = field(WatchdogModule.class, "instance");
 			recorder = field(WatchdogModule.class, "recorder");
 			config = field(WatchdogModule.class, "config");
 			age = field(ItemEntity.class, "age");
@@ -143,18 +149,23 @@ public final class WatchdogRuntimeTest {
 			clear();
 			this.scenario = scenario;
 			this.cleanup = cleanup;
-			// Baseline windows alternate tracking; normal windows alternate recording.
-			this.profiling = profiling && !Boolean.getBoolean("smp3.watchdog.baseline");
-			tracking = !profiling || !Boolean.getBoolean("smp3.watchdog.baseline");
+			this.profiling = profiling;
 			this.repeat = repeat;
 			messages.clear();
 			generated = 0;
+			workloadTicks = 0;
+			before = null;
+			ticks.clear();
 			try {
 				Files.writeString(file, WatchdogConfig.DEFAULTS.replace("240", "60").replace("120", "60"));
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 			module.change(console, cleanup);
+		}
+
+		void populate() {
+			populated = true;
 			if (scenario.equals("mobs") || scenario.equals("mixed"))
 				for (int i = 0; i < 192; i++) {
 					var mob = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
@@ -211,42 +222,43 @@ public final class WatchdogRuntimeTest {
 		}
 
 		void start() {
-			ticks.clear();
-			var stats = cleaner.statistics();
-			beforeRemoved = stats.removedEntities();
-			beforeQuantity = stats.removedItems();
-			beforeWork = stats.processingNanos();
-			if (!tracking) {
-				cleaner.clear();
-				try {
-					instance.set(null, null);
-				} catch (IllegalAccessException e) {
-					throw new RuntimeException(e);
-				}
-			}
 			if (profiling)
 				test.assertTrue(module.top(console, 5, 0) == 1, "Benchmark recording rejected");
 		}
 
-		void tick() {
-			if (scenario == null)
+		// START_SERVER_TICK precedes world updates; the preceding tick's latency and cleanup are complete.
+		void measure() {
+			if (!measuring)
 				return;
-			if (measuring && ticks.size() < 100) {
-				var server = level.getServer();
-				ticks.add(server.getTickTimesNanos()[(server.getTickCount() - 1) % 100]);
+			if (before == null) {
+				before = cleaner.statistics();
+				return;
 			}
+			var server = level.getServer();
+			ticks.add(server.getTickTimesNanos()[(server.getTickCount() - 1) % 100]);
+			if (ticks.size() == 100) {
+				after = cleaner.statistics();
+				remaining = entities.stream().filter(e -> e instanceof ItemEntity && e.isAlive()).count();
+				measuring = false;
+			}
+		}
+
+		void tick() {
+			if (!populated)
+				return;
+			workloadTicks++;
 			if (scenario.equals("producer"))
 				for (int i = 0; i < 2; i++)
 					addItem();
-			if (test.getTick() % 2 == 0)
+			if (workloadTicks % 2 == 0)
 				for (BlockPos pos : clocks) {
-					level.setBlockAndUpdate(pos.south(), test.getTick() % 4 == 0
+					level.setBlockAndUpdate(pos.south(), workloadTicks % 4 == 0
 					                                         ? Blocks.REDSTONE_BLOCK.defaultBlockState()
 															 : Blocks.AIR.defaultBlockState());
 				}
-			if (test.getTick() % 4 == 0)
+			if (workloadTicks % 4 == 0)
 				for (BlockPos pos : pistons)
-					level.setBlockAndUpdate(pos.south(), test.getTick() % 8 == 0
+					level.setBlockAndUpdate(pos.south(), workloadTicks % 8 == 0
 					                                         ? Blocks.REDSTONE_BLOCK.defaultBlockState()
 															 : Blocks.AIR.defaultBlockState());
 
@@ -257,29 +269,16 @@ public final class WatchdogRuntimeTest {
 		}
 
 		void report() {
-			measuring = false;
 			long[] sorted = ticks.stream().mapToLong(Long::longValue).sorted().toArray();
-			var stats = cleaner.statistics();
-			String result =
-			    String.format(Locale.ROOT,
-				              "WATCHDOG BENCH %s cleanup=%s top=%s tracking=%s repeat=%d mean=%.3f p95=%.3f p99=%.3f "
-			                      + "remaining=%d removed=%d quantity=%d cleanupMs=%.3f",
-				              scenario, cleanup, profiling, tracking, repeat,
-				              Arrays.stream(sorted).average().orElseThrow() / 1e6, sorted[94] / 1e6, sorted[98] / 1e6,
-				              entities.stream().filter(e -> e instanceof ItemEntity && e.isAlive()).count(),
-				              stats.removedEntities() - beforeRemoved, stats.removedItems() - beforeQuantity,
-				              (stats.processingNanos() - beforeWork) / 1e6);
+			String result = String.format(
+			    Locale.ROOT,
+			    "WATCHDOG BENCH %s cleanup=%s top=%s baseline=%s repeat=%d mean=%.3f p95=%.3f p99=%.3f "
+			        + "remaining=%d removed=%d quantity=%d cleanupMs=%.3f",
+			    scenario, cleanup, profiling, Boolean.getBoolean("smp3.watchdog.baseline"), repeat,
+			    Arrays.stream(sorted).average().orElseThrow() / 1e6, sorted[94] / 1e6, sorted[98] / 1e6, remaining,
+			    after.removedEntities() - before.removedEntities(), after.removedItems() - before.removedItems(),
+			    (after.processingNanos() - before.processingNanos()) / 1e6);
 			Smp3Core.LOGGER.info(result);
-			if (!tracking) {
-				try {
-					instance.set(null, module);
-				} catch (IllegalAccessException e) {
-					throw new RuntimeException(e);
-				}
-				for (Entity entity : entities)
-					if (entity instanceof ItemEntity item && item.isAlive())
-						cleaner.add(item);
-			}
 			if (profiling) {
 				messages.forEach(line -> Smp3Core.LOGGER.info("WATCHDOG REPORT {}: {}", scenario, line));
 				String expected = switch (scenario) {
@@ -305,6 +304,7 @@ public final class WatchdogRuntimeTest {
 
 		void clear() {
 			measuring = false;
+			populated = false;
 			entities.forEach(Entity::discard);
 			entities.clear();
 			clocks.forEach(pos -> level.setBlockAndUpdate(pos.south(), Blocks.AIR.defaultBlockState()));
@@ -321,7 +321,6 @@ public final class WatchdogRuntimeTest {
 
 		void close() {
 			clear();
-			scenario = null;
 			players.forEach(player -> level.getServer().getPlayerList().remove(player));
 			channels.forEach(EmbeddedChannel::finishAndReleaseAll);
 			for (int x = -8; x <= -4; x++)

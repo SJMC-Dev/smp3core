@@ -57,20 +57,34 @@ public final class HotspotChecks {
 
 		HotspotRecorder nested = new HotspotRecorder(10);
 		nested.beginTick(true);
-		int parent = nested.enter("world", 0, "parent", HotspotRecorder.Kind.BLOCK_EVENT);
-		int child = nested.enter("world", 0, "child", HotspotRecorder.Kind.NEIGHBOR);
-		nested.exit(child);
-		nested.exit(parent);
+		nested.enter("world", 0, "parent", HotspotRecorder.Kind.BLOCK_EVENT);
+		nested.enter("world", 0, "child", HotspotRecorder.Kind.NEIGHBOR);
+		nested.exit();
+		nested.exit();
 		nested.endTick();
 		var calls = HotspotReport.summarize(nested, List.of());
 		assert calls.rows().size() == 2 && calls.rows().stream().allMatch(row -> row.updates() == 1);
 		assert calls.rows().stream().mapToLong(HotspotReport.Row::nanos).sum() <= calls.total();
 		nested.beginTick(true);
+		nested.enter("world", 0, "parent", HotspotRecorder.Kind.BLOCK_EVENT);
+		nested.enter("world", 0, "child", HotspotRecorder.Kind.NEIGHBOR);
+		// An interrupted child has no return hook; its enclosing scope must not hide the incomplete tick.
+		nested.exit();
+		nested.endTick();
+		assert nested.samples == 1 && nested.discarded == 1;
+		assert HotspotReport.summarize(nested, List.of()).equals(calls);
+		nested.beginTick(true);
+		nested.exit();
+		nested.endTick();
+		assert nested.samples == 1 && nested.discarded == 2;
+		assert HotspotReport.summarize(nested, List.of()).equals(calls);
+		nested.beginTick(true);
 		for (int i = 0; i < 20_001; i++) {
-			int token = nested.enter("world", 0, "parent", HotspotRecorder.Kind.BLOCK_EVENT);
-			nested.exit(token);
+			nested.enter("world", 0, "parent", HotspotRecorder.Kind.BLOCK_EVENT);
+			nested.exit();
 		}
 		nested.endTick();
-		assert nested.samples == 1 && nested.discarded == 1 && nested.segments == 7;
+		assert nested.samples == 1 && nested.discarded == 3;
+		assert HotspotReport.summarize(nested, List.of()).equals(calls);
 	}
 }

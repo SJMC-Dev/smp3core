@@ -25,12 +25,12 @@ public abstract class WatchdogLevelMixin {
 			original.call(ticker);
 			return;
 		}
-		int token = recorder.enter(level.dimension().identifier(), ChunkPos.pack(ticker.getPos()), ticker.getType(),
-		                           HotspotRecorder.Kind.BLOCK_ENTITY);
+		recorder.enter(level.dimension().identifier(), ChunkPos.pack(ticker.getPos()), ticker.getType(),
+		               HotspotRecorder.Kind.BLOCK_ENTITY);
 		try {
 			original.call(ticker);
 		} finally {
-			recorder.exit(token);
+			recorder.exit();
 		}
 	}
 }

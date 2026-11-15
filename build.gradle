@@ -102,6 +102,7 @@ if (project.hasProperty('watchdogBenchmark')) {
 		systemProperty 'smp3.watchdog.benchmark', 'true'
 		systemProperty 'smp3.watchdog.scenarios', providers.gradleProperty('watchdogScenarios').getOrElse('players,mobs,items,redstone,pistons,hoppers,mixed,producer')
 		systemProperty 'smp3.watchdog.baseline', watchdogBaseline.toString()
+		systemProperty 'smp3.watchdog.idle', (watchdogBaseline || project.hasProperty('watchdogIdleBenchmark')).toString()
 	}
 }
 

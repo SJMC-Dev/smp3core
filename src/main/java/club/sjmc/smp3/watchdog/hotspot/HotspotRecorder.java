@@ -57,44 +57,43 @@ public final class HotspotRecorder {
 		invalid = false;
 	}
 
-	// Store exclusive time segments so nested updates and JVM pauses can be accounted for once.
-	public int enter(Object dimension, long chunk, Object type, Kind kind) {
+	// Callers enter only while active; exclusive segments account for nested updates and JVM pauses once.
+	public void enter(Object dimension, long chunk, Object type, Kind kind) {
 		long start = System.nanoTime();
-		if (!active())
-			return -1;
 		if (++updates > MAX_UPDATES_PER_TICK || depth == stack.length) {
 			invalid = true;
 			limited = true;
-			return -1;
+			return;
 		}
 		closeSegment(start);
 		int group = group(dimension, chunk, type, kind);
 		if (group < 0 || invalid) {
 			invalid = true;
 			limited = true;
-			return -1;
+			return;
 		}
 		int token = depth++;
 		stack[token] = group;
 		first[token] = true;
 		resumed = System.nanoTime();
 		append(start, resumed, -1, false);
-		return token;
 	}
 
-	public void exit(int token) {
-		if (token < 0)
+	public void exit() {
+		// Cancellable injections from other mods can leave an unmatched return hook.
+		if (invalid || depth == 0) {
+			invalid = true;
 			return;
+		}
 		long start = System.nanoTime();
-		if (!invalid)
-			closeSegment(start);
-		depth = token;
+		closeSegment(start);
+		depth--;
 		resumed = System.nanoTime();
 		append(start, resumed, -1, false);
 	}
 
 	private void closeSegment(long end) {
-		if (depth == 0 || invalid)
+		if (depth == 0)
 			return;
 		append(resumed, end, stack[depth - 1], first[depth - 1]);
 		first[depth - 1] = false;

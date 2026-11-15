@@ -178,7 +178,7 @@ public final class ItemCleanupService {
 	}
 
 	private boolean eligible(ItemEntity item, int age) {
-		return item.isAlive() && item.getAge() >= 0 && item.getAge() >= age &&
+		return item.isAlive() && item.getAge() >= age &&
 		    ((ServerLevel)item.level()).isPositionEntityTicking(item.blockPosition()) &&
 		    policy.eligible(item.getItem().getItem());
 	}

@@ -105,10 +105,12 @@ public final class WatchdogModule {
 
 	public static HotspotRecorder active(Level level) {
 		WatchdogModule current = instance;
-		if (current == null || !(level instanceof ServerLevel) || !current.server.isSameThread())
+		if (current == null)
 			return null;
 		HotspotRecorder data = current.recorder;
-		return data != null && data.active() ? data : null;
+		if (data == null || !(level instanceof ServerLevel) || !current.server.isSameThread())
+			return null;
+		return data.active() ? data : null;
 	}
 
 	public static void beginTick(MinecraftServer server) {

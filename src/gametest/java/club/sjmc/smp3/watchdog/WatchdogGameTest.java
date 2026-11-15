@@ -40,7 +40,7 @@ import net.minecraft.world.level.block.piston.PistonBaseBlock;
 public final class WatchdogGameTest {
 	@GameTest(maxTicks = 100000)
 	public void commandsAndCleanup(GameTestHelper test) throws Exception {
-		if (Boolean.getBoolean("smp3.watchdog.baseline")) {
+		if (Boolean.getBoolean("smp3.watchdog.idle")) {
 			test.succeed();
 			return;
 		}
@@ -112,6 +112,8 @@ public final class WatchdogGameTest {
 				                    policy.eligible(Items.STONE),
 				                "List precedence changed");
 			    for (String mode : List.of("whitelist-first", "blacklist-first")) {
+				    boolean[] expected = mode.equals("whitelist-first") ? new boolean[] {true, false, true, true}
+					                                                    : new boolean[] {false, false, true, false};
 				    for (int mask = 0; mask < 4; mask++) {
 					    boolean black = (mask & 1) != 0, white = (mask & 2) != 0;
 					    String json = WatchdogConfig.DEFAULTS.replace("whitelist-first", mode)
@@ -120,8 +122,7 @@ public final class WatchdogGameTest {
 						                  .replace("\"whitelist\": []",
 						                           "\"whitelist\": " + (white ? "[\"minecraft:oak_planks\"]" : "[]"));
 					    var tagged = WatchdogConfig.parse(json).resolve();
-					    boolean expected = mode.equals("whitelist-first") ? white || !black : white && !black;
-					    test.assertTrue(tagged.eligible(Items.OAK_PLANKS) == expected,
+					    test.assertTrue(tagged.eligible(Items.OAK_PLANKS) == expected[mask],
 						                "Mode/item/tag precedence: " + mode + "/" + mask);
 					    test.assertTrue(tagged.eligible(Items.BIRCH_PLANKS) ==
 						                    (mode.equals("whitelist-first") && !black),
