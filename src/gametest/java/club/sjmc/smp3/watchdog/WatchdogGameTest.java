@@ -26,6 +26,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -107,6 +108,20 @@ public final class WatchdogGameTest {
 			                   -> test.assertTrue(((WatchdogConfig)read(configField, module)).enabled(),
 			                                      "Waiting for enabled cleanup"))
 		    .thenExecute(() -> {
+			    try {
+				    var active = read(configField, module);
+				    String saved = Files.readString(file);
+				    test.assertTrue(dispatcher.execute("smp3perf cleanup", console) == 1,
+					                "Cleanup status command failed");
+				    test.assertTrue(read(configField, module) == active && Files.readString(file).equals(saved),
+					                "Status command changed configuration");
+				    test.assertTrue(messages.stream().anyMatch(line -> line.contains("Automatic cleanup: on")) &&
+					                    messages.stream().anyMatch(line -> line.contains(">=2/chunk: 60s")),
+					                "Status does not show the applied configuration");
+			    } catch (Exception e) {
+				    throw new RuntimeException(e);
+			    }
+
 			    var policy = ((WatchdogConfig)read(configField, module)).resolve();
 			    test.assertTrue(!policy.eligible(Items.DIAMOND) && policy.eligible(Items.COBBLESTONE) &&
 				                    policy.eligible(Items.STONE),
@@ -300,7 +315,7 @@ public final class WatchdogGameTest {
 			data.endTick();
 			test.assertTrue(HotspotReport.format(data, List.of(), 0, true)
 			                    .stream()
-			                    .noneMatch(line -> line.contains("— block event")),
+			                    .noneMatch(line -> line.getString().contains("/ block event")),
 			                "Skipped event was counted");
 			begin.invoke(data, true);
 			test.assertTrue(!(boolean)dispatch.invoke(level, new BlockEventData(pos, Blocks.PISTON, 0, 1)),
@@ -316,8 +331,10 @@ public final class WatchdogGameTest {
 			test.assertTrue(
 			    HotspotReport.format(data, List.of(), 0, true)
 			        .stream()
-			        .anyMatch(
-			            line -> line.contains("piston (minecraft:piston) — block event") && line.endsWith("2 updates")),
+			        .anyMatch(line
+					          -> line.getStyle().getHoverEvent() instanceof HoverEvent.ShowText details &&
+					                 details.value().getString().contains("piston (minecraft:piston) — block event") &&
+					                 details.value().getString().endsWith("2 updates")),
 			    "Executed callbacks missing or duplicated");
 		} finally {
 			slot.set(module, null);

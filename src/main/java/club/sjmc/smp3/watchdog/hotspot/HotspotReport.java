@@ -5,6 +5,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+
 public final class HotspotReport {
 	private HotspotReport() {}
 	public record Pause(long start, long end) {}
@@ -80,39 +84,71 @@ public final class HotspotReport {
 		return sum;
 	}
 
-	public static List<String> format(HotspotRecorder data, List<Pause> pauses, double minimum, boolean jvmAvailable) {
+	public static List<Component> format(HotspotRecorder data, List<Pause> pauses, double minimum,
+	                                     boolean jvmAvailable) {
 		Result result = summarize(data, pauses);
-		List<String> lines = new ArrayList<>();
-		lines.add(String.format(Locale.ROOT, "SMP3 top: %.1fs; %s", (data.finishedNanos - data.originNanos) / 1e9,
-		                        data.coverage()));
+		List<Component> lines = new ArrayList<>();
+		String coverage = data.coverage() + "\nEntity/block-entity ticks, scheduled/neighbor updates and block events."
+		                  + "\nHover entries for IDs, peak times and update counts.";
+		lines.add(
+		    Component
+		        .literal(String.format(Locale.ROOT, "SMP3 top: %.1fs", (data.finishedNanos - data.originNanos) / 1e9))
+		        .withStyle(ChatFormatting.AQUA)
+		        .append(Component.literal("  " + data.samples + "/" + data.observedTicks + " ticks")
+				            .withStyle(ChatFormatting.GRAY))
+		        .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(coverage)))));
+
+		if (data.discarded > 0 || data.limited)
+			lines.add(Component
+			              .literal("Incomplete: " + data.discarded + " discarded ticks" +
+			                       (data.limited ? "; recording limit reached" : ""))
+			              .withStyle(ChatFormatting.YELLOW));
 		if (result.samples == 0) {
-			lines.add("No complete sampled ticks; check the coverage and recording limit above before retrying.");
+			lines.add(
+			    Component.literal("No complete samples. Try a longer recording.").withStyle(ChatFormatting.YELLOW));
 			return lines;
 		}
 		double divisor = result.samples * 1e6;
-		lines.add(String.format(
-		    Locale.ROOT, "Sampled tick time %.3f ms/tick; probe bookkeeping %.3f ms/tick (included in Unattributed)",
-		    result.total / divisor, result.overhead / divisor));
-		lines.add(String.format(Locale.ROOT, "JVM — observed GC pause: %s; Unattributed: %.3f ms/tick",
-		                        jvmAvailable ? String.format(Locale.ROOT, "%.3f ms/tick", result.jvm / divisor)
-		                                     : "unavailable",
-		                        result.unattributed / divisor));
+		String accounting = String.format(Locale.ROOT,
+		                                  "All values are ms per sampled tick.\nJVM: observed GC pauses only."
+		                                      + "\nOther: unattributed game work and external delays."
+		                                      + "\nProbe bookkeeping: %.3f ms/t (included in Other).",
+		                                  result.overhead / divisor);
+		lines.add(
+		    Component
+		        .literal(String.format(Locale.ROOT, "Sampled %.2f ms/t | JVM %s | Other %.2f", result.total / divisor,
+				                       jvmAvailable ? String.format(Locale.ROOT, "%.2f", result.jvm / divisor) : "n/a",
+				                       result.unattributed / divisor))
+		        .withStyle(ChatFormatting.GRAY)
+		        .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(accounting)))));
+
 		int shown = 0;
 		for (Row row : result.rows) {
 			if (row.nanos / divisor < minimum || shown == 10)
 				break;
 			shown++;
 			GroupPosition position = position(row.group.chunk());
-			lines.add(String.format(
-			    Locale.ROOT, "%d. %s X=%d Z=%d | %s | %.3f ms/tick (%.1f%%), max %.3f ms, %d updates", shown,
-			    row.group.dimension(), position.x, position.z, label(row.group), row.nanos / divisor,
-			    result.total == 0 ? 0 : row.nanos * 100.0 / result.total, row.maximum / 1e6, row.updates));
+			String dimension = row.group.dimension().startsWith("minecraft:")
+			                       ? row.group.dimension().substring("minecraft:".length())
+			                       : row.group.dimension();
+			String details =
+			    String.format(Locale.ROOT, "%s (%s) — %s\n%s X=%d Z=%d\n%.3f ms/t (%.1f%%), max %.3f ms, %d updates",
+				              name(row.group), row.group.type(), operation(row.group.kind()), row.group.dimension(),
+				              position.x, position.z, row.nanos / divisor,
+				              result.total == 0 ? 0 : row.nanos * 100.0 / result.total, row.maximum / 1e6, row.updates);
+			lines.add(
+			    Component.literal(shown + ". ")
+			        .withStyle(ChatFormatting.DARK_GRAY)
+			        .append(Component.literal(name(row.group)).withStyle(ChatFormatting.WHITE))
+			        .append(Component.literal(" / " + operation(row.group.kind())).withStyle(ChatFormatting.GRAY))
+			        .append(Component.literal(String.format(Locale.ROOT, "  %.2f ms/t", row.nanos / divisor))
+					            .withStyle(ChatFormatting.AQUA))
+			        .append(Component.literal("\n   " + dimension + "  X=" + position.x + " Z=" + position.z)
+					            .withStyle(ChatFormatting.GRAY))
+			        .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(details)))));
 		}
 		if (shown == 0)
-			lines.add("No measured groups above the display threshold.");
-		lines.add("Coverage: entity/block-entity ticks, scheduled/neighbor updates and block events; other game work "
-		          + "and external delays "
-		          + "remain Unattributed. Counts are update invocations.");
+			lines.add(Component.literal("No hotspots above the display threshold.").withStyle(ChatFormatting.GRAY));
 		return List.copyOf(lines);
 	}
 
@@ -120,11 +156,14 @@ public final class HotspotReport {
 	private static GroupPosition position(long chunk) {
 		return new GroupPosition((int)chunk * 16, (int)(chunk >>> 32) * 16);
 	}
-	private static String label(HotspotRecorder.Group group) {
-		String name = group.type().equals("minecraft:item")
-		                  ? "Dropped item"
-		                  : group.type().substring(group.type().indexOf(':') + 1).replace('_', ' ');
-		String operation = switch (group.kind()) {
+	private static String name(HotspotRecorder.Group group) {
+		return group.type().equals("minecraft:item")
+		    ? "Dropped item"
+			: group.type().substring(group.type().indexOf(':') + 1).replace('_', ' ');
+	}
+
+	private static String operation(HotspotRecorder.Kind kind) {
+		return switch (kind) {
 			case ENTITY -> "entity tick";
 			case PLAYER -> "player update";
 			case BLOCK_ENTITY -> "block-entity tick";
@@ -134,6 +173,5 @@ public final class HotspotReport {
 			case NEIGHBOR -> "neighbor update";
 			case SHAPE -> "neighbor shape update";
 		};
-		return name + " (" + group.type() + ") — " + operation;
 	}
 }

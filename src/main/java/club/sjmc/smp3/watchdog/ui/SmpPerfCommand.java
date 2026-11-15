@@ -36,6 +36,7 @@ public final class SmpPerfCommand {
 		                        .requires(SmpPerfCommand::allowed)
 		                        .then(top)
 		                        .then(Commands.literal("cleanup")
+		                                  .executes(context -> WatchdogModule.current().status(context.getSource()))
 		                                  .then(Commands.literal("on").executes(
 		                                      context -> WatchdogModule.current().change(context.getSource(), true)))
 		                                  .then(Commands.literal("off").executes(

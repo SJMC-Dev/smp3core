@@ -53,7 +53,9 @@ public final class HotspotChecks {
 		assert result.rows().get(1).nanos() == 20 && result.rows().get(1).maximum() == 20;
 		assert result.samples() == 2;
 		assert HotspotReport.summarize(data, List.of()).jvm() == 0;
-		assert HotspotReport.format(data, List.of(), 0, true).stream().anyMatch(line -> line.contains("X=-16 Z=-16"));
+		assert HotspotReport.format(data, List.of(), 0, true)
+		    .stream()
+		    .anyMatch(line -> line.getString().contains("X=-16 Z=-16"));
 
 		HotspotRecorder nested = new HotspotRecorder(10);
 		nested.beginTick(true);

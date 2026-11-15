@@ -30,7 +30,8 @@ public final class HotspotRecorder {
 	int segments, samples, discarded, observedTicks;
 	private long resumed;
 	long finishedNanos;
-	private boolean selected, invalid, limited;
+	private boolean selected, invalid;
+	boolean limited;
 	public HotspotRecorder(int seconds) { deadline = originNanos + seconds * 1_000_000_000L; }
 
 	public boolean expired() {

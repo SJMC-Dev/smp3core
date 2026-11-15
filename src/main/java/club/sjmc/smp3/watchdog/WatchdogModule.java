@@ -11,6 +11,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
@@ -26,10 +27,13 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
 
@@ -153,7 +157,7 @@ public final class WatchdogModule {
 		recipient = source;
 		this.minimum = minimum;
 		source.sendSuccess(
-		    () -> Component.literal("SMP3 top starting: " + seconds + " seconds. Results will follow."), false);
+		    () -> Component.literal("SMP3 top starting: " + seconds + "s…").withStyle(ChatFormatting.AQUA), false);
 		boolean queued = submit(source, () -> {
 			try {
 				try {
@@ -202,21 +206,30 @@ public final class WatchdogModule {
 					jvm = null;
 				}
 			}
-			List<String> lines = new ArrayList<>(HotspotReport.format(data, pauses, minimum, available));
-			lines.add(String.format(Locale.ROOT,
-			                        "Cleanup: %d loaded item entities; removed %d entities / %d items; %.3f ms total",
-			                        cleanupEnd.tracked(), cleanupEnd.removedEntities() - cleanupStart.removedEntities(),
-			                        cleanupEnd.removedItems() - cleanupStart.removedItems(),
-			                        (cleanupEnd.processingNanos() - cleanupStart.processingNanos()) / 1e6));
-			lines.add(String.format(Locale.ROOT, "Report preparation: %.3f ms on worker thread",
-			                        (System.nanoTime() - started) / 1e6));
+			List<Component> lines = new ArrayList<>(HotspotReport.format(data, pauses, minimum, available));
+			String details =
+			    String.format(Locale.ROOT,
+				              "During recording: %d entities / %d items removed.\nCleanup work: %.3f ms total"
+			                      + "\nReport preparation: %.3f ms on worker thread",
+				              cleanupEnd.removedEntities() - cleanupStart.removedEntities(),
+				              cleanupEnd.removedItems() - cleanupStart.removedItems(),
+				              (cleanupEnd.processingNanos() - cleanupStart.processingNanos()) / 1e6,
+				              (System.nanoTime() - started) / 1e6);
+			lines.add(
+			    Component
+			        .literal(String.format(Locale.ROOT, "Cleanup: %d entities removed | %d loaded",
+					                       cleanupEnd.removedEntities() - cleanupStart.removedEntities(),
+					                       cleanupEnd.tracked()))
+			        .withStyle(ChatFormatting.GRAY)
+			        .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(details)))));
+
 			if (!running)
 				return;
 			server.execute(() -> {
 				if (!running)
 					return;
 				try {
-					lines.forEach(line -> recipient.sendSuccess(() -> Component.literal(line), false));
+					lines.forEach(line -> send(recipient, line));
 				} finally {
 					occupied = false;
 					recipient = null;
@@ -244,8 +257,69 @@ public final class WatchdogModule {
 			});
 	}
 
+	public int status(CommandSourceStack source) {
+		if (config == null) {
+			source.sendFailure(Component.literal("Cleanup configuration is not loaded. Use /smp3perf reload."));
+			return 0;
+		}
+		send(source, Component.literal("Automatic cleanup: ")
+		                 .withStyle(ChatFormatting.AQUA)
+		                 .append(Component.literal(config.enabled() ? "on" : "off")
+		                             .withStyle(config.enabled() ? ChatFormatting.GREEN : ChatFormatting.GRAY)));
+		boolean whitelistFirst = config.mode() == WatchdogConfig.Mode.WHITELIST_FIRST;
+		send(source,
+		     Component.literal("Mode: ")
+		         .withStyle(ChatFormatting.GRAY)
+		         .append(Component.literal(whitelistFirst ? "whitelist-first" : "blacklist-first")
+		                     .withStyle(ChatFormatting.WHITE))
+		         .withStyle(style
+		                    -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(
+		                        whitelistFirst ? "Unlisted items can be cleared. Whitelist overrides blacklist."
+								               : "Unlisted items are protected. Blacklist overrides whitelist.")))));
+		send(source,
+		     Component.literal("Blacklist: " + config.blacklist().size() + " | Whitelist: " + config.whitelist().size())
+		         .withStyle(ChatFormatting.GRAY)
+		         .withStyle(style
+		                    -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(
+		                        "Configured item IDs / tags\nBlacklist: " + preview(config.blacklist()) +
+		                        "\nWhitelist: " + preview(config.whitelist()))))));
+		String rules = config.rules()
+		                   .stream()
+		                   .limit(3)
+		                   .map(rule -> ">=" + rule.entitiesPerChunk() + "/chunk: " + rule.minimumAgeSeconds() + "s")
+		                   .collect(Collectors.joining("; "));
+		send(source,
+		     Component.literal("Rules: ")
+		         .withStyle(ChatFormatting.GRAY)
+		         .append(Component
+		                     .literal(rules +
+		                              (config.rules().size() > 3 ? "; +" + (config.rules().size() - 3) + " more" : ""))
+		                     .withStyle(ChatFormatting.WHITE))
+		         .withStyle(style
+		                    -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(
+		                        "Dropped entity count per chunk: minimum age in ticking seconds.\nThe highest "
+		                        + "reached threshold applies.\nOnly entity-ticking chunks are cleaned.")))));
+		return 1;
+	}
+
+	private static String preview(List<String> entries) {
+		return entries.isEmpty() ? "none"
+		                         : entries.stream().limit(8).collect(Collectors.joining(", ")) +
+		                               (entries.size() > 8 ? ", +" + (entries.size() - 8) + " more" : "");
+	}
+
+	private static void send(CommandSourceStack source, Component line) {
+		source.sendSuccess(()
+		                       -> !(source.getEntity() instanceof ServerPlayer) &&
+		                                  line.getStyle().getHoverEvent() instanceof HoverEvent.ShowText details
+		                              ? line.copy().append("\n").append(details.value())
+									  : line,
+		                   false);
+	}
+
 	public int change(CommandSourceStack source, Boolean enabled) {
-		source.sendSuccess(() -> Component.literal("Watchdog configuration update queued."), false);
+		source.sendSuccess(
+		    () -> Component.literal("Watchdog configuration update queued.").withStyle(ChatFormatting.GRAY), false);
 		boolean queued = submit(source, () -> {
 			try {
 				boolean missing = !Files.exists(file);
@@ -274,8 +348,10 @@ public final class WatchdogModule {
 					    config = next;
 					    cleanup.configure(policy);
 					    source.sendSuccess(()
-						                       -> Component.literal("Watchdog configuration applied; cleanup " +
-						                                            (next.enabled() ? "on" : "off")),
+						                       -> Component
+						                              .literal("Watchdog configuration applied; cleanup " +
+						                                       (next.enabled() ? "on" : "off"))
+						                              .withStyle(ChatFormatting.GREEN),
 						                   false);
 				    })
 				    .get();
