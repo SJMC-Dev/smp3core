@@ -11,12 +11,20 @@
         "tier": 1
       },
       {
-        "minScore": 25,
+        "minScore": 20,
         "tier": 2
       },
       {
-        "minScore": 60,
+        "minScore": 40,
         "tier": 3
+      },
+      {
+        "minScore": 60,
+        "tier": 4
+      },
+      {
+        "minScore": 80,
+        "tier": 5
       }
     ]
   },
@@ -41,235 +49,109 @@
   },
   "tasks": [
     {
-      "id": "zombie_a",
+      "id": "planks_a",
+      "name": "木板加工",
+      "category": "crafting",
+      "difficulty": "A",
+      "icon": "minecraft:oak_planks",
+      "objective": {
+        "event": "item_crafted",
+        "conditions": {
+          "item": "#minecraft:planks"
+        }
+      },
+      "description": "制作 {count} 个{item}。",
+      "tiers": [
+        {
+          "tier": 1,
+          "count": 8
+        },
+        {
+          "tier": 2,
+          "count": 16
+        },
+        {
+          "tier": 3,
+          "count": 24
+        },
+        {
+          "tier": 4,
+          "count": 32
+        },
+        {
+          "tier": 5,
+          "count": 64
+        }
+      ]
+    },
+    {
+      "id": "inventory_wood_a",
+      "name": "木材储备",
+      "category": "collecting",
+      "difficulty": "A",
+      "icon": "minecraft:oak_log",
+      "objective": {
+        "event": "inventory_changed",
+        "conditions": {
+          "item": [
+            "#minecraft:logs",
+            "minecraft:oak_log"
+          ]
+        }
+      },
+      "description": "同时持有 {count} 个{item}。\n可以混合木材，不会收走物品。",
+      "count": 16,
+      "requires": [],
+      "rewards": {
+        "base": false,
+        "tongbao": 0,
+        "coffeeStamp": 0,
+        "items": [
+          {
+            "id": "minecraft:bread",
+            "count": 130
+          }
+        ]
+      }
+    },
+    {
+      "id": "zombies_a",
       "name": "清理僵尸",
-      "description": "击败 {count} 个{entity}。",
       "category": "combat",
       "difficulty": "A",
       "icon": "minecraft:rotten_flesh",
       "objective": {
         "event": "entity_killed",
         "conditions": {
-          "entity": "minecraft:zombie"
+          "entity": [
+            "minecraft:zombie",
+            "minecraft:husk"
+          ],
+          "dimension": "minecraft:overworld"
         }
       },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 5
-        },
-        {
-          "tier": 2,
-          "count": 20
-        },
-        {
-          "tier": 3,
-          "count": 25
-        }
-      ]
+      "description": "在{dimension}击败 {count} 只{entity}。",
+      "count": 4,
+      "rewards": {}
     },
     {
-      "id": "stone_a",
-      "name": "石材采集",
-      "description": "挖掘 {count} 个方块（{block} 均可）。",
-      "category": "mining",
-      "difficulty": "A",
-      "icon": "minecraft:stone",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "minecraft:stone"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 20
-        },
-        {
-          "tier": 2,
-          "count": 66
-        },
-        {
-          "tier": 3,
-          "count": 150
-        }
-      ]
-    },
-    {
-      "id": "build_a",
-      "name": "建设家园",
-      "description": "放置 {count} 个木板，任意木材均可。",
-      "category": "building",
-      "difficulty": "A",
-      "icon": "minecraft:oak_planks",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": "#minecraft:planks"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 16
-        },
-        {
-          "tier": 2,
-          "count": 32
-        },
-        {
-          "tier": 3,
-          "count": 64
-        }
-      ]
-    },
-    {
-      "id": "creeper_a",
-      "name": "排除爆破威胁",
-      "description": "击败 {count} 个{entity}。",
+      "id": "hunting_a",
+      "name": "狩猎练习",
       "category": "combat",
       "difficulty": "A",
-      "icon": "minecraft:gunpowder",
+      "icon": "minecraft:bow",
       "objective": {
         "event": "entity_killed",
-        "conditions": {
-          "entity": "minecraft:creeper"
-        }
+        "conditions": {}
       },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 2
-        },
-        {
-          "tier": 2,
-          "count": 4
-        },
-        {
-          "tier": 3,
-          "count": 6
-        }
-      ]
+      "description": "亲手或用投射物击杀 {count} 个生物。",
+      "count": 3
     },
     {
-      "id": "deepslate_a",
-      "name": "深层岩开采",
-      "description": "挖掘 {count} 个方块（{block} 均可）。",
-      "category": "mining",
-      "difficulty": "A",
-      "icon": "minecraft:deepslate",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "minecraft:deepslate"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 5
-        },
-        {
-          "tier": 2,
-          "count": 15
-        },
-        {
-          "tier": 3,
-          "count": 30
-        }
-      ]
-    },
-    {
-      "id": "iron_a",
-      "name": "铁矿勘采",
-      "description": "挖掘 {count} 个铁矿石，普通与深层矿石均可。",
-      "category": "mining",
-      "difficulty": "A",
-      "icon": "minecraft:raw_iron",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "#minecraft:iron_ores"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 12
-        },
-        {
-          "tier": 2,
-          "count": 24
-        },
-        {
-          "tier": 3,
-          "count": 48
-        }
-      ]
-    },
-    {
-      "id": "copper_a",
-      "name": "铜矿勘采",
-      "description": "挖掘 {count} 个铜矿石，普通与深层矿石均可。",
-      "category": "mining",
-      "difficulty": "A",
-      "icon": "minecraft:raw_copper",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "#minecraft:copper_ores"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 10
-        },
-        {
-          "tier": 2,
-          "count": 20
-        },
-        {
-          "tier": 3,
-          "count": 32
-        }
-      ]
-    },
-    {
-      "id": "timber_a",
-      "name": "林场备料",
-      "description": "砍伐 {count} 个原木，任意木材均可。",
-      "category": "forestry",
-      "difficulty": "A",
-      "icon": "minecraft:oak_log",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "#minecraft:logs"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 32
-        },
-        {
-          "tier": 2,
-          "count": 48
-        },
-        {
-          "tier": 3,
-          "count": 64
-        }
-      ]
-    },
-    {
-      "id": "wheat_a",
-      "name": "麦田丰收",
-      "description": "收获 {count} 株成熟的小麦。",
+      "id": "wheat_b",
+      "name": "麦田收获",
       "category": "farming",
-      "difficulty": "A",
+      "difficulty": "B",
       "icon": "minecraft:wheat",
       "objective": {
         "event": "crop_harvested",
@@ -277,755 +159,350 @@
           "block": "minecraft:wheat"
         }
       },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 8
-        },
-        {
-          "tier": 2,
-          "count": 16
-        },
-        {
-          "tier": 3,
-          "count": 32
-        }
-      ]
-    },
-    {
-      "id": "masonry_a",
-      "name": "石砖砌筑",
-      "description": "放置 {count} 个方块（{block} 均可）。",
-      "category": "building",
-      "difficulty": "A",
-      "icon": "minecraft:stone_bricks",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": [
-            "minecraft:stone_bricks",
-            "minecraft:mossy_stone_bricks",
-            "minecraft:cracked_stone_bricks",
-            "minecraft:chiseled_stone_bricks"
-          ]
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 6
-        },
-        {
-          "tier": 2,
-          "count": 12
-        },
-        {
-          "tier": 3,
-          "count": 24
-        }
-      ]
-    },
-    {
-      "id": "roof_a",
-      "name": "木阶搭建",
-      "description": "放置 {count} 个木楼梯，任意木材均可。",
-      "category": "building",
-      "difficulty": "A",
-      "icon": "minecraft:oak_stairs",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": "#minecraft:wooden_stairs"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 32
-        },
-        {
-          "tier": 2,
-          "count": 48
-        },
-        {
-          "tier": 3,
-          "count": 72
-        }
-      ]
-    },
-    {
-      "id": "river_fishing_a",
-      "name": "河畔垂钓",
-      "description": "在 {biome} 成功收获 {count} 次渔获。",
-      "category": "fishing",
-      "difficulty": "A",
-      "icon": "minecraft:fishing_rod",
-      "objective": {
-        "event": "fish_caught",
-        "conditions": {
-          "biome": [
-            "minecraft:river",
-            "minecraft:frozen_river"
-          ]
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 12
-        },
-        {
-          "tier": 2,
-          "count": 18
-        },
-        {
-          "tier": 3,
-          "count": 24
-        }
-      ]
-    },
-    {
-      "id": "bread_trade_a",
-      "name": "采购口粮",
-      "description": "与村民完成 {count} 次交易，购买 {item}。",
-      "category": "trading",
-      "difficulty": "A",
-      "icon": "minecraft:bread",
-      "objective": {
-        "event": "villager_trade",
-        "conditions": {
-          "item": "minecraft:bread"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 8
-        },
-        {
-          "tier": 2,
-          "count": 12
-        },
-        {
-          "tier": 3,
-          "count": 18
-        }
-      ]
-    },
-    {
-      "id": "lush_caves_a",
-      "name": "寻访繁茂洞穴",
-      "description": "前往 {biome}，任选一处即可。",
-      "category": "exploration",
-      "difficulty": "A",
-      "icon": "minecraft:azalea",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "biome": "minecraft:lush_caves"
-        }
+      "description": "收获 {count} 株成熟的{block}。",
+      "count": 16,
+      "rewards": {
+        "base": true,
+        "tongbao": 5,
+        "coffeeStamp": 1,
+        "items": []
       }
     },
     {
-      "id": "skeleton_b",
-      "name": "清理骷髅",
-      "description": "击败 {count} 个{entity}。",
-      "category": "combat",
-      "difficulty": "B",
-      "icon": "minecraft:bone",
-      "objective": {
-        "event": "entity_killed",
-        "conditions": {
-          "entity": "minecraft:skeleton"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 12
-        },
-        {
-          "tier": 2,
-          "count": 16
-        },
-        {
-          "tier": 3,
-          "count": 20
-        }
-      ]
-    },
-    {
-      "id": "carrot_b",
-      "name": "田园收获",
-      "description": "收获 {count} 株成熟的胡萝卜。",
+      "id": "cocoa_b",
+      "name": "可可采收",
       "category": "farming",
       "difficulty": "B",
-      "icon": "minecraft:carrot",
+      "icon": "minecraft:cocoa_beans",
       "objective": {
-        "event": "crop_harvested",
+        "event": "block_broken",
         "conditions": {
-          "block": "minecraft:carrots"
+          "block": "minecraft:cocoa",
+          "block_state": {
+            "age": "2"
+          },
+          "biome": "#minecraft:is_jungle"
         }
       },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 36
-        },
-        {
-          "tier": 2,
-          "count": 48
-        },
-        {
-          "tier": 3,
-          "count": 60
-        }
-      ]
+      "description": "在{biome}采收 {count} 个成熟的{block}。",
+      "count": 6
     },
     {
-      "id": "fishing_b",
-      "name": "今日垂钓",
-      "description": "成功钓得 {count} 次渔获，任意产物均可。",
-      "category": "fishing",
+      "id": "logs_b",
+      "name": "竖直原木",
+      "category": "forestry",
       "difficulty": "B",
-      "icon": "minecraft:fishing_rod",
+      "icon": "minecraft:oak_log",
       "objective": {
-        "event": "fish_caught",
-        "conditions": {}
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 9
-        },
-        {
-          "tier": 2,
-          "count": 12
-        },
-        {
-          "tier": 3,
-          "count": 15
+        "event": "block_broken",
+        "conditions": {
+          "block": "#minecraft:logs",
+          "block_state": {
+            "axis": "y"
+          },
+          "dimension": [
+            "minecraft:overworld",
+            "minecraft:the_nether"
+          ]
         }
-      ],
+      },
+      "description": "在{dimension}挖掘 {count} 个竖直放置的{block}。",
+      "count": 12
+    },
+    {
+      "id": "smelting_b",
+      "name": "铁料加工",
+      "category": "crafting",
+      "difficulty": "B",
+      "icon": "minecraft:iron_ingot",
+      "objective": {
+        "event": "item_crafted",
+        "conditions": {
+          "item": "minecraft:iron_ingot"
+        }
+      },
+      "description": "制作并取出 {count} 个{item}，熔炼或普通合成都可。",
+      "count": 16,
       "rewards": {
         "items": [
           {
-            "id": "minecraft:cooked_cod",
-            "count": 4
+            "id": "minecraft:iron_pickaxe",
+            "components": {
+              "minecraft:custom_name": {
+                "text": "工匠铁镐",
+                "italic": false
+              },
+              "minecraft:lore": [
+                {
+                  "text": "每日任务制作奖励",
+                  "color": "gray",
+                  "italic": false
+                }
+              ],
+              "minecraft:enchantments": {
+                "minecraft:efficiency": 2
+              },
+              "minecraft:custom_data": {
+                "smp3_reward": {
+                  "source": "dailyquest",
+                  "edition": 1,
+                  "keepsake": true
+                }
+              }
+            }
           }
         ]
       }
     },
     {
-      "id": "villager_b",
-      "name": "村庄贸易",
-      "description": "与村民完成 {count} 次交易，买卖均可。",
-      "category": "trading",
+      "id": "brewing_b",
+      "name": "药剂调制",
+      "category": "crafting",
       "difficulty": "B",
-      "icon": "minecraft:emerald",
+      "icon": "minecraft:brewing_stand",
       "objective": {
-        "event": "villager_trade",
-        "conditions": {}
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 6
-        },
-        {
-          "tier": 2,
-          "count": 8
-        },
-        {
-          "tier": 3,
-          "count": 10
-        }
-      ]
-    },
-    {
-      "id": "spider_b",
-      "name": "清理蜘蛛",
-      "description": "击败 {count} 个{entity}。",
-      "category": "combat",
-      "difficulty": "B",
-      "icon": "minecraft:spider_eye",
-      "objective": {
-        "event": "entity_killed",
+        "event": "item_crafted",
         "conditions": {
-          "entity": "minecraft:spider"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 8
-        },
-        {
-          "tier": 2,
-          "count": 12
-        },
-        {
-          "tier": 3,
-          "count": 18
-        }
-      ]
-    },
-    {
-      "id": "coal_b",
-      "name": "煤矿开采",
-      "description": "挖掘 {count} 个煤矿石，普通与深层矿石均可。",
-      "category": "mining",
-      "difficulty": "B",
-      "icon": "minecraft:coal",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "#minecraft:coal_ores"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 12
-        },
-        {
-          "tier": 2,
-          "count": 20
-        },
-        {
-          "tier": 3,
-          "count": 32
-        }
-      ]
-    },
-    {
-      "id": "redstone_b",
-      "name": "红石勘采",
-      "description": "挖掘 {count} 个红石矿石，普通与深层矿石均可。",
-      "category": "mining",
-      "difficulty": "B",
-      "icon": "minecraft:redstone",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "#minecraft:redstone_ores"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 8
-        },
-        {
-          "tier": 2,
-          "count": 12
-        },
-        {
-          "tier": 3,
-          "count": 20
-        }
-      ]
-    },
-    {
-      "id": "quartz_b",
-      "name": "石英开采",
-      "description": "在{dimension}挖掘 {count} 个{block}。",
-      "category": "mining",
-      "difficulty": "B",
-      "icon": "minecraft:quartz",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "minecraft:nether_quartz_ore",
-          "dimension": "minecraft:the_nether"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 8
-        },
-        {
-          "tier": 2,
-          "count": 16
-        },
-        {
-          "tier": 3,
-          "count": 24
-        }
-      ],
-      "requires": [
-        "nether_access"
-      ]
-    },
-    {
-      "id": "sand_b",
-      "name": "砂料备货",
-      "description": "挖掘 {count} 个沙子或红沙。",
-      "category": "mining",
-      "difficulty": "B",
-      "icon": "minecraft:sand",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "#minecraft:sand"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 48
-        },
-        {
-          "tier": 2,
-          "count": 80
-        },
-        {
-          "tier": 3,
-          "count": 112
-        }
-      ]
-    },
-    {
-      "id": "clay_b",
-      "name": "黏土开采",
-      "description": "挖掘 {count} 个方块（{block} 均可）。",
-      "category": "mining",
-      "difficulty": "B",
-      "icon": "minecraft:clay_ball",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "minecraft:clay"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 16
-        },
-        {
-          "tier": 2,
-          "count": 24
-        },
-        {
-          "tier": 3,
-          "count": 40
-        }
-      ]
-    },
-    {
-      "id": "beetroot_b",
-      "name": "甜菜收获",
-      "description": "收获 {count} 株成熟的甜菜。",
-      "category": "farming",
-      "difficulty": "B",
-      "icon": "minecraft:beetroot",
-      "objective": {
-        "event": "crop_harvested",
-        "conditions": {
-          "block": "minecraft:beetroots"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 24
-        },
-        {
-          "tier": 2,
-          "count": 40
-        },
-        {
-          "tier": 3,
-          "count": 56
-        }
-      ]
-    },
-    {
-      "id": "sugar_cane_b",
-      "name": "甘蔗收割",
-      "description": "直接打掉 {count} 节甘蔗。\n连锁脱落的部分不计数。",
-      "category": "farming",
-      "difficulty": "B",
-      "icon": "minecraft:sugar_cane",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "minecraft:sugar_cane"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 16
-        },
-        {
-          "tier": 2,
-          "count": 24
-        },
-        {
-          "tier": 3,
-          "count": 40
-        }
-      ]
-    },
-    {
-      "id": "lantern_b",
-      "name": "挂起灯笼",
-      "description": "放置 {count} 个方块（{block} 均可）。",
-      "category": "building",
-      "difficulty": "B",
-      "icon": "minecraft:lantern",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": [
-            "minecraft:lantern",
-            "minecraft:soul_lantern"
+          "item": [
+            "minecraft:potion",
+            "minecraft:splash_potion",
+            "minecraft:lingering_potion"
           ]
         }
       },
-      "count": 8
-    },
-    {
-      "id": "glass_b",
-      "name": "安装玻璃",
-      "description": "放置 {count} 个方块（{block} 均可）。",
-      "category": "building",
-      "difficulty": "B",
-      "icon": "minecraft:glass",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": [
-            "minecraft:glass",
-            "minecraft:glass_pane",
-            "minecraft:tinted_glass"
-          ]
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 24
-        },
-        {
-          "tier": 2,
-          "count": 40
-        },
-        {
-          "tier": 3,
-          "count": 56
-        }
-      ]
-    },
-    {
-      "id": "salmon_b",
-      "name": "鲑鱼渔获",
-      "description": "钓得{item} {count} 次。",
-      "category": "fishing",
-      "difficulty": "B",
-      "icon": "minecraft:salmon",
-      "objective": {
-        "event": "fish_caught",
-        "conditions": {
-          "item": "minecraft:salmon"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 4
-        },
-        {
-          "tier": 2,
-          "count": 6
-        },
-        {
-          "tier": 3,
-          "count": 9
-        }
-      ]
-    },
-    {
-      "id": "emerald_trade_b",
-      "name": "换取绿宝石",
-      "description": "向村民出售物品，换取绿宝石 {count} 次。",
-      "category": "trading",
-      "difficulty": "B",
-      "icon": "minecraft:emerald",
-      "objective": {
-        "event": "villager_trade",
-        "conditions": {
-          "item": "minecraft:emerald"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 6
-        },
-        {
-          "tier": 2,
-          "count": 10
-        },
-        {
-          "tier": 3,
-          "count": 14
-        }
-      ]
-    },
-    {
-      "id": "desert_c",
-      "name": "沙漠远行",
-      "description": "前往 {biome}，任选一处即可。",
-      "category": "exploration",
-      "difficulty": "C",
-      "icon": "minecraft:cactus",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "biome": "minecraft:desert"
-        }
+      "description": "取出 {count} 瓶实际酿成的药水，任意效果均可。",
+      "count": 3,
+      "rewards": {
+        "coffeeStamp": 2
       }
-    },
-    {
-      "id": "snow_c",
-      "name": "踏雪寻路",
-      "description": "前往 {biome}，任选一处即可。",
-      "category": "exploration",
-      "difficulty": "C",
-      "icon": "minecraft:snowball",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "biome": [
-            "minecraft:snowy_plains",
-            "minecraft:snowy_slopes",
-            "minecraft:grove",
-            "minecraft:snowy_taiga"
-          ]
-        }
-      }
-    },
-    {
-      "id": "drowned_b",
-      "name": "清理溺尸",
-      "description": "击败 {count} 个{entity}。",
-      "category": "combat",
-      "difficulty": "B",
-      "icon": "minecraft:trident",
-      "objective": {
-        "event": "entity_killed",
-        "conditions": {
-          "entity": "minecraft:drowned"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 6
-        },
-        {
-          "tier": 2,
-          "count": 10
-        },
-        {
-          "tier": 3,
-          "count": 14
-        }
-      ]
-    },
-    {
-      "id": "potato_c",
-      "name": "土豆收获",
-      "description": "收获 {count} 株成熟的马铃薯。",
-      "category": "farming",
-      "difficulty": "C",
-      "icon": "minecraft:potato",
-      "objective": {
-        "event": "crop_harvested",
-        "conditions": {
-          "block": "minecraft:potatoes"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 12
-        },
-        {
-          "tier": 2,
-          "count": 16
-        },
-        {
-          "tier": 3,
-          "count": 20
-        }
-      ]
     },
     {
       "id": "forest_c",
       "name": "森林漫步",
-      "description": "前往 {biome}，任选一处即可。",
       "category": "exploration",
       "difficulty": "C",
       "icon": "minecraft:oak_sapling",
       "objective": {
         "event": "biome_visited",
         "conditions": {
-          "biome": "minecraft:forest"
+          "biome": [
+            "minecraft:forest",
+            "#minecraft:is_taiga"
+          ]
         }
       }
     },
     {
-      "id": "plains_c",
-      "name": "平原漫步",
-      "description": "前往 {biome}，任选一处即可。",
-      "category": "exploration",
+      "id": "torch_c",
+      "name": "点亮住处",
+      "category": "building",
       "difficulty": "C",
-      "icon": "minecraft:grass_block",
+      "icon": "minecraft:torch",
       "objective": {
-        "event": "biome_visited",
+        "event": "block_placed",
         "conditions": {
-          "biome": "minecraft:plains"
+          "block": [
+            "minecraft:torch",
+            "minecraft:wall_torch"
+          ]
         }
+      },
+      "description": "放置 {count} 个{block}，地面或墙上均可。",
+      "count": 8,
+      "requires": [],
+      "rewards": {
+        "items": [
+          {
+            "id": "minecraft:torch",
+            "count": 16,
+            "components": {
+              "minecraft:custom_name": "旅行火把"
+            }
+          }
+        ]
       }
+    },
+    {
+      "id": "trapdoor_c",
+      "name": "木门安装",
+      "category": "building",
+      "difficulty": "C",
+      "icon": "minecraft:oak_trapdoor",
+      "objective": {
+        "event": "block_placed",
+        "conditions": {
+          "block": "minecraft:oak_trapdoor",
+          "block_state": {
+            "open": "false",
+            "waterlogged": "false"
+          }
+        }
+      },
+      "description": "放置 {count} 个关闭且未含水的{block}。",
+      "count": 4
+    },
+    {
+      "id": "fishing_c",
+      "name": "今日鱼获",
+      "category": "fishing",
+      "difficulty": "C",
+      "icon": "minecraft:fishing_rod",
+      "objective": {
+        "event": "fish_caught",
+        "conditions": {
+          "item": [
+            "minecraft:cod",
+            "minecraft:salmon"
+          ]
+        }
+      },
+      "description": "成功钓到{item}共 {count} 次。",
+      "count": 3
+    },
+    {
+      "id": "food_c",
+      "name": "采购口粮",
+      "category": "trading",
+      "difficulty": "C",
+      "icon": "minecraft:bread",
+      "objective": {
+        "event": "villager_trade",
+        "conditions": {
+          "entity": "minecraft:villager",
+          "item": [
+            "minecraft:bread",
+            "minecraft:apple"
+          ]
+        }
+      },
+      "description": "与{entity}交易 {count} 次，购买{item}，任一种均可。",
+      "count": 2,
+      "rewards": {
+        "items": [
+          {
+            "id": "smp3:choice_pack",
+            "components": {
+              "minecraft:custom_name": {
+                "text": "旅行补给包",
+                "color": "aqua",
+                "italic": false
+              },
+              "smp3:pack": {
+                "options": [
+                  {
+                    "name": "矿工补给",
+                    "items": [
+                      {
+                        "id": "minecraft:iron_pickaxe",
+                        "components": {
+                          "minecraft:enchantments": {
+                            "minecraft:efficiency": 2,
+                            "minecraft:unbreaking": 1
+                          }
+                        }
+                      },
+                      {
+                        "id": "minecraft:torch",
+                        "count": 32
+                      }
+                    ]
+                  },
+                  {
+                    "name": "旅途补给",
+                    "items": [
+                      {
+                        "id": "minecraft:bread",
+                        "count": 16
+                      },
+                      {
+                        "id": "minecraft:potion",
+                        "components": {
+                          "minecraft:potion_contents": {
+                            "potion": "minecraft:healing"
+                          }
+                        }
+                      },
+                      {
+                        "id": "smp3:random_pack",
+                        "components": {
+                          "smp3:pack": {
+                            "entries": [
+                              {
+                                "item": {
+                                  "id": "minecraft:emerald"
+                                },
+                                "weight": 3,
+                                "min": 1,
+                                "max": 2
+                              },
+                              {
+                                "item": {
+                                  "id": "minecraft:diamond"
+                                },
+                                "weight": 1,
+                                "min": 1,
+                                "max": 1
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "raiders_c",
+      "name": "抵御袭击者",
+      "category": "combat",
+      "difficulty": "C",
+      "icon": "minecraft:crossbow",
+      "objective": {
+        "event": "entity_killed",
+        "conditions": {
+          "entity": "#minecraft:raiders"
+        }
+      },
+      "description": "击败 {count} 只{entity}。",
+      "count": 2,
+      "requires": [
+        "diamonds"
+      ]
     },
     {
       "id": "piglin_c",
-      "name": "猪灵交易",
-      "description": "亲手交给成年猪灵金锭，\n完成 {count} 次以物易物。",
+      "name": "下界商旅",
       "category": "trading",
       "difficulty": "C",
       "icon": "minecraft:gold_ingot",
       "objective": {
         "event": "piglin_barter",
-        "conditions": {}
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 2
-        },
-        {
-          "tier": 2,
-          "count": 2
-        },
-        {
-          "tier": 3,
-          "count": 3
+        "conditions": {
+          "entity": "minecraft:piglin",
+          "dimension": "minecraft:the_nether"
         }
+      },
+      "description": "在{dimension}与成年{entity}完成 {count} 次金锭交易。",
+      "count": 4,
+      "requires": [
+        "nether_access",
+        "diamonds"
       ],
       "rewards": {
+        "base": false,
+        "tongbao": 10,
         "items": [
           {
             "id": "smp3:random_pack",
-            "count": 1,
+            "count": 2,
             "components": {
               "smp3:pack": {
-                "draws": 1,
+                "draws": 3,
                 "entries": [
                   {
                     "item": {
@@ -1037,7 +514,8 @@
                   },
                   {
                     "item": {
-                      "id": "minecraft:gold_ingot"
+                      "id": "minecraft:gold_ingot",
+                      "count": 1
                     },
                     "weight": 3,
                     "min": 1,
@@ -1059,534 +537,32 @@
       }
     },
     {
-      "id": "pumpkin_c",
-      "name": "南瓜收获",
-      "description": "打掉 {count} 个南瓜。",
-      "category": "farming",
-      "difficulty": "C",
-      "icon": "minecraft:pumpkin",
-      "objective": {
-        "event": "crop_harvested",
-        "conditions": {
-          "block": "minecraft:pumpkin"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 6
-        },
-        {
-          "tier": 2,
-          "count": 8
-        },
-        {
-          "tier": 3,
-          "count": 10
-        }
-      ]
-    },
-    {
-      "id": "melon_c",
-      "name": "西瓜收获",
-      "description": "打掉 {count} 个西瓜方块，按方块数计。",
-      "category": "farming",
-      "difficulty": "C",
-      "icon": "minecraft:melon",
-      "objective": {
-        "event": "crop_harvested",
-        "conditions": {
-          "block": "minecraft:melon"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 6
-        },
-        {
-          "tier": 2,
-          "count": 8
-        },
-        {
-          "tier": 3,
-          "count": 10
-        }
-      ]
-    },
-    {
-      "id": "gravel_c",
-      "name": "砂砾备料",
-      "description": "挖掘 {count} 个方块（{block} 均可）。",
-      "category": "mining",
-      "difficulty": "C",
-      "icon": "minecraft:gravel",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "minecraft:gravel"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 16
-        },
-        {
-          "tier": 2,
-          "count": 24
-        },
-        {
-          "tier": 3,
-          "count": 40
-        }
-      ]
-    },
-    {
-      "id": "mixed_stone_c",
-      "name": "杂岩备料",
-      "description": "挖掘 {count} 个方块（{block} 均可）。",
-      "category": "mining",
-      "difficulty": "C",
-      "icon": "minecraft:andesite",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": [
-            "minecraft:andesite",
-            "minecraft:diorite",
-            "minecraft:granite"
-          ]
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 24
-        },
-        {
-          "tier": 2,
-          "count": 40
-        },
-        {
-          "tier": 3,
-          "count": 64
-        }
-      ]
-    },
-    {
-      "id": "leaves_c",
-      "name": "修剪树叶",
-      "description": "打掉 {count} 个树叶方块，任意树种均可。",
-      "category": "forestry",
-      "difficulty": "C",
-      "icon": "minecraft:oak_leaves",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "#minecraft:leaves"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 16
-        },
-        {
-          "tier": 2,
-          "count": 24
-        },
-        {
-          "tier": 3,
-          "count": 32
-        }
-      ]
-    },
-    {
-      "id": "bamboo_c",
-      "name": "竹林取材",
-      "description": "直接打掉 {count} 节竹子。\n连锁脱落的部分不计数。",
-      "category": "forestry",
-      "difficulty": "C",
-      "icon": "minecraft:bamboo",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "minecraft:bamboo"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 16
-        },
-        {
-          "tier": 2,
-          "count": 24
-        },
-        {
-          "tier": 3,
-          "count": 40
-        }
-      ]
-    },
-    {
-      "id": "cocoa_c",
-      "name": "可可收获",
-      "description": "打掉 {count} 个成熟的可可果。",
-      "category": "farming",
-      "difficulty": "C",
-      "icon": "minecraft:cocoa_beans",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "minecraft:cocoa",
-          "block_state": {
-            "age": "2"
-          }
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 6
-        },
-        {
-          "tier": 2,
-          "count": 10
-        },
-        {
-          "tier": 3,
-          "count": 16
-        }
-      ]
-    },
-    {
-      "id": "sowing_c",
-      "name": "播种田地",
-      "description": "种下 {count} 株作物。\n小麦、胡萝卜、马铃薯或甜菜均可。",
-      "category": "farming",
-      "difficulty": "C",
-      "icon": "minecraft:wheat_seeds",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": [
-            "minecraft:wheat",
-            "minecraft:carrots",
-            "minecraft:potatoes",
-            "minecraft:beetroots"
-          ]
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 8
-        },
-        {
-          "tier": 2,
-          "count": 12
-        },
-        {
-          "tier": 3,
-          "count": 20
-        }
-      ]
-    },
-    {
-      "id": "flowers_c",
-      "name": "栽花点缀",
-      "description": "种下 {count} 朵小型花，任选种类。",
-      "category": "building",
-      "difficulty": "C",
-      "icon": "minecraft:poppy",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": "#minecraft:small_flowers"
-        }
-      },
-      "count": 8
-    },
-    {
-      "id": "paving_c",
-      "name": "铺设路面",
-      "description": "放置 {count} 个方块（{block} 均可）。",
-      "category": "building",
-      "difficulty": "C",
-      "icon": "minecraft:smooth_stone",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": [
-            "minecraft:gravel",
-            "minecraft:cobblestone",
-            "minecraft:smooth_stone"
-          ]
-        }
-      },
-      "count": 16
-    },
-    {
-      "id": "fence_c",
-      "name": "搭建围栏",
-      "description": "放置 {count} 个木栅栏，任意木材均可。",
-      "category": "building",
-      "difficulty": "C",
-      "icon": "minecraft:oak_fence",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": "#minecraft:wooden_fences"
-        }
-      },
-      "count": 12
-    },
-    {
-      "id": "torch_c",
-      "name": "点亮住处",
-      "description": "放置 {count} 个火把，地面或墙上均可。",
-      "category": "building",
-      "difficulty": "C",
-      "icon": "minecraft:torch",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": [
-            "minecraft:torch",
-            "minecraft:wall_torch"
-          ]
-        }
-      },
-      "count": 12
-    },
-    {
-      "id": "bed_c",
-      "name": "安置床铺",
-      "description": "放置一张床，任意颜色均可。",
-      "category": "building",
-      "difficulty": "C",
-      "icon": "minecraft:red_bed",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": "#minecraft:beds"
-        }
-      }
-    },
-    {
-      "id": "cod_c",
-      "name": "鳕鱼渔获",
-      "description": "钓得{item} {count} 次。",
-      "category": "fishing",
-      "difficulty": "C",
-      "icon": "minecraft:cod",
-      "objective": {
-        "event": "fish_caught",
-        "conditions": {
-          "item": "minecraft:cod"
-        }
-      },
-      "count": 3
-    },
-    {
-      "id": "apple_trade_c",
-      "name": "采购苹果",
-      "description": "与村民完成 {count} 次交易，购买 {item}。",
-      "category": "trading",
-      "difficulty": "C",
-      "icon": "minecraft:apple",
-      "objective": {
-        "event": "villager_trade",
-        "conditions": {
-          "item": "minecraft:apple"
-        }
-      },
-      "count": 2
-    },
-    {
-      "id": "river_c",
-      "name": "河边走走",
-      "description": "前往 {biome}，任选一处即可。",
-      "category": "exploration",
-      "difficulty": "C",
-      "icon": "minecraft:sugar_cane",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "biome": [
-            "minecraft:river",
-            "minecraft:frozen_river"
-          ]
-        }
-      }
-    },
-    {
-      "id": "shore_c",
-      "name": "海岸散步",
-      "description": "前往 {biome}，任选一处即可。",
-      "category": "exploration",
-      "difficulty": "C",
-      "icon": "minecraft:sand",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "biome": [
-            "minecraft:beach",
-            "minecraft:snowy_beach",
-            "minecraft:stony_shore"
-          ]
-        }
-      }
-    },
-    {
-      "id": "taiga_c",
-      "name": "针叶林漫步",
-      "description": "前往任意针叶林群系。",
-      "category": "exploration",
-      "difficulty": "C",
-      "icon": "minecraft:spruce_sapling",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "biome": "#minecraft:is_taiga"
-        }
-      }
-    },
-    {
-      "id": "birch_c",
-      "name": "白桦林漫步",
-      "description": "前往 {biome}，任选一处即可。",
-      "category": "exploration",
-      "difficulty": "C",
-      "icon": "minecraft:birch_sapling",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "biome": [
-            "minecraft:birch_forest",
-            "minecraft:old_growth_birch_forest"
-          ]
-        }
-      }
-    },
-    {
-      "id": "savanna_c",
-      "name": "热带草原漫步",
-      "description": "前往任意热带草原群系。",
-      "category": "exploration",
-      "difficulty": "C",
-      "icon": "minecraft:acacia_sapling",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "biome": "#minecraft:is_savanna"
-        }
-      }
-    },
-    {
-      "id": "hostile_patrol_c",
-      "name": "清理敌怪",
-      "description": "击败 {count} 个敌怪，以下目标任选：\n{entity}。",
-      "category": "combat",
-      "difficulty": "C",
-      "icon": "minecraft:stone_sword",
-      "objective": {
-        "event": "entity_killed",
-        "conditions": {
-          "entity": [
-            "minecraft:zombie",
-            "minecraft:skeleton",
-            "minecraft:spider",
-            "minecraft:creeper",
-            "minecraft:slime",
-            "#minecraft:raiders"
-          ]
-        }
-      },
-      "count": 3
-    },
-    {
-      "id": "blaze_c",
-      "name": "击败烈焰人",
-      "description": "击败 {count} 个{entity}。",
-      "category": "combat",
-      "difficulty": "C",
-      "icon": "minecraft:blaze_rod",
-      "objective": {
-        "event": "entity_killed",
-        "conditions": {
-          "entity": "minecraft:blaze"
-        }
-      },
-      "count": 2,
-      "requires": [
-        "nether_access"
-      ]
-    },
-    {
-      "id": "craft_planks_a",
-      "name": "木板加工",
-      "description": "合成 {count} 个木板，任意木材均可。",
+      "id": "smithing_c",
+      "name": "下界合金工艺",
       "category": "crafting",
-      "difficulty": "A",
-      "icon": "minecraft:oak_planks",
+      "difficulty": "C",
+      "icon": "minecraft:smithing_table",
       "objective": {
         "event": "item_crafted",
         "conditions": {
-          "item": "#minecraft:planks"
+          "item": [
+            "minecraft:netherite_pickaxe",
+            "minecraft:netherite_sword"
+          ]
         }
       },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 16
-        },
-        {
-          "tier": 2,
-          "count": 32
-        },
-        {
-          "tier": 3,
-          "count": 64
-        }
+      "description": "锻造并取出 {count} 件{item}。",
+      "requires": [
+        "nether_access",
+        "diamonds"
       ],
       "rewards": {
         "items": [
           {
-            "id": "smp3:choice_pack",
-            "count": 1,
+            "id": "minecraft:enchanted_book",
             "components": {
-              "smp3:pack": {
-                "options": [
-                  {
-                    "name": "矿工补给",
-                    "items": [
-                      {
-                        "id": "minecraft:torch",
-                        "count": 16
-                      },
-                      {
-                        "id": "minecraft:bread",
-                        "count": 4
-                      }
-                    ]
-                  },
-                  {
-                    "name": "建筑补给",
-                    "items": [
-                      {
-                        "id": "minecraft:oak_planks",
-                        "count": 32
-                      },
-                      {
-                        "id": "minecraft:glass",
-                        "count": 16
-                      }
-                    ]
-                  }
-                ]
+              "minecraft:stored_enchantments": {
+                "minecraft:unbreaking": 3
               }
             }
           }
@@ -1594,269 +570,23 @@
       }
     },
     {
-      "id": "craft_torches_a",
-      "name": "制作火把",
-      "description": "合成 {count} 个火把，按产物个数计。",
-      "category": "crafting",
-      "difficulty": "A",
-      "icon": "minecraft:torch",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "minecraft:torch"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 12
-        },
-        {
-          "tier": 2,
-          "count": 24
-        },
-        {
-          "tier": 3,
-          "count": 48
-        }
-      ]
-    },
-    {
-      "id": "craft_paper_a",
-      "name": "制作纸张",
-      "description": "用甘蔗合成 {count} 张纸。",
-      "category": "crafting",
-      "difficulty": "A",
-      "icon": "minecraft:paper",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "minecraft:paper"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 12
-        },
-        {
-          "tier": 2,
-          "count": 24
-        },
-        {
-          "tier": 3,
-          "count": 48
-        }
-      ]
-    },
-    {
-      "id": "craft_bread_a",
-      "name": "烘焙面包",
-      "description": "用小麦合成 {count} 个面包。",
-      "category": "crafting",
-      "difficulty": "A",
-      "icon": "minecraft:bread",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "minecraft:bread"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 4
-        },
-        {
-          "tier": 2,
-          "count": 8
-        },
-        {
-          "tier": 3,
-          "count": 16
-        }
-      ]
-    },
-    {
-      "id": "craft_sticks_b",
-      "name": "制作木棍",
-      "description": "合成 {count} 根木棍，按产物个数计。",
-      "category": "crafting",
-      "difficulty": "B",
-      "icon": "minecraft:stick",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "minecraft:stick"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 8
-        },
-        {
-          "tier": 2,
-          "count": 16
-        },
-        {
-          "tier": 3,
-          "count": 32
-        }
-      ]
-    },
-    {
-      "id": "craft_stairs_b",
-      "name": "制作木阶",
-      "description": "合成 {count} 个木楼梯，任意木材均可。",
-      "category": "crafting",
-      "difficulty": "B",
-      "icon": "minecraft:oak_stairs",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "#minecraft:wooden_stairs"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 8
-        },
-        {
-          "tier": 2,
-          "count": 16
-        },
-        {
-          "tier": 3,
-          "count": 24
-        }
-      ]
-    },
-    {
-      "id": "craft_fences_b",
-      "name": "制作围栏",
-      "description": "合成 {count} 个木栅栏，任意木材均可。",
-      "category": "crafting",
-      "difficulty": "B",
-      "icon": "minecraft:oak_fence",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "#minecraft:wooden_fences"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 6
-        },
-        {
-          "tier": 2,
-          "count": 12
-        },
-        {
-          "tier": 3,
-          "count": 18
-        }
-      ]
-    },
-    {
-      "id": "craft_ladders_b",
-      "name": "制作梯子",
-      "description": "用木棍合成 {count} 个梯子。",
-      "category": "crafting",
-      "difficulty": "B",
-      "icon": "minecraft:ladder",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "minecraft:ladder"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 6
-        },
-        {
-          "tier": 2,
-          "count": 12
-        },
-        {
-          "tier": 3,
-          "count": 18
-        }
-      ]
-    },
-    {
-      "id": "craft_chests_b",
-      "name": "制作箱子",
-      "description": "用木板合成 {count} 个箱子。",
-      "category": "crafting",
-      "difficulty": "B",
-      "icon": "minecraft:chest",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "minecraft:chest"
-        }
-      },
-      "tiers": [
-        {
-          "tier": 1,
-          "count": 2
-        },
-        {
-          "tier": 2,
-          "count": 3
-        },
-        {
-          "tier": 3,
-          "count": 4
-        }
-      ]
-    },
-    {
-      "id": "craft_table_c",
-      "name": "制作工作台",
-      "description": "用木板合成一个工作台。",
-      "category": "crafting",
+      "id": "end_visit_c",
+      "name": "末地见闻",
+      "category": "exploration",
       "difficulty": "C",
-      "icon": "minecraft:crafting_table",
+      "icon": "minecraft:end_stone",
       "objective": {
-        "event": "item_crafted",
+        "event": "biome_visited",
         "conditions": {
-          "item": "minecraft:crafting_table"
+          "dimension": "minecraft:the_end"
         }
-      }
-    },
-    {
-      "id": "craft_furnace_c",
-      "name": "制作熔炉",
-      "description": "在工作台合成一个熔炉。",
-      "category": "crafting",
-      "difficulty": "C",
-      "icon": "minecraft:furnace",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "minecraft:furnace"
-        }
-      }
-    },
-    {
-      "id": "craft_pickaxe_c",
-      "name": "制作石镐",
-      "description": "在工作台合成一把石镐。",
-      "category": "crafting",
-      "difficulty": "C",
-      "icon": "minecraft:stone_pickaxe",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "minecraft:stone_pickaxe"
-        }
+      },
+      "description": "前往{dimension}。本例仅记录完成，不发放奖励。",
+      "requires": [
+        "end_access"
+      ],
+      "rewards": {
+        "base": false
       }
     }
   ]
