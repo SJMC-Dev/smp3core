@@ -1,4 +1,4 @@
-package club.sjmc.smp3.reward.ui;
+package club.sjmc.smp3.daily.ui;
 
 import java.util.List;
 
@@ -6,29 +6,30 @@ import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.gui.GuiStyle;
-import club.sjmc.smp3.reward.PackItem;
-import club.sjmc.smp3.reward.RewardService;
+import club.sjmc.smp3.item.ItemDelivery;
+import club.sjmc.smp3.item.PackItem;
+import club.sjmc.smp3.item.ui.PackGui;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-public final class RewardsGui extends SimpleGui {
+public final class QuestRewardsGui extends SimpleGui {
 	private final List<ItemStack> items;
 	private int page;
-	private RewardsGui(ServerPlayer player, List<ItemStack> items, boolean pending) {
+	private QuestRewardsGui(ServerPlayer player, List<ItemStack> items, boolean pending) {
 		super(MenuType.GENERIC_9x6, player, false);
 		this.items = items;
 		setTitle(GuiStyle.text(pending ? "待领取奖励" : "任务物品奖励", GuiStyle.TITLE));
 		refresh();
 	}
 	public static void pending(ServerPlayer player) {
-		RewardService.deliver(player);
-		new RewardsGui(player, RewardService.pending(player), true).open();
+		ItemDelivery.deliver(player);
+		new QuestRewardsGui(player, ItemDelivery.pending(player), true).open();
 	}
 	public static void preview(ServerPlayer player, List<ItemStack> items) {
-		new RewardsGui(player, items, false).open();
+		new QuestRewardsGui(player, items, false).open();
 	}
 	private void refresh() {
 		GuiStyle.fill(this, 54);

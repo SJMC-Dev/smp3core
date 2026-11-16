@@ -10,8 +10,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.QuestDefinition;
 import club.sjmc.smp3.daily.ui.DailyQuestGui;
-import club.sjmc.smp3.reward.RewardItems;
-import club.sjmc.smp3.reward.ui.PackGui;
+import club.sjmc.smp3.item.ItemDefinitions;
+import club.sjmc.smp3.item.ui.PackGui;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -93,7 +93,8 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 					                 .rewards()
 					                 .items()
 					                 .getFirst();
-					player.setItemInHand(InteractionHand.MAIN_HAND, RewardItems.stack(reward, player.registryAccess()));
+					player.setItemInHand(InteractionHand.MAIN_HAND,
+					                     ItemDefinitions.stack(reward, player.registryAccess()));
 					PackGui.open(player, InteractionHand.MAIN_HAND);
 				});
 				context.waitForScreen(AbstractContainerScreen.class);

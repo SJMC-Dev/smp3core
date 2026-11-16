@@ -4,9 +4,6 @@ import java.util.List;
 
 import com.google.gson.JsonParser;
 
-import club.sjmc.smp3.reward.Reward;
-import club.sjmc.smp3.reward.RewardService;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
@@ -38,7 +35,7 @@ final class ProductionChecks {
 		                                         + "\"minecraft:netherite_pickaxe\",\"minecraft:potion\"]}")
 		                            .getAsJsonObject()),
 		    100, List.of(), List.of(), null);
-		var task = new QuestDay.Assignment(definition, 1, new Reward(0, 0));
+		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0));
 		DailyQuestModule.current().state(player).assignments.set(0, task);
 		player.getInventory().clearContent();
 		var furnace = new FurnaceMenu(6, player.getInventory());
@@ -106,28 +103,42 @@ final class ProductionChecks {
 		        JsonParser.parseString("{\"item\":[\"minecraft:oak_planks\",\"#minecraft:planks\"]}")
 		            .getAsJsonObject()),
 		    6, List.of(), List.of(), null);
-		task = new QuestDay.Assignment(definition, 1, new Reward(0, 0));
+		task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0));
 		service.state(player).assignments.set(0, task);
 		player.getInventory().clearContent();
 		player.getInventory().setItem(0, new ItemStack(Items.OAK_PLANKS, 2));
 		player.getInventory().setItem(1, new ItemStack(Items.BIRCH_PLANKS, 2));
 		player.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.OAK_PLANKS));
+		player.inventoryMenu.broadcastChanges();
+		player.inventoryMenu.broadcastChanges();
+		test.assertTrue(task.progress == 0, "Slot notifications were not deferred to a complete inventory snapshot");
+		DailyQuestEvents.flushInventories(player.level().getServer());
 		service.settle(player);
 		test.assertTrue(task.progress == 5, "Inventory tags, overlapping filters or offhand counted incorrectly");
 		player.getInventory().setItem(2, player.getInventory().removeItemNoUpdate(0));
+		player.inventoryMenu.broadcastChanges();
+		DailyQuestEvents.flushInventories(player.level().getServer());
 		service.settle(player);
 		test.assertTrue(task.progress == 5, "Moving stacks added possession progress");
 		player.getInventory().setItem(1, ItemStack.EMPTY);
 		service.settle(player);
+		test.assertTrue(task.progress == 5, "Settlement polled an unchanged notification state");
+		player.inventoryMenu.broadcastChanges();
+		DailyQuestEvents.flushInventories(player.level().getServer());
+		service.settle(player);
 		test.assertTrue(task.progress == 3, "Possession progress did not decrease after removal");
-		long completed = RewardService.progress(player).completed();
+		long completed = QuestRewards.progress(player).completed();
 		player.getInventory().setItem(2, new ItemStack(Items.OAK_PLANKS, 5));
+		player.inventoryMenu.broadcastChanges();
+		DailyQuestEvents.flushInventories(player.level().getServer());
 		service.settle(player);
 		test.assertTrue(task.claimed && player.getInventory().getItem(2).getCount() == 5,
 		                "Possession task failed to settle or consumed items");
 		player.getInventory().clearContent();
+		player.inventoryMenu.broadcastChanges();
+		DailyQuestEvents.flushInventories(player.level().getServer());
 		service.settle(player);
-		test.assertTrue(task.progress == 6 && RewardService.progress(player).completed() == completed + 1,
+		test.assertTrue(task.progress == 6 && QuestRewards.progress(player).completed() == completed + 1,
 		                "Completed possession task reverted or paid twice");
 	}
 }

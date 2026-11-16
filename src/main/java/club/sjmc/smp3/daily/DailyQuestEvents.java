@@ -2,17 +2,21 @@ package club.sjmc.smp3.daily;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -25,8 +29,38 @@ import net.minecraft.world.level.block.state.properties.Property;
 
 public final class DailyQuestEvents {
 	private DailyQuestEvents() {}
+	private static final Set<UUID> inventoryChanges = new HashSet<>();
+	public static void inventoryChanged(ServerPlayer player) { inventoryChanges.add(player.getUUID()); }
+	static void forgetInventory(UUID player) { inventoryChanges.remove(player); }
+	static void clearInventories() { inventoryChanges.clear(); }
+	static void flushInventories(MinecraftServer server) {
+		if (inventoryChanges.isEmpty())
+			return;
+		var changed = Set.copyOf(inventoryChanges);
+		inventoryChanges.clear();
+		for (UUID id : changed) {
+			ServerPlayer player = server.getPlayerList().getPlayer(id);
+			if (player != null)
+				DailyQuestModule.current().inventoryChanged(player);
+		}
+	}
+	static void inventoryLocation(ServerPlayer player, QuestDay day) {
+		if (day == null ||
+		    !day.assignments.stream().anyMatch(
+		        a
+		        -> !a.complete() && a.definition.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()) &&
+		               (a.definition.objective().conditions().has("biome") ||
+					    a.definition.objective().conditions().has("dimension"))))
+			return;
+		GlobalPos location = GlobalPos.of(player.level().dimension(), player.blockPosition());
+		if (!location.equals(day.inventoryLocation)) {
+			day.inventoryLocation = location;
+			inventoryChanged(player);
+		}
+	}
 
 	public static void register() {
+		ServerPlayerEvents.AFTER_RESPAWN.register((previous, player, alive) -> inventoryChanged(player));
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, damage) -> {
 			if (damage.getEntity() instanceof ServerPlayer player &&
 			    (damage.getDirectEntity() == player || damage.getDirectEntity() instanceof Projectile)) {

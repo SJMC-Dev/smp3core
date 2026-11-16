@@ -1,7 +1,7 @@
 package club.sjmc.smp3.sign;
 
 import club.sjmc.smp3.Smp3Core;
-import club.sjmc.smp3.inventory.PlayerItems;
+import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.perm.Permissions;
 
 import net.minecraft.commands.Commands;
@@ -19,9 +19,9 @@ final class SignRewardGranter {
 			return switch (reward.kind()) {
 				case CURRENCY -> throw new IllegalArgumentException("Currency must be committed with its receipt");
 				case ITEM -> {
-					PlayerItems.give(player,
-					                 new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(reward.value())),
-					                               reward.amount()));
+					ItemDelivery.give(player,
+					                  new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(reward.value())),
+					                                reward.amount()));
 					yield Result.SUCCESS;
 				}
 				case TITLE -> {

@@ -1,4 +1,4 @@
-package club.sjmc.smp3.reward.ui;
+package club.sjmc.smp3.item.ui;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,9 +9,8 @@ import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.gui.GuiStyle;
-import club.sjmc.smp3.reward.PackItem;
-import club.sjmc.smp3.reward.RewardItems;
-import club.sjmc.smp3.reward.RewardService;
+import club.sjmc.smp3.item.ItemDefinitions;
+import club.sjmc.smp3.item.PackItem;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -43,8 +42,8 @@ public final class PackGui extends SimpleGui {
 	public static void preview(ServerPlayer player, ItemStack pack) { show(player, pack, null); }
 	private static void show(ServerPlayer player, ItemStack pack, InteractionHand hand) {
 		try {
-			RewardItems.validate(RewardItems.json(pack, player.registryAccess()), player.registryAccess());
-			int count = pack.get(RewardItems.PACK)
+			ItemDefinitions.validate(ItemDefinitions.json(pack, player.registryAccess()), player.registryAccess());
+			int count = pack.get(ItemDefinitions.PACK)
 			                .getAsJsonArray(((PackItem)pack.getItem()).choice() ? "options" : "entries")
 			                .size();
 			PackGui gui = new PackGui(player, pack, hand, Math.min(6, Math.max(3, (count + 8) / 9 + 2)));
@@ -57,7 +56,7 @@ public final class PackGui extends SimpleGui {
 	}
 	private void refresh() {
 		GuiStyle.fill(this, size);
-		var definition = pack.get(RewardItems.PACK);
+		var definition = pack.get(ItemDefinitions.PACK);
 		var entries = definition.getAsJsonArray(choice ? "options" : "entries");
 		setSlot(4, new GuiElementBuilder(pack.copyWithCount(1))
 		               .addLoreLine(GuiStyle.text(
@@ -73,9 +72,9 @@ public final class PackGui extends SimpleGui {
 			List<ItemStack> items = new ArrayList<>();
 			if (choice)
 				for (var item : entry.getAsJsonArray("items"))
-					items.add(RewardItems.stack(item.getAsJsonObject(), player.registryAccess()));
+					items.add(ItemDefinitions.stack(item.getAsJsonObject(), player.registryAccess()));
 			else
-				items.add(RewardItems.stack(entry.getAsJsonObject("item"), player.registryAccess()));
+				items.add(ItemDefinitions.stack(entry.getAsJsonObject("item"), player.registryAccess()));
 			var icon = new GuiElementBuilder(items.getFirst().copyWithCount(
 			    Math.min(items.getFirst().getCount(), items.getFirst().getMaxStackSize())));
 			if (choice) {
@@ -122,7 +121,7 @@ public final class PackGui extends SimpleGui {
 		if (redeemed)
 			return;
 		try {
-			redeemed = RewardService.open(player, hand, pack, option, new Random());
+			redeemed = PackItem.open(player, hand, pack, option, new Random());
 			close();
 			player.sendSystemMessage(GuiStyle.text(redeemed ? "礼包已开启，背包不足的物品保留在待领取奖励中"
 			                                                : "手中的礼包已改变，请重新打开",

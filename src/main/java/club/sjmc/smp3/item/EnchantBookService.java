@@ -1,7 +1,6 @@
 package club.sjmc.smp3.item;
 
 import club.sjmc.smp3.Smp3Core;
-import club.sjmc.smp3.inventory.PlayerItems;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
@@ -28,7 +27,7 @@ public final class EnchantBookService {
 		}
 
 		ItemStack reward = book(holder, level);
-		boolean dropped = PlayerItems.give(player, reward);
+		boolean dropped = ItemDelivery.give(player, reward);
 
 		Smp3Core.LOGGER.info("[SMP3] 任意附魔书使用：player={}({}) enchantment={} level={}{}",
 		                     player.getName().getString(), player.getUUID(),

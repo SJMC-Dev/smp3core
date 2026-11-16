@@ -8,9 +8,9 @@ import com.google.gson.JsonParser;
 
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
-import club.sjmc.smp3.reward.Reward;
-import club.sjmc.smp3.reward.RewardItems;
-import club.sjmc.smp3.reward.RewardService;
+import club.sjmc.smp3.item.ItemDefinitions;
+import club.sjmc.smp3.item.ItemDelivery;
+import club.sjmc.smp3.item.PackItem;
 import club.sjmc.smp3.time.ServerDates;
 
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -66,67 +66,66 @@ final class QuestUpdateChecks {
 	}
 	static void rewards(GameTestHelper test, ServerPlayer player) {
 		long day = ServerDates.today().toEpochDay() + 1;
-		long count = RewardService.progress(player).completed();
-		RewardService.complete(player, day, 3, "counter", new Reward(0, 0));
-		RewardService.complete(player, day, 3, "counter", new Reward(0, 0));
-		test.assertTrue(RewardService.progress(player).completed() == count + 1, "Completion was counted twice");
+		long count = QuestRewards.progress(player).completed();
+		QuestRewards.complete(player, day, 3, "counter", new QuestReward(0, 0));
+		QuestRewards.complete(player, day, 3, "counter", new QuestReward(0, 0));
+		test.assertTrue(QuestRewards.progress(player).completed() == count + 1, "Completion was counted twice");
 		player.getInventory().clearContent();
 		for (int i = 0; i < 36; i++)
 			player.getInventory().setItem(i, new ItemStack(Items.STONE, 64));
 		player.getInventory().setItem(0, new ItemStack(Items.BREAD, 63));
 		var bread = JsonParser.parseString("{\"id\":\"minecraft:bread\",\"count\":130}").getAsJsonObject();
-		var reward = new Reward(5, 1, List.of(bread));
+		var reward = new QuestReward(5, 1, List.of(bread));
 		long before = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO);
-		RewardService.grant(player, new RewardService.DailyReward(day, 0, "bread", reward));
-		RewardService.grant(player, new RewardService.DailyReward(day, 0, "bread", reward));
-		RewardService.deliver(player);
+		QuestRewards.grant(player, new QuestRewards.DailyReward(day, 0, "bread", reward));
+		QuestRewards.grant(player, new QuestRewards.DailyReward(day, 0, "bread", reward));
+		ItemDelivery.deliver(player);
 		test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO) == before + 500 &&
-		                    RewardService.pending(player).getFirst().getCount() == 129 &&
+		                    ItemDelivery.pending(player).getFirst().getCount() == 129 &&
 		                    player.getInventory().getItem(0).getCount() == 64,
 		                "Partial reward settlement failed");
 		player.getInventory().setItem(1, ItemStack.EMPTY);
 		player.getInventory().setItem(2, ItemStack.EMPTY);
-		RewardService.deliver(player);
-		test.assertTrue(RewardService.pending(player).getFirst().getCount() == 1,
+		ItemDelivery.deliver(player);
+		test.assertTrue(ItemDelivery.pending(player).getFirst().getCount() == 1,
 		                "Reward quantities did not split at stack limits");
 		player.getInventory().clearContent();
-		player.removeAttached(RewardService.APPLIED);
-		RewardService.deliver(player);
+		player.removeAttached(ItemDelivery.APPLIED);
+		ItemDelivery.deliver(player);
 		test.assertTrue(player.getInventory().getItem(1).getCount() == 64 &&
-		                    RewardService.pending(player).getFirst().getCount() == 1,
+		                    ItemDelivery.pending(player).getFirst().getCount() == 1,
 		                "Inventory checkpoint recovery failed");
 		player.getInventory().setItem(3, ItemStack.EMPTY);
-		RewardService.deliver(player);
-		test.assertTrue(RewardService.pending(player).isEmpty() && player.getInventory().getItem(3).getCount() == 1,
+		ItemDelivery.deliver(player);
+		test.assertTrue(ItemDelivery.pending(player).isEmpty() && player.getInventory().getItem(3).getCount() == 1,
 		                "Pending delivery was lost");
 		before = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO);
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, Long.MAX_VALUE);
 		try {
-			RewardService.grant(player, new RewardService.DailyReward(day, 1, "bread", reward));
+			QuestRewards.grant(player, new QuestRewards.DailyReward(day, 1, "bread", reward));
 			throw new AssertionError("Overflow accepted");
 		} catch (ArithmeticException expected) {
 		}
-		test.assertTrue(!RewardService.progress(player).paid(day, 1) && RewardService.pending(player).isEmpty(),
+		test.assertTrue(!QuestRewards.progress(player).paid(day, 1) && ItemDelivery.pending(player).isEmpty(),
 		                "Failed settlement committed part of reward");
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, before);
 		player.getInventory().clearContent();
 		var definition = JsonParser.parseString("""
    {"id":"smp3:random_pack","count":2,"components":{"smp3:pack":{"draws":2,"entries":[{"item":{"id":"minecraft:diamond"},"weight":1,"min":2,"max":2}]}}}
    """).getAsJsonObject();
-		var pack = RewardItems.stack(definition, player.registryAccess());
+		var pack = ItemDefinitions.stack(definition, player.registryAccess());
 		player.setItemInHand(InteractionHand.MAIN_HAND, pack);
-		test.assertTrue(RewardService.open(player, InteractionHand.MAIN_HAND, pack, 0, new Random(1)),
-		                "Pack did not open");
-		test.assertTrue(!RewardService.open(player, InteractionHand.MAIN_HAND, pack, 0, new Random(2)),
+		test.assertTrue(PackItem.open(player, InteractionHand.MAIN_HAND, pack, 0, new Random(1)), "Pack did not open");
+		test.assertTrue(!PackItem.open(player, InteractionHand.MAIN_HAND, pack, 0, new Random(2)),
 		                "Stale callback consumed another pack");
-		long sequence = player.getAttachedOrElse(RewardService.APPLIED, 0L);
+		long sequence = player.getAttachedOrElse(ItemDelivery.APPLIED, 0L);
 		player.getInventory().clearContent();
-		player.removeAttached(RewardService.APPLIED);
-		RewardService.deliver(player);
+		player.removeAttached(ItemDelivery.APPLIED);
+		ItemDelivery.deliver(player);
 		test.assertTrue(player.getMainHandItem().getCount() == 1 &&
 		                    player.getInventory().getItem(1).is(Items.DIAMOND) &&
 		                    player.getInventory().getItem(1).getCount() == 4 &&
-		                    player.getAttachedOrElse(RewardService.APPLIED, 0L) == sequence,
+		                    player.getAttachedOrElse(ItemDelivery.APPLIED, 0L) == sequence,
 		                "Pack recovery redrew, duplicated or lost items");
 		var choiceDefinition = DailyQuestModule.current()
 		                           .config.tasks()
@@ -137,16 +136,25 @@ final class QuestUpdateChecks {
 		                           .rewards()
 		                           .items()
 		                           .getFirst();
-		var choice = RewardItems.stack(choiceDefinition, player.registryAccess());
+		var choice = ItemDefinitions.stack(choiceDefinition, player.registryAccess());
 		player.getInventory().clearContent();
 		player.setItemInHand(InteractionHand.MAIN_HAND, choice);
-		test.assertTrue(RewardService.open(player, InteractionHand.MAIN_HAND, choice, 1, new Random(1)),
+		test.assertTrue(PackItem.open(player, InteractionHand.MAIN_HAND, choice, 1, new Random(1)),
 		                "Choice pack did not open");
 		test.assertTrue(player.getInventory().getItem(0).is(Items.OAK_PLANKS) &&
 		                    player.getInventory().getItem(0).getCount() == 32 &&
 		                    player.getInventory().getItem(1).is(Items.GLASS),
 		                "Choice pack delivered the wrong option");
-		test.assertTrue(!RewardService.open(player, InteractionHand.MAIN_HAND, choice, 0, new Random(1)),
+		test.assertTrue(!PackItem.open(player, InteractionHand.MAIN_HAND, choice, 0, new Random(1)),
 		                "Choice pack redeemed twice");
+		test.assertTrue(QuestRewards.progress(player).completed() == count + 1 &&
+		                    QuestRewards.progress(player).paid(day, 0),
+		                "Item delivery overwrote quest receipts");
+		var checkpoint = ItemDelivery.ledgerState(player);
+		QuestRewards.complete(player, day, 2, "preserve delivery", new QuestReward(0, 0));
+		var updated = ItemDelivery.ledgerState(player);
+		test.assertTrue(checkpoint.get("inventory").equals(updated.get("inventory")) &&
+		                    checkpoint.get("sequence").equals(updated.get("sequence")),
+		                "Quest completion overwrote the delivery checkpoint");
 	}
 }

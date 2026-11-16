@@ -18,7 +18,7 @@ import club.sjmc.smp3.FeatureChecks;
 import club.sjmc.smp3.daily.ui.DailyQuestGui;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
-import club.sjmc.smp3.reward.RewardService;
+import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.shop.ui.SheetListGui;
 import club.sjmc.smp3.sign.ui.SignGui;
 
@@ -268,7 +268,7 @@ public final class DailyQuestGameTest {
 			long stampsBefore = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP);
 			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, Long.MAX_VALUE);
 			service.settle(player);
-			test.assertTrue(!task.claimed && RewardService.ready(player).size() == 2 &&
+			test.assertTrue(!task.claimed && QuestRewards.ready(player).size() == 2 &&
 			                    day.retryAt > level.getGameTime() &&
 			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == stampsBefore,
 			                "Failed automatic payment lost a pending reward or partially credited currency");
@@ -280,7 +280,7 @@ public final class DailyQuestGameTest {
 			task = day.assignments.getFirst();
 			service.settle(player);
 			service.settle(player);
-			test.assertTrue(task.claimed && RewardService.ready(player).isEmpty() &&
+			test.assertTrue(task.claimed && QuestRewards.ready(player).isEmpty() &&
 			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO) ==
 			                        2 * Smp3Currency.rawUnits(task.reward.tongbao()) &&
 			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) ==
@@ -393,7 +393,7 @@ public final class DailyQuestGameTest {
 		Smp3AccountStore.commitReward(player.getUUID(), "questsAndPacks",
 		                              Smp3AccountStore.rewardState(player.getUUID(), "questsAndPacks"),
 		                              new JsonObject(), Map.of());
-		player.removeAttached(RewardService.APPLIED);
+		player.removeAttached(ItemDelivery.APPLIED);
 		QuestDefinition definition =
 		    service.config.tasks().stream().filter(t -> t.id().equals(id)).findFirst().orElseThrow();
 		QuestDay.Assignment assignment =

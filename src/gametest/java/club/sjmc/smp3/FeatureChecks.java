@@ -10,7 +10,7 @@ import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
-import club.sjmc.smp3.inventory.PlayerItems;
+import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.item.Smp3Items;
 import club.sjmc.smp3.item.ui.EnchantBookGui;
 import club.sjmc.smp3.shop.QuotaStore;
@@ -108,7 +108,7 @@ public final class FeatureChecks {
 		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
 			player.getInventory().setItem(i, new ItemStack(Items.STONE, 64));
 		}
-		test.assertTrue(PlayerItems.give(player, new ItemStack(Items.DIAMOND, 3)),
+		test.assertTrue(ItemDelivery.give(player, new ItemStack(Items.DIAMOND, 3)),
 		                "Full inventory did not report overflow");
 		var drops = player.level().getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(4));
 		test.assertTrue(

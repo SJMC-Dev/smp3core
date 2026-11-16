@@ -8,8 +8,6 @@ import java.util.regex.Pattern;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import club.sjmc.smp3.reward.Reward;
-
 public record
     QuestDefinition(String id, String name, String description, String category, String difficulty, String icon,
 	                Objective objective, Integer count, List<Tier> tiers, List<String> requires, Extras rewards) {
@@ -22,12 +20,12 @@ public record
 	public record Extras(Boolean base, int tongbao, int coffeeStamp, List<JsonObject> items) {
 		public Extras { items = items == null ? List.of() : items.stream().map(JsonObject::deepCopy).toList(); }
 	}
-	public Reward reward(Reward base) {
+	public QuestReward reward(QuestReward base) {
 		if (rewards == null)
 			return base;
 		boolean include = !Boolean.FALSE.equals(rewards.base);
-		return new Reward(Math.addExact(include ? base.tongbao() : 0, rewards.tongbao),
-		                  Math.addExact(include ? base.coffeeStamp() : 0, rewards.coffeeStamp), rewards.items);
+		return new QuestReward(Math.addExact(include ? base.tongbao() : 0, rewards.tongbao),
+		                       Math.addExact(include ? base.coffeeStamp() : 0, rewards.coffeeStamp), rewards.items);
 	}
 
 	public record Tier(int tier, int count) {}

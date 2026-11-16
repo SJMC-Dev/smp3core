@@ -7,9 +7,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.random.RandomGenerator;
 
-import club.sjmc.smp3.reward.Reward;
+import net.minecraft.core.GlobalPos;
 
 public final class QuestDay {
+	transient GlobalPos inventoryLocation;
 	public final long date;
 	public final long completedQuests;
 	public final double playtimeHours;
@@ -51,11 +52,11 @@ public final class QuestDay {
 		public final QuestDefinition definition;
 		public final int target;
 		private final int tier;
-		public final Reward reward;
+		public final QuestReward reward;
 		int progress;
 		boolean claimed;
 
-		Assignment(QuestDefinition definition, int tier, Reward reward) {
+		Assignment(QuestDefinition definition, int tier, QuestReward reward) {
 			this.target = definition.target(tier);
 			this.tier = definition.tiered() ? tier : 0;
 			this.definition = definition.snapshot(target);

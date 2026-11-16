@@ -7,7 +7,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import club.sjmc.smp3.Smp3Core;
-import club.sjmc.smp3.reward.RewardService;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -27,7 +26,6 @@ public final class DailyQuestModule {
 
 	public static void register() {
 		BarterAttribution.register();
-		RewardService.register();
 		PayloadTypeRegistry.clientboundPlay().register(QuestHudPayload.TYPE, QuestHudPayload.CODEC);
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			try {
@@ -48,20 +46,29 @@ public final class DailyQuestModule {
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			instance = null;
 			hudSnapshots.clear();
+			DailyQuestEvents.clearInventories();
 		});
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			if (instance != null) {
 				instance.settle(handler.player);
+				DailyQuestEvents.inventoryChanged(handler.player);
 				syncHud(handler.player, instance.state(handler.player));
 			}
 		});
-		ServerPlayConnectionEvents.DISCONNECT.register(
-		    (handler, server) -> hudSnapshots.remove(handler.player.getUUID()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			hudSnapshots.remove(handler.player.getUUID());
+			DailyQuestEvents.forgetInventory(handler.player.getUUID());
+		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
-			if (instance == null || server.getTickCount() % 5 != 0)
+			if (instance == null)
+				return;
+			DailyQuestEvents.flushInventories(server);
+			if (server.getTickCount() % 5 != 0)
 				return;
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 				QuestDay day = instance.state(player);
+				if (server.getTickCount() % 20 == 0)
+					DailyQuestEvents.inventoryLocation(player, day);
 				if (day != null && server.getTickCount() % 20 == 0 &&
 				    day.assignments.stream().anyMatch(a
 				                                      -> !a.complete() && a.definition.objective().event().equals(

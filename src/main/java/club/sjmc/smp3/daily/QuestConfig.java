@@ -17,8 +17,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import club.sjmc.smp3.reward.Reward;
-import club.sjmc.smp3.reward.RewardItems;
+import club.sjmc.smp3.item.ItemDefinitions;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
@@ -27,7 +26,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 
 public record QuestConfig(int dailyRerollLimit, Progression progression, Map<String, String> milestones,
-                          Map<String, Reward> rewards, List<QuestDefinition> tasks) {
+                          Map<String, QuestReward> rewards, List<QuestDefinition> tasks) {
 	public QuestConfig {
 		milestones = Map.copyOf(milestones);
 		rewards = Map.copyOf(rewards);
@@ -260,7 +259,7 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 				if (task.rewards() != null)
 					for (int i = 0; i < task.rewards().items().size(); i++) {
 						try {
-							RewardItems.validate(task.rewards().items().get(i), registries);
+							ItemDefinitions.validate(task.rewards().items().get(i), registries);
 						} catch (RuntimeException e) {
 							throw new IllegalArgumentException("rewards.items[" + i + "]: " + e.getMessage(), e);
 						}

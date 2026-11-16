@@ -1,4 +1,4 @@
-package club.sjmc.smp3.reward;
+package club.sjmc.smp3.item;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +19,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
-public final class RewardItems {
+public final class ItemDefinitions {
 	public static final DataComponentType<JsonObject> PACK = Registry.register(
 	    BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath("smp3", "pack"),
 	    DataComponentType.<JsonObject>builder()
@@ -29,7 +29,7 @@ public final class RewardItems {
 	        .networkSynchronized(ByteBufCodecs.STRING_UTF8.map(
 	            value -> JsonParser.parseString(value).getAsJsonObject(), JsonObject::toString))
 	        .build());
-	private RewardItems() {}
+	private ItemDefinitions() {}
 	public static void register() {}
 
 	public static ItemStack stack(JsonObject item, RegistryAccess registries) {

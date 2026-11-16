@@ -9,9 +9,8 @@ import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.DailyQuestService;
 import club.sjmc.smp3.daily.QuestDay;
 import club.sjmc.smp3.gui.GuiStyle;
-import club.sjmc.smp3.reward.RewardItems;
-import club.sjmc.smp3.reward.RewardService;
-import club.sjmc.smp3.reward.ui.RewardsGui;
+import club.sjmc.smp3.item.ItemDefinitions;
+import club.sjmc.smp3.item.ItemDelivery;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -63,7 +62,7 @@ public final class DailyQuestGui extends SimpleGui {
 	}
 
 	private long pendingCount() {
-		return RewardService.pending(player).stream().mapToLong(stack -> stack.getCount()).sum();
+		return ItemDelivery.pending(player).stream().mapToLong(stack -> stack.getCount()).sum();
 	}
 	private void refresh(QuestDay current) {
 		pending = pendingCount();
@@ -86,7 +85,7 @@ public final class DailyQuestGui extends SimpleGui {
 			task(slot);
 		if (pending > 0)
 			setSlot(31, GuiStyle.button(Items.CHEST, "待领取物品 x " + pending, GuiStyle.ACTIVE,
-			                            () -> RewardsGui.pending(player)));
+			                            () -> QuestRewardsGui.pending(player)));
 		setSlot(35, GuiStyle.close(this::close));
 	}
 
@@ -116,7 +115,7 @@ public final class DailyQuestGui extends SimpleGui {
 		if (task.reward.coffeeStamp() > 0)
 			rewardIcon.addLoreLine(GuiStyle.text("咖啡印章 x " + task.reward.coffeeStamp(), GuiStyle.MUTED));
 		var rewardItems =
-		    task.reward.items().stream().map(item -> RewardItems.stack(item, player.registryAccess())).toList();
+		    task.reward.items().stream().map(item -> ItemDefinitions.stack(item, player.registryAccess())).toList();
 		rewardItems.forEach(item
 		                    -> rewardIcon.addLoreLine(GuiStyle.text(
 		                        item.getHoverName().getString() + " x " + item.getCount(), GuiStyle.MUTED)));
@@ -126,7 +125,7 @@ public final class DailyQuestGui extends SimpleGui {
 		                         .onLeftClick(rewardIcon,
 		                                      () -> {
 			                                      if (!rewardItems.isEmpty())
-				                                      RewardsGui.preview(player, rewardItems);
+				                                      QuestRewardsGui.preview(player, rewardItems);
 		                                      })
 		                         .build());
 		if (task.complete()) {

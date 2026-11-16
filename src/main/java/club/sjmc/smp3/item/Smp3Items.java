@@ -1,8 +1,6 @@
 package club.sjmc.smp3.item;
 
 import club.sjmc.smp3.Smp3Core;
-import club.sjmc.smp3.reward.PackItem;
-import club.sjmc.smp3.reward.RewardItems;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -34,7 +32,8 @@ public final class Smp3Items {
 	private Smp3Items() {}
 
 	public static void init() {
-		RewardItems.register();
+		ItemDefinitions.register();
+		ItemDelivery.register();
 		Smp3Core.LOGGER.info("[SMP3] 已注册物品 {}", ANY_ENCHANTED_BOOK_ID);
 	}
 }

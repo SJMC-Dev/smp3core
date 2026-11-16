@@ -7,7 +7,7 @@ import java.util.List;
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.economy.EconomyBridge;
 import club.sjmc.smp3.economy.Smp3Currency;
-import club.sjmc.smp3.inventory.PlayerItems;
+import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.perm.Permissions;
 import club.sjmc.smp3.time.ServerDates;
 
@@ -63,7 +63,7 @@ public final class ShopService {
 			            payment.message() == null ? "" : payment.message().getString());
 		}
 
-		boolean dropped = PlayerItems.give(player, new ItemStack(entry.icon(), entry.amount()));
+		boolean dropped = ItemDelivery.give(player, new ItemStack(entry.icon(), entry.amount()));
 		QuotaStore.add(player, entry, entry.amount(), today);
 
 		log(player, entry, "SUCCESS", balance, payment.balanceAfter(), dropped ? "dropped" : "");
@@ -94,7 +94,7 @@ public final class ShopService {
 
 		EconomyBridge.Outcome income = EconomyBridge.deposit(player, Smp3Currency.TONGBAO, entry.price());
 		if (!income.success()) {
-			removed.forEach(stack -> PlayerItems.give(player, stack.copy()));
+			removed.forEach(stack -> ItemDelivery.give(player, stack.copy()));
 			return fail(player, entry, new Outcome(Status.DEPOSIT_FAILED),
 			            income.message() == null ? "" : income.message().getString());
 		}
