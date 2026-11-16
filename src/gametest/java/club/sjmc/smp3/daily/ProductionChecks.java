@@ -4,6 +4,8 @@ import java.util.List;
 
 import com.google.gson.JsonParser;
 
+import club.sjmc.smp3.item.ItemDelivery;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
@@ -103,7 +105,10 @@ final class ProductionChecks {
 		        JsonParser.parseString("{\"item\":[\"minecraft:oak_planks\",\"#minecraft:planks\"]}")
 		            .getAsJsonObject()),
 		    6, List.of(), List.of(), null);
-		task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0));
+		task = new QuestDay.Assignment(
+		    definition, 1,
+		    new QuestReward(
+		        0, 0, List.of(JsonParser.parseString("{\"id\":\"minecraft:bread\",\"count\":2}").getAsJsonObject())));
 		service.state(player).assignments.set(0, task);
 		player.getInventory().clearContent();
 		player.getInventory().setItem(0, new ItemStack(Items.OAK_PLANKS, 2));
@@ -128,17 +133,30 @@ final class ProductionChecks {
 		service.settle(player);
 		test.assertTrue(task.progress == 3, "Possession progress did not decrease after removal");
 		long completed = QuestRewards.progress(player).completed();
+		for (int slot = 0; slot < 36; slot++)
+			player.getInventory().setItem(slot, new ItemStack(Items.STONE, 64));
 		player.getInventory().setItem(2, new ItemStack(Items.OAK_PLANKS, 5));
 		player.inventoryMenu.broadcastChanges();
 		DailyQuestEvents.flushInventories(player.level().getServer());
 		service.settle(player);
-		test.assertTrue(task.claimed && player.getInventory().getItem(2).getCount() == 5,
-		                "Possession task failed to settle or consumed items");
-		player.getInventory().clearContent();
+		test.assertTrue(task.claimed && player.getInventory().getItem(2).getCount() == 5 &&
+		                    ItemDelivery.pending(player).getFirst().getCount() == 2,
+		                "Full inventory lost the entitlement or consumed target items");
+		player.getInventory().setItem(2, new ItemStack(Items.STONE, 64));
+		player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
 		player.inventoryMenu.broadcastChanges();
 		DailyQuestEvents.flushInventories(player.level().getServer());
 		service.settle(player);
-		test.assertTrue(task.progress == 6 && QuestRewards.progress(player).completed() == completed + 1,
-		                "Completed possession task reverted or paid twice");
+		var hud = QuestHudPayload.of(service.state(player)).entries().getFirst();
+		test.assertTrue(hud.progress() == 6 && hud.complete() && hud.claimed() &&
+		                    ItemDelivery.pending(player).getFirst().getCount() == 2 &&
+		                    QuestRewards.progress(player).completed() == completed + 1,
+		                "Pending reward reverted completion or its displayed progress after target items were removed");
+		player.getInventory().setItem(0, ItemStack.EMPTY);
+		ItemDelivery.deliver(player);
+		ItemDelivery.deliver(player);
+		test.assertTrue(ItemDelivery.pending(player).isEmpty() && player.getInventory().getItem(0).is(Items.BREAD) &&
+		                    player.getInventory().getItem(0).getCount() == 2,
+		                "Freeing space lost or duplicated the pending reward");
 	}
 }
