@@ -92,6 +92,31 @@ public final class QuestDay {
 		return changed;
 	}
 
+	boolean tracksInventory() {
+		return assignments.stream().anyMatch(
+		    a -> !a.complete() && a.definition.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()));
+	}
+
+	boolean updateInventory(List<QuestDefinition.Event> contents) {
+		boolean changed = false;
+		for (Assignment assignment : assignments) {
+			if (assignment.complete() ||
+			    !assignment.definition.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()))
+				continue;
+			int count = 0;
+			for (var stack : contents)
+				if (assignment.definition.objective().matches(stack))
+					count += Math.min(stack.amount(), assignment.target - count);
+			if (assignment.progress != count) {
+				assignment.progress = count;
+				changed = true;
+			}
+		}
+		if (changed)
+			revision++;
+		return changed;
+	}
+
 	boolean reroll(int slot, String token, boolean admin, QuestConfig config, RandomGenerator random) {
 		Assignment old = assignments.get(slot);
 		if (!old.token.equals(token) || old.complete() || (!admin && remaining(config) == 0))

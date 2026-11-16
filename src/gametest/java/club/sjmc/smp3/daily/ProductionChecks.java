@@ -5,11 +5,13 @@ import java.util.List;
 import com.google.gson.JsonParser;
 
 import club.sjmc.smp3.reward.Reward;
+import club.sjmc.smp3.reward.RewardService;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.BlastFurnaceMenu;
 import net.minecraft.world.inventory.BrewingStandMenu;
 import net.minecraft.world.inventory.ContainerInput;
@@ -96,5 +98,36 @@ final class ProductionChecks {
 		player.getInventory().setItem(0, PotionContents.createItemStack(Items.POTION, Potions.WATER));
 		brewing.clicked(2, 0, ContainerInput.SWAP, player);
 		test.assertTrue(task.progress == 14, "Shift-click or hotbar-swap brewing missed output");
+		var service = DailyQuestModule.current();
+		definition = new QuestDefinition(
+		    "inventory", "Inventory", null, "collecting", "A", "minecraft:oak_planks",
+		    new QuestDefinition.Objective(
+		        "inventory_changed",
+		        JsonParser.parseString("{\"item\":[\"minecraft:oak_planks\",\"#minecraft:planks\"]}")
+		            .getAsJsonObject()),
+		    6, List.of(), List.of(), null);
+		task = new QuestDay.Assignment(definition, 1, new Reward(0, 0));
+		service.state(player).assignments.set(0, task);
+		player.getInventory().clearContent();
+		player.getInventory().setItem(0, new ItemStack(Items.OAK_PLANKS, 2));
+		player.getInventory().setItem(1, new ItemStack(Items.BIRCH_PLANKS, 2));
+		player.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.OAK_PLANKS));
+		service.settle(player);
+		test.assertTrue(task.progress == 5, "Inventory tags, overlapping filters or offhand counted incorrectly");
+		player.getInventory().setItem(2, player.getInventory().removeItemNoUpdate(0));
+		service.settle(player);
+		test.assertTrue(task.progress == 5, "Moving stacks added possession progress");
+		player.getInventory().setItem(1, ItemStack.EMPTY);
+		service.settle(player);
+		test.assertTrue(task.progress == 3, "Possession progress did not decrease after removal");
+		long completed = RewardService.progress(player).completed();
+		player.getInventory().setItem(2, new ItemStack(Items.OAK_PLANKS, 5));
+		service.settle(player);
+		test.assertTrue(task.claimed && player.getInventory().getItem(2).getCount() == 5,
+		                "Possession task failed to settle or consumed items");
+		player.getInventory().clearContent();
+		service.settle(player);
+		test.assertTrue(task.progress == 6 && RewardService.progress(player).completed() == completed + 1,
+		                "Completed possession task reverted or paid twice");
 	}
 }

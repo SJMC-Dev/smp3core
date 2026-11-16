@@ -5,6 +5,7 @@ import java.util.Set;
 public enum QuestEventType {
 	ENTITY_KILLED("entity_killed", "entity"),
 	ITEM_CRAFTED("item_crafted", "item"),
+	INVENTORY_CHANGED("inventory_changed", "item"),
 	BLOCK_BROKEN("block_broken", "block", "block_state"),
 	CROP_HARVESTED("crop_harvested", "block", "block_state"),
 	BLOCK_PLACED("block_placed", "block", "block_state"),

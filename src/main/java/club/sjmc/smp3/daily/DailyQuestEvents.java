@@ -1,6 +1,8 @@
 package club.sjmc.smp3.daily;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -73,6 +75,21 @@ public final class DailyQuestEvents {
 		Map<String, Set<String>> facts = context(player.level(), player.blockPosition());
 		target(facts, "item", BuiltInRegistries.ITEM.wrapAsHolder(result.getItem()));
 		emit(player, new QuestDefinition.Event(QuestEventType.ITEM_CRAFTED.id(), facts, amount));
+	}
+
+	static List<QuestDefinition.Event> inventory(ServerPlayer player) {
+		var result = new ArrayList<QuestDefinition.Event>();
+		var location = context(player.level(), player.blockPosition());
+		var inventory = player.getInventory();
+		for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+			ItemStack stack = inventory.getItem(slot);
+			if (stack.isEmpty())
+				continue;
+			Map<String, Set<String>> facts = new HashMap<>(location);
+			target(facts, "item", BuiltInRegistries.ITEM.wrapAsHolder(stack.getItem()));
+			result.add(new QuestDefinition.Event(QuestEventType.INVENTORY_CHANGED.id(), facts, stack.getCount()));
+		}
+		return result;
 	}
 
 	public static void explore(ServerPlayer player) {

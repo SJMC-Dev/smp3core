@@ -94,18 +94,21 @@ public final class DailyQuestService {
 	public void record(ServerPlayer player, QuestDefinition.Event event) {
 		long today = ServerDates.today().toEpochDay();
 		QuestDay day = state(player, today);
-		if (day != null && day.date == today && day.record(event)) {
-			data.setDirty();
-			if (player.level().getGameTime() >= day.retryAt) {
-				try {
-					for (int slot = 0; slot < day.assignments.size(); slot++) {
-						var task = day.assignments.get(slot);
-						if (task.complete())
-							RewardService.complete(player, day.date, slot, task.definition.name(), task.reward);
-					}
-				} catch (RuntimeException e) {
-					retry(player, day, e);
+		if (day != null && day.date == today && day.record(event))
+			changed(player, day);
+	}
+
+	private void changed(ServerPlayer player, QuestDay day) {
+		data.setDirty();
+		if (player.level().getGameTime() >= day.retryAt) {
+			try {
+				for (int slot = 0; slot < day.assignments.size(); slot++) {
+					var task = day.assignments.get(slot);
+					if (task.complete())
+						RewardService.complete(player, day.date, slot, task.definition.name(), task.reward);
 				}
+			} catch (RuntimeException e) {
+				retry(player, day, e);
 			}
 		}
 	}
@@ -133,6 +136,11 @@ public final class DailyQuestService {
 		QuestDay day = state(player, today);
 		long now = player.level().getGameTime();
 		if (day == null || day.date > today || now < day.retryAt)
+			return;
+		if (player.isAlive() && !player.isCreative() && !player.isSpectator() && day.tracksInventory() &&
+		    day.updateInventory(DailyQuestEvents.inventory(player)))
+			changed(player, day);
+		if (now < day.retryAt)
 			return;
 		try {
 			for (var reward : RewardService.ready(player))
