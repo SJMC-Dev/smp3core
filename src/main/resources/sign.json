@@ -1,0 +1,47 @@
+{
+  "daily": {"currency": "smp3:tongbao", "amounts": [30, 35, 40, 45, 50]},
+  "monthly": [
+    {"days": 3, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 50},
+      {"type": "currency", "id": "smp3:coffee_stamp", "count": 3}
+    ]},
+    {"days": 7, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 100},
+      {"type": "currency", "id": "smp3:coffee_stamp", "count": 5}
+    ]},
+    {"days": 15, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 150},
+      {"type": "currency", "id": "smp3:coffee_stamp", "count": 10}
+    ]},
+    {"days": 25, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 200},
+      {"type": "currency", "id": "smp3:coffee_stamp", "count": 15}
+    ]}
+  ],
+  "lifetime": [
+    {"days": 1, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 200}
+    ]},
+    {"days": 2, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 200}
+    ]},
+    {"days": 3, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 100},
+      {"type": "item", "id": "smp3:any_enchanted_book", "count": 1}
+    ]},
+    {"days": 4, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 200}
+    ]},
+    {"days": 5, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 100},
+      {"type": "command", "command": "/gacha give <player> ten"}
+    ]},
+    {"days": 6, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 200}
+    ]},
+    {"days": 7, "grants": [
+      {"type": "currency", "id": "smp3:tongbao", "count": 200},
+      {"type": "title", "id": "founding_player"}
+    ]}
+  ]
+}

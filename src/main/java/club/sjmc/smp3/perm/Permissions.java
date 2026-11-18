@@ -1,12 +1,19 @@
 package club.sjmc.smp3.perm;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
 import net.luckperms.api.node.Node;
 
 import club.sjmc.smp3.Smp3Core;
 
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permission;
+import net.minecraft.server.permissions.PermissionLevel;
 
 public final class Permissions {
 	private static boolean warned;
@@ -30,12 +37,23 @@ public final class Permissions {
 		}
 	}
 
-	public static void grant(ServerPlayer player, String node) {
-		User user = user(player);
-		if (user == null) {
-			throw new IllegalStateException("LuckPerms player data is not loaded: " + player.getUUID());
+	public static boolean isAdmin(CommandSourceStack source, String node) {
+		return source.getEntity() == null ||
+		    source.permissions().hasPermission(new Permission.HasCommandLevel(PermissionLevel.GAMEMASTERS)) ||
+		    source.getEntity() instanceof ServerPlayer player && has(player, node, true);
+	}
+	public static CompletableFuture<Void> grant(ServerPlayer player, String node) {
+		return grant(player, List.of(node));
+	}
+	public static CompletableFuture<Void> grant(ServerPlayer player, Collection<String> nodes) {
+		try {
+			User user = user(player);
+			if (user == null)
+				throw new IllegalStateException("LuckPerms player data is not loaded: " + player.getUUID());
+			nodes.forEach(node -> user.data().add(Node.builder(node).value(true).build()));
+			return LuckPermsProvider.get().getUserManager().saveUser(user);
+		} catch (RuntimeException | LinkageError error) {
+			return CompletableFuture.failedFuture(error);
 		}
-		user.data().add(Node.builder(node).value(true).build());
-		LuckPermsProvider.get().getUserManager().saveUser(user).join();
 	}
 }

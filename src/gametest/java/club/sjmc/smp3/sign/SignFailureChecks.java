@@ -1,6 +1,8 @@
 package club.sjmc.smp3.sign;
 
 import java.time.YearMonth;
+import java.nio.file.Files;
+import net.fabricmc.loader.api.FabricLoader;
 import java.util.Map;
 
 import club.sjmc.smp3.economy.Smp3AccountStore;
@@ -13,7 +15,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class SignFailureChecks {
-	public static void run(GameTestHelper test, ServerPlayer player) {
+	public static void run(GameTestHelper test, ServerPlayer player) throws Exception {
+		configuration(test, player);
 		var today = ServerDates.today();
 		var data = SignData.get(player.level().getServer());
 		var legacy = new CompoundTag();
@@ -58,7 +61,7 @@ public final class SignFailureChecks {
 		                "Stale world snapshot overrode ledger");
 		state = SignData.copy(data.of(player.getUUID()));
 		var claim = new PlayerSignData.Claim(
-		    "", SignRewards.SERVER.stream().filter(m -> m.days() == 5).findFirst().orElseThrow());
+		    "", SignModule.config().lifetime().stream().filter(m -> m.days() == 5).findFirst().orElseThrow());
 		for (var delivery : claim.deliveries) {
 			delivery.status = delivery.reward.kind() == SignReward.Kind.CURRENCY ? PlayerSignData.Status.DONE
 			                                                                     : PlayerSignData.Status.IN_FLIGHT;
@@ -68,6 +71,47 @@ public final class SignFailureChecks {
 		SignService.sign(player, today);
 		test.assertTrue(calls[0] == 2 && data.of(player.getUUID()).hasPendingRewards(),
 		                "Interrupted delivery automatically repeated");
+	}
+
+	private static void configuration(GameTestHelper test, ServerPlayer player) throws Exception {
+		var file = FabricLoader.getInstance().getConfigDir().resolve("smp3/sign.json");
+		String original = Files.readString(file);
+		var server = player.level().getServer();
+		try {
+			Files.writeString(file, """
+			    {"daily":{"currency":"smp3:coffee_stamp","amounts":[2,4]},"monthly":[],"lifetime":[
+			      {"days":1,"grants":[{"type":"currency","id":"smp3:tongbao","count":9},
+			                           {"type":"title","id":"test_sign_title"}]}]}
+			    """);
+			SignModule.reload(server);
+			var config = SignModule.config();
+			test.assertTrue(config.dailyReward(99) == 4, "Final daily amount did not repeat");
+			SignData.get(server).commit(player.getUUID(), Smp3AccountStore.rewardState(player.getUUID(), "sign"),
+			                            new PlayerSignData(), Map.of());
+			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
+			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.COFFEE_STAMP, 0);
+			SignService.sign(player, ServerDates.today());
+			SignService.sign(player, ServerDates.today());
+			test.assertTrue(balance(player) == 900 &&
+			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == 200 &&
+			                    SignService.state(player).hasPendingRewards(),
+			                "Custom sign rewards or title retry changed currency");
+			Files.writeString(file, Files.readString(file).replace("\"days\":1", "\"days\":0"));
+			try {
+				SignModule.reload(server);
+				throw new AssertionError("Invalid sign threshold accepted");
+			} catch (IllegalArgumentException expected) {
+				test.assertTrue(SignModule.config() == config, "Invalid reload replaced sign configuration");
+			}
+			Files.writeString(
+			    file, "{\"daily\":{\"currency\":\"smp3:tongbao\",\"amounts\":[1]},\"monthly\":[],\"lifetime\":[]}");
+			SignModule.reload(server);
+			test.assertTrue(SignService.state(player).hasPendingRewards() && balance(player) == 900,
+			                "Removing a threshold lost its pending reward or repeated currency");
+		} finally {
+			Files.writeString(file, original);
+			SignModule.reload(server);
+		}
 	}
 
 	private static long balance(ServerPlayer player) {

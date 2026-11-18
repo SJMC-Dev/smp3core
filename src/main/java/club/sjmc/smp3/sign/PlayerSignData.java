@@ -34,7 +34,7 @@ public final class PlayerSignData {
 		final int days;
 		final List<Delivery> deliveries;
 
-		Claim(String month, SignRewards.Milestone milestone) {
+		Claim(String month, SignConfig.Milestone milestone) {
 			this.month = month;
 			days = milestone.days();
 			id = (month.isEmpty() ? "server" : month) + ":" + days;
@@ -71,19 +71,25 @@ public final class PlayerSignData {
 		monthTotal++;
 		serverTotal++;
 		monthSignedDays.add(today.getDayOfMonth());
-		for (var milestone : SignRewards.MONTH) {
+		queueMilestones(SignModule.config());
+	}
+
+	boolean queueMilestones(SignConfig config) {
+		int previous = pending.size();
+		for (var milestone : config.monthly()) {
 			if (monthTotal >= milestone.days() && !monthClaimed.contains(milestone.days())) {
 				queue(monthKey, milestone);
 			}
 		}
-		for (var milestone : SignRewards.SERVER) {
+		for (var milestone : config.lifetime()) {
 			if (serverTotal >= milestone.days() && !serverClaimed.contains(milestone.days())) {
 				queue("", milestone);
 			}
 		}
+		return pending.size() != previous;
 	}
 
-	private void queue(String month, SignRewards.Milestone milestone) {
+	private void queue(String month, SignConfig.Milestone milestone) {
 		Claim claim = new Claim(month, milestone);
 		if (pending.stream().noneMatch(existing -> existing.id.equals(claim.id))) {
 			pending.add(claim);

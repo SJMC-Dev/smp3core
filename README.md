@@ -12,6 +12,8 @@ Minecraft 26.3 / Fabric Loader 0.19.5 / Java 25 SMP3 核心模组，提供资源
 | `/smp3 dailyquest <player> reroll [slot]` | 更换在线玩家指定槽位的任务；省略槽位则更换全部任务 | 控制台、OP 等级 2 及以上或 LuckPerms `smp.dailyquest.*` |
 | `/smp3 dailyquest <player> reset [slot]` | 重置在线玩家指定槽位的任务状态；省略槽位则重置全部任务 | 控制台、OP 等级 2 及以上或 LuckPerms `smp.dailyquest.*` |
 | `/smp3 sign` | 打开每日签到 | 所有玩家 |
+| `/smp3 sign reload` | 热重载签到奖励规则（`config/smp3/sign.json`） | OP 等级 2 或控制台 |
+| `/smp3 reward reload` | 热重载一些成就/称号等发放规则（`config/smp3/milestone-rewards.json`） | OP 等级 2 或控制台 |
 | `/smp3 shop <player>` | 为指定玩家打开商店 | OP 等级 2 或控制台 |
 | `/smp3 shop reload` | 热重载商店配置（`config/smp3/shop.json`） | OP 等级 2 或控制台 |
 | `/smp3 info` | 打开公告栏 | 所有玩家 |
@@ -39,6 +41,7 @@ Minecraft 26.3 / Fabric Loader 0.19.5 / Java 25 SMP3 核心模组，提供资源
 
 - [x] 代码结构重构
 - [x] 商店和时区逻辑修复
+- [x] 签到和成就奖励
 
 - [x] 每日任务需求
 

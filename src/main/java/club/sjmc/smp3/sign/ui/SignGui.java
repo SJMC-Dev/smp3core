@@ -8,7 +8,8 @@ import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.sign.PlayerSignData;
-import club.sjmc.smp3.sign.SignRewards;
+import club.sjmc.smp3.sign.SignConfig;
+import club.sjmc.smp3.sign.SignModule;
 import club.sjmc.smp3.sign.SignService;
 import club.sjmc.smp3.time.ServerDates;
 import club.sjmc.smp3.ui.GuiStyle;
@@ -30,6 +31,7 @@ public final class SignGui extends SimpleGui {
 
 	private PlayerSignData state;
 	private LocalDate shownDate;
+	private SignConfig shownConfig;
 
 	private SignGui(ServerPlayer player) {
 		super(MenuType.GENERIC_9x6, player, false);
@@ -45,7 +47,8 @@ public final class SignGui extends SimpleGui {
 
 	@Override
 	public void onTick() {
-		if (!ServerDates.today().equals(shownDate)) {
+		if (!ServerDates.today().equals(shownDate) || shownConfig != SignModule.config() ||
+		    state.hasPendingRewards() && player.tickCount % 20 == 0) {
 			refresh();
 		}
 	}
@@ -53,6 +56,7 @@ public final class SignGui extends SimpleGui {
 	private boolean refresh() {
 		try {
 			shownDate = ServerDates.today();
+			shownConfig = SignModule.config();
 			state = SignService.state(player);
 			populate(shownDate);
 			return true;
@@ -129,7 +133,9 @@ public final class SignGui extends SimpleGui {
 
 		if (clickable) {
 			if (!signed)
-				builder.addLoreLine(GuiStyle.text("通宝 x " + SignRewards.dailyReward(nextStreak), GuiStyle.MUTED));
+				builder.addLoreLine(GuiStyle.text(shownConfig.currency().name().getString() + " x " +
+				                                      shownConfig.dailyReward(nextStreak),
+				                                  GuiStyle.MUTED));
 			builder.addLoreLine(GuiStyle.text(signed ? "左键重试奖励" : "左键签到", GuiStyle.ACTION));
 			GuiStyle.onLeftClick(builder, () -> signDaily(today));
 		}
@@ -146,7 +152,8 @@ public final class SignGui extends SimpleGui {
 		return switch (result.status()) {
 			case DATE_CHANGED -> GuiStyle.text("签到日期已更新，请重新操作", GuiStyle.ACTIVE);
 			case SIGNED ->
-				GuiStyle.text("签到成功，获得 " + result.coins() + " 通宝，连续 " + result.days() + " 天",
+				GuiStyle.text("签到成功，获得 " + result.coins() + " " +
+				                  SignModule.config().currency().name().getString() + "，连续 " + result.days() + " 天",
 				              GuiStyle.READY);
 			case ALREADY_SIGNED -> Component.literal("今天已经签到过了");
 			case SAVE_FAILED -> GuiStyle.text("签到或奖励保存失败，请稍后重试", GuiStyle.ERROR);

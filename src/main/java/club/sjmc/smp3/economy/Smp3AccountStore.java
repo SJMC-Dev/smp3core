@@ -14,9 +14,20 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import net.fabricmc.fabric.api.event.Event;
+import net.fabricmc.fabric.api.event.EventFactory;
 import net.fabricmc.loader.api.FabricLoader;
 
 public final class Smp3AccountStore {
+	@FunctionalInterface
+	public interface BalanceChange {
+		void changed(UUID owner, Smp3Currency currency, long rawBalance);
+	}
+	public static final Event<BalanceChange> BALANCE_CHANGED =
+	    EventFactory.createArrayBacked(BalanceChange.class, listeners -> (owner, currency, balance) -> {
+		    for (var listener : listeners)
+			    listener.changed(owner, currency, balance);
+	    });
 	private static final class Holder {
 		private static final Ledger LEDGER =
 		    new Ledger(FabricLoader.getInstance().getConfigDir().resolve("smp3/accounts"));
@@ -30,6 +41,7 @@ public final class Smp3AccountStore {
 
 	public static void setBalance(UUID owner, Smp3Currency currency, long rawValue) {
 		Holder.LEDGER.set(owner, currency.id().getPath(), rawValue);
+		BALANCE_CHANGED.invoker().changed(owner, currency, rawValue);
 	}
 
 	public static JsonObject rewardState(UUID owner, String key, String... fields) {
@@ -47,7 +59,11 @@ public final class Smp3AccountStore {
 	                                Map<Smp3Currency, Integer> changes) {
 		Map<String, Long> raw = new HashMap<>();
 		changes.forEach((currency, amount) -> raw.put(currency.id().getPath(), Smp3Currency.rawUnits(amount)));
-		Holder.LEDGER.update(owner, key, expected, state, raw);
+		var balances = Holder.LEDGER.update(owner, key, expected, state, raw);
+		changes.forEach((currency, amount) -> {
+			if (amount != 0)
+				BALANCE_CHANGED.invoker().changed(owner, currency, balances.get(currency.id().getPath()));
+		});
 	}
 
 	public static void saveRewardFields(String key, Map<UUID, JsonObject> fields) {
@@ -92,8 +108,8 @@ public final class Smp3AccountStore {
 			return selected;
 		}
 
-		synchronized void update(UUID owner, String key, JsonObject expected, JsonObject state,
-		                         Map<String, Long> changes) {
+		synchronized Map<String, Long> update(UUID owner, String key, JsonObject expected, JsonObject state,
+		                                      Map<String, Long> changes) {
 			Account account = load(owner);
 			if (!Objects.equals(account.rewards.get(key), expected))
 				throw new IllegalStateException("Reward state changed; reload before retrying");
@@ -107,6 +123,7 @@ public final class Smp3AccountStore {
 			JsonObject rewards = account.rewards.deepCopy();
 			rewards.add(key, state.deepCopy());
 			commit(owner, new Account(balances, rewards));
+			return balances;
 		}
 
 		synchronized void saveRewardFields(String key, Map<UUID, JsonObject> fields) {

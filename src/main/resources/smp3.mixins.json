@@ -3,6 +3,7 @@
   "package": "club.sjmc.smp3.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "AdvancementRewardMixin",
     "CraftingQuestMixin",
     "InventoryQuestMixin",
     "FurnaceQuestMixin",

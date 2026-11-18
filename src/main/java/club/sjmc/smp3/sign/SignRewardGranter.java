@@ -2,7 +2,6 @@ package club.sjmc.smp3.sign;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.item.ItemDelivery;
-import club.sjmc.smp3.perm.Permissions;
 
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -24,15 +23,12 @@ final class SignRewardGranter {
 					                                reward.amount()));
 					yield Result.SUCCESS;
 				}
-				case TITLE -> {
-					Permissions.grant(player, "fuji.title.obtain." + reward.value());
-					yield Result.SUCCESS;
-				}
+				case TITLE -> throw new IllegalArgumentException("Titles must be delivered asynchronously");
 				case COMMAND -> command(player, reward.value());
 			};
 		} catch (RuntimeException | LinkageError e) {
 			Smp3Core.LOGGER.error("[SMP3] 签到奖励待核对 player={} reward={}", player.getUUID(), reward, e);
-			return reward.kind() == SignReward.Kind.TITLE ? Result.RETRY : Result.REVIEW;
+			return Result.REVIEW;
 		}
 	}
 

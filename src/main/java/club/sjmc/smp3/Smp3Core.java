@@ -8,10 +8,13 @@ import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.ui.DailyQuestCommand;
 import club.sjmc.smp3.economy.Smp3EconomyProvider;
 import club.sjmc.smp3.item.Smp3Items;
+import club.sjmc.smp3.milestone.MilestoneModule;
+import club.sjmc.smp3.milestone.ui.RewardCommand;
 import club.sjmc.smp3.notice.NoticeModule;
 import club.sjmc.smp3.notice.ui.NoticeCommand;
 import club.sjmc.smp3.shop.ShopModule;
 import club.sjmc.smp3.shop.ui.ShopCommand;
+import club.sjmc.smp3.sign.SignModule;
 import club.sjmc.smp3.sign.ui.SignCommand;
 import club.sjmc.smp3.time.ServerDates;
 import club.sjmc.smp3.ui.HudSettingsPayload;
@@ -42,6 +45,8 @@ public final class Smp3Core implements ModInitializer {
 		});
 		Smp3Items.init();
 		ShopModule.register();
+		SignModule.register();
+		MilestoneModule.register();
 		Smp3EconomyProvider.register();
 
 		DailyQuestModule.register();
@@ -54,6 +59,7 @@ public final class Smp3Core implements ModInitializer {
 			    Commands.literal("smp3")
 			        .then(ShopCommand.command())
 			        .then(SignCommand.command())
+			        .then(RewardCommand.command())
 			        .then(SmpPerfCommand.command())
 			        .then(NoticeCommand.command())
 			        .then(Commands.literal("hud").executes(context -> {

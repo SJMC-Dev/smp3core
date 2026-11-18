@@ -5,11 +5,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.economy.Smp3Currency;
+import club.sjmc.smp3.perm.Permissions;
 import club.sjmc.smp3.time.ServerDates;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class SignService {
@@ -20,10 +24,42 @@ public final class SignService {
 	}
 
 	private SignService() {}
+	private record TitleKey(UUID player, String claim, int delivery) {}
+	private static final Map<TitleKey, CompletableFuture<Void>> titles = new HashMap<>();
+	static void clear() { titles.clear(); }
+	static void flushTitles(MinecraftServer server) {
+		if (titles.isEmpty())
+			return;
+		var ready = titles.entrySet()
+		                .stream()
+		                .filter(e -> e.getValue().isDone())
+		                .map(e -> e.getKey().player())
+		                .distinct()
+		                .toList();
+		for (UUID id : ready) {
+			var player = server.getPlayerList().getPlayer(id);
+			if (player == null)
+				titles.keySet().removeIf(key -> key.player().equals(id));
+			else
+				reconcile(player);
+		}
+	}
+	public static void reconcile(ServerPlayer player) {
+		try {
+			var next = SignData.copy(state(player));
+			if (next.queueMilestones(SignModule.config()))
+				commit(player, next, Map.of());
+			deliverPending(player, ServerDates.today(), new ArrayList<>());
+		} catch (RuntimeException error) {
+			titles.keySet().removeIf(key -> key.player().equals(player.getUUID()));
+			Smp3Core.LOGGER.error("Check-in rewards pending for {}", player.getUUID(), error);
+		}
+	}
 
 	public static PlayerSignData state(ServerPlayer player) { return state(player, ServerDates.today()); }
 
 	private static PlayerSignData state(ServerPlayer player, LocalDate today) {
+		SignModule.config();
 		SignData data = SignData.get(player.level().getServer());
 		PlayerSignData state = data.of(player.getUUID());
 		PlayerSignData next = SignData.copy(state);
@@ -45,8 +81,9 @@ public final class SignService {
 			if (today.toEpochDay() > state.lastSignEpochDay()) {
 				PlayerSignData next = SignData.copy(state);
 				next.sign(today);
-				int reward = SignRewards.dailyReward(next.streak());
-				commit(player, next, Map.of(Smp3Currency.TONGBAO, reward));
+				var config = SignModule.config();
+				int reward = config.dailyReward(next.streak());
+				commit(player, next, Map.of(config.currency(), reward));
 				outcomes.add(new Outcome(Status.SIGNED, next.streak(), reward, ""));
 				Smp3Core.LOGGER.info("[SMP3] 签到：player={}({}) streak={} reward={} monthTotal={} serverTotal={}",
 				                     player.getName().getString(), player.getUUID(), next.streak(), reward,
@@ -80,8 +117,30 @@ public final class SignService {
 				if (delivery.status == PlayerSignData.Status.DONE) {
 					continue;
 				}
-				if (delivery.status == PlayerSignData.Status.IN_FLIGHT &&
-				    delivery.reward.kind() != SignReward.Kind.TITLE) {
+				if (delivery.reward.kind() == SignReward.Kind.TITLE) {
+					var key = new TitleKey(player.getUUID(), claim.id, claim.deliveries.indexOf(delivery));
+					var future = titles.get(key);
+					if (future == null) {
+						delivery.status = PlayerSignData.Status.IN_FLIGHT;
+						commit(player, state, Map.of());
+						future = Permissions.grant(player, "fuji.title.obtain." + delivery.reward.value());
+						titles.put(key, future);
+					}
+					if (!future.isDone())
+						continue;
+					try {
+						future.join();
+						delivery.status = PlayerSignData.Status.DONE;
+					} catch (RuntimeException error) {
+						delivery.status = PlayerSignData.Status.READY;
+						outcomes.add(new Outcome(Status.RETRY, claim.days, 0, claim.month));
+						Smp3Core.LOGGER.error("Check-in title pending for {}", player.getUUID(), error);
+					}
+					titles.remove(key);
+					commit(player, state, Map.of());
+					continue;
+				}
+				if (delivery.status == PlayerSignData.Status.IN_FLIGHT) {
 					outcomes.add(new Outcome(Status.REVIEW, claim.days, 0, claim.month));
 					continue;
 				}
