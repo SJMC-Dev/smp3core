@@ -1,4 +1,4 @@
-package club.sjmc.smp3.client;
+package club.sjmc.smp3.ui;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -14,20 +14,18 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.BookViewScreen;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
 final class NoticeEditorScreen extends Screen {
-	private static final int INK = 0xFF443323;
+	private static final int INK = PaperStyle.INK;
 	private final String session;
 	private final List<NoticeCatalog.Category> categories;
 	private final NoticeEditing.Draft original;
 	private final String[] fields;
 	private String body, status = "";
 	private boolean markdown, pinned, notify, acknowledgement, publishing, discard, confirmDelete;
-	private int tab = 1;
+	private int tab;
 	private int x, y, panelWidth, panelHeight, contentTop, contentBottom, previewX, previewWidth, scroll;
 	private boolean narrow;
 	private List<FormattedCharSequence> lines = List.of();
@@ -247,10 +245,7 @@ final class NoticeEditorScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		graphics.fill(0, 0, width, height, 0x66000000);
-		graphics.fillGradient(x, y, x + panelWidth, y + panelHeight, 0xFF79523A, 0xFF3F2A20);
-		graphics.outline(x + 1, y + 1, panelWidth - 2, panelHeight - 2, 0xFFAD8053);
-		graphics.blit(RenderPipelines.GUI_TEXTURED, BookViewScreen.BOOK_LOCATION, x + 7, y + 5, 32, 20, panelWidth - 14,
-		              panelHeight - 10, 128, 140, 256, 256);
+		PaperStyle.frame(graphics, x, y, panelWidth, panelHeight);
 		graphics.text(font, title, x + 16, y + 11, INK, false);
 		if (confirmDelete) {
 			int top = y + 48;

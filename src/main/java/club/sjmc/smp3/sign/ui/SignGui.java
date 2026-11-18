@@ -7,11 +7,11 @@ import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.Smp3Core;
-import club.sjmc.smp3.gui.GuiStyle;
 import club.sjmc.smp3.sign.PlayerSignData;
 import club.sjmc.smp3.sign.SignRewards;
 import club.sjmc.smp3.sign.SignService;
 import club.sjmc.smp3.time.ServerDates;
+import club.sjmc.smp3.ui.GuiStyle;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;

@@ -19,7 +19,6 @@ import club.sjmc.smp3.daily.ui.DailyQuestGui;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.item.ItemDelivery;
-import club.sjmc.smp3.shop.ui.SheetListGui;
 import club.sjmc.smp3.sign.ui.SignGui;
 
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
@@ -297,7 +296,7 @@ public final class DailyQuestGameTest {
 			var commands = server.getCommands().getDispatcher();
 			String playerName = player.getGameProfile().name();
 			var console = server.createCommandSourceStack();
-			for (String root : List.of("dailyquest", "dailyquests", "dailyrequest")) {
+			for (String root : List.of("smp3 dailyquest", "smp3 dailyquests", "smp3 dailyrequest")) {
 				for (String prefix : List.of("", playerName.substring(0, 2))) {
 					var parsed = commands.parse(root + " " + prefix, console);
 					var suggestions = commands.getCompletionSuggestions(parsed).join().getList();
@@ -313,15 +312,15 @@ public final class DailyQuestGameTest {
 					                "Command argument completion missing: " + entry.getKey());
 				}
 			}
-			String reset = "dailyquest " + player.getGameProfile().name() + " reroll";
-			for (String invalid : List.of(reset + " 0", reset + " 5", "dailyquest nobody-online reset")) {
+			String reset = "smp3 dailyquest " + player.getGameProfile().name() + " reroll";
+			for (String invalid : List.of(reset + " 0", reset + " 5", "smp3 dailyquest nobody-online reset")) {
 				try {
 					commands.execute(invalid, server.createCommandSourceStack());
 					throw new AssertionError("无效命令被接受：" + invalid);
 				} catch (CommandSyntaxException expected) {
 				}
 			}
-			for (String root : List.of("dailyquest", "dailyquests", "dailyrequest")) {
+			for (String root : List.of("smp3 dailyquest", "smp3 dailyquests", "smp3 dailyrequest")) {
 				try {
 					commands.execute(root + " " + playerName + " reset", player.createCommandSourceStack());
 					throw new AssertionError("未授权玩家能执行管理命令");
@@ -335,7 +334,7 @@ public final class DailyQuestGameTest {
 			                "指定刷新修改了其他槽位");
 			test.assertTrue(!service.reroll(player, day.date, 2, old.token, false).success(), "过期任务回调被接受");
 			test.assertTrue(
-			    commands.execute("dailyquests " + playerName + " reroll", server.createCommandSourceStack()) == 2,
+			    commands.execute("smp3 dailyquests " + playerName + " reroll", server.createCommandSourceStack()) == 2,
 			    "批量刷新未正确跳过已完成任务");
 			test.assertTrue(day.assignments.getFirst() == task && day.assignments.get(1) == completed,
 			                "刷新改动已领取或已完成任务");
@@ -358,9 +357,8 @@ public final class DailyQuestGameTest {
 			                                                  overview);
 			player.closeContainer();
 			test.assertTrue(day.rerollsUsed == 0 && day.assignments.get(2) == old, "关闭确认页消耗额度");
-			commands.execute("dailyquest", player.createCommandSourceStack());
+			commands.execute("smp3 dailyquest", player.createCommandSourceStack());
 			player.closeContainer();
-			test.assertTrue(new SheetListGui(player).open(), "商店 GUI 打开失败");
 			player.closeContainer();
 			SignGui.open(player);
 			player.closeContainer();
@@ -383,7 +381,7 @@ public final class DailyQuestGameTest {
 			} finally {
 				Files.delete(blockedWrite);
 			}
-			test.assertTrue(commands.execute("dailyrequest " + playerName + " reset 1", console) == 1,
+			test.assertTrue(commands.execute("smp3 dailyrequest " + playerName + " reset 1", console) == 1,
 			                "Completed task reset failed");
 			day = service.state(player);
 			test.assertTrue(
@@ -408,7 +406,7 @@ public final class DailyQuestGameTest {
 			test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO) ==
 			                    balanceBeforeReset + Smp3Currency.rawUnits(resetTask.reward.tongbao()),
 			                "Replayed completion paid more than once");
-			test.assertTrue(commands.execute("dailyquest " + playerName + " reset", console) == 4,
+			test.assertTrue(commands.execute("smp3 dailyquest " + playerName + " reset", console) == 4,
 			                "Reset did not include all slots");
 			QuestUpdateChecks.rewards(test, player);
 			FeatureChecks.run(test, player);

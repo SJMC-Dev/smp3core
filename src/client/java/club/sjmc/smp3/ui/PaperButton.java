@@ -1,4 +1,4 @@
-package club.sjmc.smp3.client;
+package club.sjmc.smp3.ui;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -6,7 +6,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
 final class PaperButton extends Button {
-	private static final int INK = 0xFF443323, MUTED = 0xFF827058;
+	private static final int INK = PaperStyle.INK, MUTED = PaperStyle.MUTED;
 	private final boolean tab;
 
 	PaperButton(int x, int y, int width, String text, boolean tab, Runnable action) {
@@ -32,7 +32,8 @@ final class PaperButton extends Button {
 		if (isFocused() && active)
 			graphics.outline(getX() + 2, getY() + 2, getWidth() - 4, getHeight() - 4, border);
 		var font = Minecraft.getInstance().font;
-		graphics.text(font, getMessage(), getX() + (getWidth() - font.width(getMessage())) / 2,
+		String label = font.plainSubstrByWidth(getMessage().getString(), getWidth() - 8);
+		graphics.text(font, label, getX() + (getWidth() - font.width(label)) / 2,
 		              getY() + (getHeight() - font.lineHeight) / 2, active || selected ? INK : MUTED, false);
 	}
 }

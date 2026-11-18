@@ -1,4 +1,4 @@
-package club.sjmc.smp3.client;
+package club.sjmc.smp3.ui;
 
 import java.util.List;
 import java.util.stream.IntStream;
@@ -10,14 +10,12 @@ import club.sjmc.smp3.notice.NoticePayloads;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
 final class ServerBookScreen extends Screen {
-	private static final int INK = 0xFF443323, MUTED = 0xFF827058;
+	private static final int INK = PaperStyle.INK, MUTED = PaperStyle.MUTED;
 	private final ServerBookState state = Smp3Client.BOOK;
 	private int x, y, bookWidth, bookHeight, sidebar, bodyTop, bodyBottom, listScroll, textScroll, headerExtra;
 	private boolean narrow, detail, subscribed;
@@ -50,8 +48,7 @@ final class ServerBookScreen extends Screen {
 	@Override
 	protected void init() {
 		if (!subscribed) {
-			state.coins.clear();
-			state.stamps.clear();
+			Smp3Client.BALANCES.clear();
 			state.request(NoticePayloads.Action.OPEN, "", "");
 			subscribed = true;
 		}
@@ -61,7 +58,7 @@ final class ServerBookScreen extends Screen {
 		bookHeight = height - 2 * y;
 		narrow = bookWidth < 400;
 		sidebar = narrow ? bookWidth - 28 : Math.min(174, bookWidth / 3);
-		headerExtra = bookWidth - 44 < font.width(state.title) + 24 + state.currencyWidth() ? 22 : 0;
+		headerExtra = bookWidth - 44 < font.width(state.title) + 24 + Smp3Client.BALANCES.width() ? 22 : 0;
 		bodyTop = y + 73 + headerExtra;
 		bodyBottom = y + bookHeight - 20;
 		entries = IntStream.range(0, state.messages.size())
@@ -134,15 +131,10 @@ final class ServerBookScreen extends Screen {
 		float seconds = Math.min(.05F, (now - lastFrame) / 1e9F);
 		lastFrame = now;
 		graphics.fill(0, 0, width, height, 0x66000000);
-		graphics.fill(x + 4, y + 5, x + bookWidth + 4, y + bookHeight + 5, 0x77000000);
-		graphics.fillGradient(x, y, x + bookWidth, y + bookHeight, 0xFF79523A, 0xFF3F2A20);
-		graphics.outline(x + 1, y + 1, bookWidth - 2, bookHeight - 2, 0xFFAD8053);
-		graphics.fill(x + 5, y + 4, x + 9, y + bookHeight - 4, 0xFF39271F);
-		graphics.blit(RenderPipelines.GUI_TEXTURED, BookViewScreen.BOOK_LOCATION, x + 11, y + 8, 32, 20, bookWidth - 20,
-		              bookHeight - 16, 128, 140, 256, 256);
+		PaperStyle.frame(graphics, x, y, bookWidth, bookHeight);
 		graphics.text(font, font.plainSubstrByWidth(state.title, bookWidth - 44), x + 22, y + 28, INK, false);
-		state.renderCurrency(graphics, x + bookWidth - 22, y + (headerExtra == 0 ? 22 : 44),
-		                     bookWidth - 44 - (headerExtra == 0 ? font.width(state.title) + 24 : 0), seconds);
+		Smp3Client.BALANCES.render(graphics, x + bookWidth - 22, y + (headerExtra == 0 ? 22 : 44),
+		                           bookWidth - 44 - (headerExtra == 0 ? font.width(state.title) + 24 : 0), seconds);
 		graphics.horizontalLine(x + 20, x + bookWidth - 20, y + 41 + headerExtra, 0xFFB7A17D);
 		if (!narrow) {
 			graphics.fill(x + sidebar + 14, y + 47 + headerExtra, x + sidebar + 16, bodyBottom, 0x66836B48);
@@ -184,7 +176,7 @@ final class ServerBookScreen extends Screen {
 			              left + 7, top + 23, MUTED, false);
 		}
 		graphics.disableScissor();
-		scrollbar(graphics, right - 2, bodyTop, bodyBottom, entries.size() * 40, listScroll);
+		PaperStyle.scrollbar(graphics, right - 2, bodyTop, bodyBottom, entries.size() * 40, listScroll);
 	}
 
 	private void drawMessage(GuiGraphicsExtractor graphics) {
@@ -214,17 +206,7 @@ final class ServerBookScreen extends Screen {
 		for (int i = textScroll / 14; i < Math.min(lines.size(), (textScroll + bottom - top) / 14 + 1); i++)
 			graphics.text(font, lines.get(i), left, top + i * 14 - textScroll, INK, false);
 		graphics.disableScissor();
-		scrollbar(graphics, left + contentWidth() - 3, top, bottom, lines.size() * 14, textScroll);
-	}
-
-	private static void scrollbar(GuiGraphicsExtractor graphics, int x, int top, int bottom, int content, int scroll) {
-		int height = bottom - top;
-		if (content <= height || height <= 0)
-			return;
-		int thumb = Math.max(12, height * height / content);
-		int y = top + (height - thumb) * scroll / (content - height);
-		graphics.fill(x, top, x + 2, bottom, 0x44765A37);
-		graphics.fill(x, y, x + 2, y + thumb, 0xFF9B7B51);
+		PaperStyle.scrollbar(graphics, left + contentWidth() - 3, top, bottom, lines.size() * 14, textScroll);
 	}
 
 	@Override

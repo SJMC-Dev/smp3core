@@ -1,4 +1,4 @@
-package club.sjmc.smp3.client;
+package club.sjmc.smp3.ui;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,8 +11,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.daily.QuestHudPayload;
 import club.sjmc.smp3.economy.BalanceSync;
-import club.sjmc.smp3.hud.HudSettingsPayload;
 import club.sjmc.smp3.notice.NoticePayloads;
+import club.sjmc.smp3.shop.ShopPayloads;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -30,6 +30,8 @@ import net.minecraft.resources.Identifier;
 public final class Smp3Client implements ClientModInitializer {
 	static final QuestHud HUD = new QuestHud();
 	static final ServerBookState BOOK = new ServerBookState();
+	static final CurrencyDisplay BALANCES = new CurrencyDisplay();
+	static final ShopState SHOP = new ShopState();
 	static HudLayout layout = new HudLayout();
 	private static boolean pendingSettings;
 	private static NoticePayloads.Editor pendingEditor;
@@ -42,6 +44,10 @@ public final class Smp3Client implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		loadPreferences();
+		ClientPlayNetworking.registerGlobalReceiver(ShopPayloads.Catalog.TYPE,
+		                                            (payload, context) -> SHOP.accept(payload));
+		ClientPlayNetworking.registerGlobalReceiver(ShopPayloads.State.TYPE,
+		                                            (payload, context) -> SHOP.accept(payload));
 		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Editor.TYPE, (payload, context) -> {
 			if (!payload.draft().isEmpty())
 				pendingEditor = payload;
@@ -54,20 +60,11 @@ public final class Smp3Client implements ClientModInitializer {
 		                                            (catalog, context) -> BOOK.accept(catalog));
 		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Body.TYPE, (body, context) -> BOOK.accept(body));
 		ClientPlayNetworking.registerGlobalReceiver(BalanceSync.Payload.TYPE, (balance, context) -> {
-			if (balance.initial()) {
-				BOOK.coins.clear();
-				BOOK.stamps.clear();
-			}
-			if (balance.coins() < 0)
-				BOOK.coins.clear();
-			else
-				BOOK.coins.set(balance.coins());
-			if (balance.stamps() < 0)
-				BOOK.stamps.clear();
-			else
-				BOOK.stamps.set(balance.stamps());
+			BALANCES.accept(balance);
 			if (context.client().gui.screen() instanceof ServerBookScreen screen)
 				screen.contentChanged();
+			else if (context.client().gui.screen() instanceof ShopScreen screen)
+				screen.balancesChanged();
 		});
 		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("smp3", "main"));
 		KeyMapping toggle = KeyMappingHelper.registerKeyMapping(
@@ -77,6 +74,8 @@ public final class Smp3Client implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			HUD.state.clear();
 			BOOK.clear();
+			BALANCES.clear();
+			SHOP.clear();
 			pendingSettings = false;
 			pendingEditor = null;
 		});
@@ -86,6 +85,15 @@ public final class Smp3Client implements ClientModInitializer {
 		KeyMapping settings = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.hud_settings", InputConstants.UNKNOWN.getValue(), category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			if (SHOP.pendingOpen && client.player != null && client.level != null &&
+			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||
+			     client.gui.screen() instanceof ServerBookScreen || client.gui.screen() instanceof ShopScreen)) {
+				SHOP.pendingOpen = false;
+				if (client.gui.screen() instanceof ShopScreen screen)
+					screen.catalogChanged();
+				else
+					client.gui.setScreen(new ShopScreen());
+			}
 			if (pendingEditor != null && client.player != null && client.level != null &&
 			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||
 			     client.gui.screen() instanceof ServerBookScreen)) {

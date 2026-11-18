@@ -7,8 +7,8 @@ import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.Smp3Core;
-import club.sjmc.smp3.gui.GuiStyle;
 import club.sjmc.smp3.item.EnchantBookService;
+import club.sjmc.smp3.ui.GuiStyle;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;

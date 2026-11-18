@@ -17,10 +17,7 @@ import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.item.Smp3Items;
 import club.sjmc.smp3.item.ui.EnchantBookGui;
-import club.sjmc.smp3.shop.QuotaStore;
-import club.sjmc.smp3.shop.ShopEntry;
-import club.sjmc.smp3.shop.ShopService;
-import club.sjmc.smp3.shop.TradeDirection;
+import club.sjmc.smp3.shop.ShopChecks;
 import club.sjmc.smp3.sign.PlayerSignData;
 import club.sjmc.smp3.sign.SignFailureChecks;
 import club.sjmc.smp3.sign.SignService;
@@ -30,10 +27,8 @@ import club.sjmc.smp3.time.SignDateChecks;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -56,6 +51,7 @@ public final class FeatureChecks implements ModInitializer {
 				}
 			}
 			Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING);
+			ShopChecks.install(path.resolveSibling("shops.json"));
 			Files.writeString(path.resolveSibling("notices.json"), "{\"categories\":[],\"entries\":[]}");
 			Files.writeString(path.resolveSibling("client.json"), "{\"questHudVisible\":false}");
 		} catch (IOException e) {
@@ -64,32 +60,7 @@ public final class FeatureChecks implements ModInitializer {
 	}
 
 	public static void run(GameTestHelper test, ServerPlayer player) {
-		player.getInventory().clearContent();
-		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 10000);
-		var buy =
-		    new ShopEntry("test.buy", TradeDirection.BUY, null, Items.GRANITE, Items.GRANITE, null, 32, 2, 64, 64);
-		test.assertTrue(ShopService.buy(player, buy).status() == ShopService.Status.BOUGHT, "Purchase result changed");
-		ShopService.buy(player, buy);
-		test.assertTrue(ShopService.buy(player, buy).status() == ShopService.Status.QUOTA, "Quota result changed");
-		test.assertTrue(count(player, Items.GRANITE) == 64 && balance(player) == 9600 &&
-		                    QuotaStore.used(player, buy) == 64,
-		                "Purchase/quota changed");
-		var sell =
-		    new ShopEntry("test.sell", TradeDirection.SELL, null, Items.GRANITE, Items.GRANITE, null, 2, 3, 4, 4);
-		test.assertTrue(ShopService.sell(player, sell).status() == ShopService.Status.SOLD, "Sale result changed");
-		test.assertTrue(count(player, Items.GRANITE) == 62 && balance(player) == 9900, "Sale changed");
-		player.getInventory().clearContent();
-		ItemStack named = new ItemStack(Items.GRANITE, 2);
-		named.set(DataComponents.CUSTOM_NAME, Component.literal("refund"));
-		player.getInventory().add(named);
-		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, Long.MAX_VALUE);
-		test.assertTrue(ShopService.sell(player, sell).status() == ShopService.Status.DEPOSIT_FAILED,
-		                "Refund result changed");
-		test.assertTrue(count(player, Items.GRANITE) == 2 && QuotaStore.used(player, sell) == 2,
-		                "Failed sale consumed items/quota");
-		test.assertTrue(player.getInventory().getItem(0).getHoverName().getString().equals("refund"),
-		                "Refund lost item components");
-		player.getInventory().clearContent();
+		ShopChecks.run(test, player);
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.COFFEE_STAMP, 0);
 		var today = ServerDates.today();

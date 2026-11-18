@@ -265,10 +265,10 @@ public final class NoticeService implements AutoCloseable {
 		switch (request.action()) {
 		case OPEN -> {
 			sync(player, "");
-			BalanceSync.subscribe(player, true);
+			BalanceSync.subscribe(player, BalanceSync.View.NOTICE, true);
 		}
 		case CLOSE -> {
-			BalanceSync.subscribe(player, false);
+			BalanceSync.subscribe(player, BalanceSync.View.NOTICE, false);
 			delivered.remove(player.getUUID());
 		}
 		case BODY, READ, ACKNOWLEDGE -> {

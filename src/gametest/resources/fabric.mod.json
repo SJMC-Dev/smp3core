@@ -11,7 +11,7 @@
       "club.sjmc.smp3.watchdog.WatchdogRuntimeTest"
     ],
     "fabric-client-gametest": [
-      "club.sjmc.smp3.client.QuestHudClientGameTest"
+      "club.sjmc.smp3.ui.QuestHudClientGameTest"
     ]
   },
   "depends": {

@@ -8,7 +8,7 @@ import com.google.gson.JsonElement;
 import club.sjmc.smp3.daily.QuestDay;
 import club.sjmc.smp3.daily.QuestDefinition;
 import club.sjmc.smp3.daily.QuestField;
-import club.sjmc.smp3.gui.GuiStyle;
+import club.sjmc.smp3.ui.GuiStyle;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;

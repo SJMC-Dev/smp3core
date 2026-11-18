@@ -14,7 +14,7 @@
 			"club.sjmc.smp3.Smp3Core"
 		],
 		"client": [
-			"club.sjmc.smp3.client.Smp3Client"
+			"club.sjmc.smp3.ui.Smp3Client"
 		]
 	},
 	"mixins": ["smp3.mixins.json"],

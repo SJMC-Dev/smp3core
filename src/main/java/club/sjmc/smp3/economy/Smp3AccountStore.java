@@ -38,9 +38,16 @@ public final class Smp3AccountStore {
 
 	public static void commitReward(UUID owner, String key, JsonObject expected, JsonObject state,
 	                                Map<Smp3Currency, Integer> credits) {
+		if (credits.values().stream().anyMatch(amount -> amount < 0))
+			throw new IllegalArgumentException("Negative reward");
+		commitChange(owner, key, expected, state, credits);
+	}
+
+	public static void commitChange(UUID owner, String key, JsonObject expected, JsonObject state,
+	                                Map<Smp3Currency, Integer> changes) {
 		Map<String, Long> raw = new HashMap<>();
-		credits.forEach((currency, amount) -> raw.put(currency.id().getPath(), Smp3Currency.rawUnits(amount)));
-		Holder.LEDGER.updateReward(owner, key, expected, state, raw);
+		changes.forEach((currency, amount) -> raw.put(currency.id().getPath(), Smp3Currency.rawUnits(amount)));
+		Holder.LEDGER.update(owner, key, expected, state, raw);
 	}
 
 	public static void saveRewardFields(String key, Map<UUID, JsonObject> fields) {
@@ -85,16 +92,17 @@ public final class Smp3AccountStore {
 			return selected;
 		}
 
-		synchronized void updateReward(UUID owner, String key, JsonObject expected, JsonObject state,
-		                               Map<String, Long> credits) {
+		synchronized void update(UUID owner, String key, JsonObject expected, JsonObject state,
+		                         Map<String, Long> changes) {
 			Account account = load(owner);
 			if (!Objects.equals(account.rewards.get(key), expected))
 				throw new IllegalStateException("Reward state changed; reload before retrying");
 			Map<String, Long> balances = new HashMap<>(account.balances);
-			credits.forEach((currency, amount) -> {
-				if (amount < 0)
-					throw new IllegalArgumentException("Negative reward");
-				balances.put(currency, Math.addExact(balances.getOrDefault(currency, 0L), amount));
+			changes.forEach((currency, amount) -> {
+				long value = Math.addExact(balances.getOrDefault(currency, 0L), amount);
+				if (value < 0)
+					throw new IllegalArgumentException("Insufficient balance");
+				balances.put(currency, value);
 			});
 			JsonObject rewards = account.rewards.deepCopy();
 			rewards.add(key, state.deepCopy());

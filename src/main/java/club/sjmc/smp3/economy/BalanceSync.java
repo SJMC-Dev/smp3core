@@ -1,12 +1,14 @@
 package club.sjmc.smp3.economy;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import io.netty.buffer.ByteBuf;
+
 import club.sjmc.smp3.Smp3Core;
 
-import io.netty.buffer.ByteBuf;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -19,7 +21,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class BalanceSync {
-	private static final Map<UUID, Payload> subscribers = new HashMap<>();
+	public enum View { NOTICE, SHOP }
+	private static final class Subscription {
+		final EnumSet<View> views = EnumSet.noneOf(View.class);
+		Payload value;
+	}
+	private static final Map<UUID, Subscription> subscribers = new HashMap<>();
 	private BalanceSync() {}
 
 	public record Payload(long coins, long stamps, boolean initial) implements CustomPacketPayload {
@@ -45,23 +52,34 @@ public final class BalanceSync {
 				var player = server.getPlayerList().getPlayer(subscription.getKey());
 				if (player == null)
 					continue;
-				Payload next = snapshot(player, false);
-				Payload previous = subscription.getValue();
-				if (next.coins != previous.coins || next.stamps != previous.stamps) {
-					ServerPlayNetworking.send(player, next);
-					subscription.setValue(next);
-				}
+				refresh(player);
 			}
 		});
 	}
 
-	public static void subscribe(ServerPlayer player, boolean open) {
+	public static void subscribe(ServerPlayer player, View view, boolean open) {
 		if (!open) {
-			subscribers.remove(player.getUUID());
+			Subscription subscription = subscribers.get(player.getUUID());
+			if (subscription != null) {
+				subscription.views.remove(view);
+				if (subscription.views.isEmpty())
+					subscribers.remove(player.getUUID());
+			}
 		} else if (ServerPlayNetworking.canSend(player, Payload.TYPE)) {
-			Payload snapshot = snapshot(player, true);
-			subscribers.put(player.getUUID(), snapshot);
-			ServerPlayNetworking.send(player, snapshot);
+			Subscription subscription = subscribers.computeIfAbsent(player.getUUID(), id -> new Subscription());
+			subscription.views.add(view);
+			subscription.value = snapshot(player, true);
+			ServerPlayNetworking.send(player, subscription.value);
+		}
+	}
+	public static void refresh(ServerPlayer player) {
+		Subscription subscription = subscribers.get(player.getUUID());
+		if (subscription == null)
+			return;
+		Payload next = snapshot(player, false), previous = subscription.value;
+		if (next.coins != previous.coins || next.stamps != previous.stamps) {
+			ServerPlayNetworking.send(player, next);
+			subscription.value = next;
 		}
 	}
 
@@ -73,7 +91,7 @@ public final class BalanceSync {
 			    initial);
 		} catch (RuntimeException e) {
 			if (initial)
-				Smp3Core.LOGGER.error("[SMP3] 无法读取手册余额", e);
+				Smp3Core.LOGGER.error("[SMP3] 无法读取玩家余额", e);
 			return new Payload(-1, -1, initial);
 		}
 	}

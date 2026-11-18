@@ -1,4 +1,4 @@
-package club.sjmc.smp3.client;
+package club.sjmc.smp3.ui;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -59,13 +59,17 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				server.getPlayerList().op(new NameAndId(player.getGameProfile()),
 				                          Optional.of(LevelBasedPermissionSet.GAMEMASTER), Optional.empty());
 			});
-			context.waitFor(
-			    client
-			    -> client.getConnection().getCommands().getRoot().getChild("dailyquest").getChild("player") != null);
+			context.waitFor(client
+			                -> client.getConnection()
+			                           .getCommands()
+			                           .getRoot()
+			                           .getChild("smp3")
+			                           .getChild("dailyquest")
+			                           .getChild("player") != null);
 			context.runOnClient(client -> {
 				var connection = client.getConnection();
 				var commands = connection.getCommands();
-				for (String root : List.of("dailyquest", "dailyquests")) {
+				for (String root : List.of("smp3 dailyquest", "smp3 dailyquests")) {
 					var suggestions =
 					    commands
 					        .getCompletionSuggestions(commands.parse(root + " ", connection.getSuggestionsProvider()))
@@ -77,6 +81,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			});
 			context.runOnClient(client -> client.options.guiScale().set(2));
 			context.takeScreenshot("quest-hud-active");
+			ShopClientChecks.run(context, world);
 			String token = context.computeOnClient(client -> Smp3Client.HUD.state.rows.getFirst().entry.token());
 
 			world.getServer().runOnServer(server -> DailyQuestGui.show(world.getConnection().getServerPlayer()));
@@ -230,7 +235,6 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.waitFor(client -> client.gui.screen() == null);
 			context.runOnClient(client -> client.getConnection().sendCommand("smp3 info edit"));
 			context.waitForScreen(NoticeEditorScreen.class);
-			context.clickScreenButton("信息");
 			context.runOnClient(client -> {
 				var fields = client.gui.screen()
 				                 .children()
@@ -266,6 +270,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				client.getConnection().sendCommand("smp3 info edit editor-test");
 			});
 			context.waitForScreen(NoticeEditorScreen.class);
+			context.clickScreenButton("正文");
 			context.runOnClient(client
 			                    -> client.gui.screen()
 			                           .children()
@@ -323,7 +328,8 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			hudControls(context);
 			world.getServer().runOnServer(server -> NoticeFixture.join(world.getConnection().getServerPlayer()));
 			context.waitForScreen(ServerBookScreen.class);
-			context.waitFor(client -> Smp3Client.BOOK.bodies.containsKey("rules") && Smp3Client.BOOK.coins.received);
+			context.waitFor(
+			    client -> Smp3Client.BOOK.bodies.containsKey("rules") && Smp3Client.BALANCES.coins.received);
 			context.takeScreenshot("server-book-join-confirmation");
 			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
 			context.waitFor(client -> client.gui.screen() == null);
@@ -349,14 +355,15 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				Smp3Client.BOOK.selected = 2;
 				client.gui.setScreen(new ServerBookScreen());
 			});
-			context.waitFor(client -> !Smp3Client.BOOK.unread(2) && Smp3Client.BOOK.coins.value == 12450);
+			context.waitFor(client -> !Smp3Client.BOOK.unread(2) && Smp3Client.BALANCES.coins.value == 12450);
 			context.takeScreenshot("server-book");
 			world.getServer().runOnServer(server -> {
 				var player = world.getConnection().getServerPlayer();
 				Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 1257500);
 				Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.COFFEE_STAMP, 1700);
 			});
-			context.waitFor(client -> Smp3Client.BOOK.coins.value == 12575 && Smp3Client.BOOK.stamps.value == 17);
+			context.waitFor(
+			    client -> Smp3Client.BALANCES.coins.value == 12575 && Smp3Client.BALANCES.stamps.value == 17);
 			context.takeScreenshot("server-book-balances");
 			context.runOnClient(client -> {
 				Smp3Client.BOOK.selected = 1;
@@ -392,7 +399,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.waitTicks(25);
 			context.runOnClient(client -> {
 				if (client.gui.screen() != null || Smp3Client.BOOK.unreadCount() != 0 ||
-				    Smp3Client.BOOK.coins.value != 12575)
+				    Smp3Client.BALANCES.coins.value != 12575)
 					throw new AssertionError("Read receipt or closed balance subscription failed");
 			});
 			result.set(null);
@@ -410,7 +417,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			NoticeFixture.install();
 		}
 		context.runOnClient(client -> {
-			if (!Smp3Client.BOOK.messages.isEmpty() || Smp3Client.BOOK.coins.received ||
+			if (!Smp3Client.BOOK.messages.isEmpty() || Smp3Client.BALANCES.coins.received ||
 			    !Smp3Client.HUD.state.rows.isEmpty())
 				throw new AssertionError("Session data remains after disconnect");
 		});

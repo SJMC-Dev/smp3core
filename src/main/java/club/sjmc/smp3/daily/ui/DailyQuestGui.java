@@ -8,9 +8,9 @@ import eu.pb4.sgui.api.gui.SimpleGui;
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.DailyQuestService;
 import club.sjmc.smp3.daily.QuestDay;
-import club.sjmc.smp3.gui.GuiStyle;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.ItemDelivery;
+import club.sjmc.smp3.ui.GuiStyle;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;

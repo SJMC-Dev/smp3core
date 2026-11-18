@@ -12,17 +12,14 @@ import com.google.gson.Gson;
 import club.sjmc.smp3.config.ServerConfig;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
-import club.sjmc.smp3.shop.QuotaStore;
-import club.sjmc.smp3.shop.ShopEntry;
+import club.sjmc.smp3.shop.ShopModule;
 import club.sjmc.smp3.shop.ShopService;
-import club.sjmc.smp3.shop.TradeDirection;
 import club.sjmc.smp3.sign.PlayerSignData;
 import club.sjmc.smp3.sign.SignService;
 
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.Items;
 
 public final class SignDateChecks {
 	public static void run(GameTestHelper test, ServerPlayer player) {
@@ -47,14 +44,21 @@ public final class SignDateChecks {
 			ServerDates.clock = Clock.fixed(boundary.minusSeconds(1), ZoneId.of("Asia/Shanghai"));
 			SignService.sign(player, january);
 			test.assertTrue(SignService.state(player).monthKey().equals("2030-01"), "Month changed before reset");
-			var entry =
-			    new ShopEntry("test.reset", TradeDirection.BUY, null, Items.STONE, Items.STONE, null, 1, 1, 1, 1);
+			var catalog = ShopModule.catalog();
 			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 100);
-			test.assertTrue(ShopService.buy(player, entry).status() == ShopService.Status.BOUGHT &&
-			                    QuotaStore.used(player, entry) == 1,
+			test.assertTrue(ShopService.trade(player, catalog, "test.reset", 1) == ShopService.Status.BOUGHT &&
+			                    ShopService.usage(player).getOrDefault("test.reset", 0L) == 1,
 			                "Shop quota was not consumed before reset");
 			ServerDates.clock = Clock.fixed(boundary, ZoneId.of("Asia/Shanghai"));
-			test.assertTrue(QuotaStore.used(player, entry) == 0, "Shop quota did not reset with check-in");
+			test.assertTrue(ShopService.usage(player).getOrDefault("test.reset", 0L) == 0,
+			                "Shop quota did not reset with check-in");
+			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 100);
+			test.assertTrue(ShopService.trade(player, catalog, "test.reset", 1) == ShopService.Status.BOUGHT,
+			                "New business day quota not usable");
+			ServerDates.clock = Clock.fixed(boundary.minusSeconds(1), ZoneId.of("Asia/Shanghai"));
+			test.assertTrue(ShopService.usage(player).getOrDefault("test.reset", 0L) == 1,
+			                "Clock rollback restored quota");
+			ServerDates.clock = Clock.fixed(boundary, ZoneId.of("Asia/Shanghai"));
 			SignService.sign(player, january);
 
 			test.assertTrue(SignService.state(player).monthKey().equals("2030-02") &&

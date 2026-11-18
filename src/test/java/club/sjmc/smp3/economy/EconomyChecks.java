@@ -20,20 +20,20 @@ public final class EconomyChecks {
 			assert ledger.balance(player, "tongbao") == 3000;
 			var empty = new JsonObject();
 			empty.addProperty("signed", false);
-			ledger.updateReward(player, "sign", null, empty, Map.of());
+			ledger.update(player, "sign", null, empty, Map.of());
 			var signed = empty.deepCopy();
 			signed.addProperty("signed", true);
 			Files.createDirectory(directory.resolve(player + ".json.tmp"));
 			try {
-				ledger.updateReward(player, "sign", empty, signed, Map.of("tongbao", 3000L));
+				ledger.update(player, "sign", empty, signed, Map.of("tongbao", 3000L));
 				throw new AssertionError("Reward write failure accepted");
 			} catch (IllegalStateException expected) {
 			}
 			assert ledger.balance(player, "tongbao") == 3000 && ledger.rewardState(player, "sign").equals(empty);
 			Files.delete(directory.resolve(player + ".json.tmp"));
-			ledger.updateReward(player, "sign", empty, signed, Map.of("tongbao", 3000L));
+			ledger.update(player, "sign", empty, signed, Map.of("tongbao", 3000L));
 			try {
-				ledger.updateReward(player, "sign", empty, signed, Map.of("tongbao", 3000L));
+				ledger.update(player, "sign", empty, signed, Map.of("tongbao", 3000L));
 				throw new AssertionError("Stale reward committed twice");
 			} catch (IllegalStateException expected) {
 			}
@@ -41,6 +41,15 @@ public final class EconomyChecks {
 			assert recovered.balance(player, "tongbao") == 6000 && recovered.rewardState(player, "sign").equals(signed);
 			signed.addProperty("signed", false);
 			assert recovered.rewardState(player, "sign").get("signed").getAsBoolean();
+
+			var paid = recovered.rewardState(player, "sign");
+			recovered.update(player, "sign", paid, paid, Map.of("tongbao", -1000L));
+			try {
+				recovered.update(player, "sign", paid, paid, Map.of("tongbao", -5001L));
+				throw new AssertionError("Overdraft accepted");
+			} catch (IllegalArgumentException expected) {
+			}
+			assert new Smp3AccountStore.Ledger(directory).balance(player, "tongbao") == 5000;
 
 			Files.writeString(file, "broken");
 			try {

@@ -1,152 +1,96 @@
 package club.sjmc.smp3.shop;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import club.sjmc.smp3.Smp3Core;
-import club.sjmc.smp3.economy.EconomyBridge;
+import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.perm.Permissions;
-import club.sjmc.smp3.time.ServerDates;
 
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 public final class ShopService {
 	public static final String ADVANCED_PERMISSION = "smp.shop.advanced";
-
-	public enum Status {
-		BOUGHT,
-		SOLD,
-		LOCKED,
-		NO_ECONOMY,
-		NO_MONEY,
-		QUOTA,
-		PAYMENT_FAILED,
-		NOT_ENOUGH_ITEMS,
-		DEPOSIT_FAILED
-	}
-
-	public record Outcome(Status status, int balance, int remaining, boolean dropped) {
-		Outcome(Status status) { this(status, 0, 0, false); }
-	}
-
+	public enum Status { BOUGHT, SOLD, STALE, LOCKED, NO_MONEY, QUOTA, NOT_ENOUGH_ITEMS, INVALID_QUANTITY, FAILED }
 	private ShopService() {}
 
-	public static Outcome buy(ServerPlayer player, ShopEntry entry) {
-		LocalDate today = ServerDates.today();
-		boolean advanced = Permissions.has(player, ShopService.ADVANCED_PERMISSION, true);
-
-		if (entry.isLockedFor(advanced)) {
-			return fail(player, entry, new Outcome(Status.LOCKED), "");
+	public static Map<String, Long> usage(ServerPlayer player) {
+		return ShopQuota.read(Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY, "shop")).used();
+	}
+	public static Status trade(ServerPlayer player, ShopCatalog shown, String id, int batches) {
+		if (shown == null || shown != ShopModule.catalog() || !shown.entries().containsKey(id))
+			return Status.STALE;
+		ShopEntry entry = shown.entries().get(id);
+		if (batches < 1 || batches > Integer.MAX_VALUE / Math.max(entry.amount(), entry.price()))
+			return Status.INVALID_QUANTITY;
+		int amount = entry.amount() * batches, price = entry.price() * batches;
+		try {
+			boolean advanced = Permissions.has(player, ADVANCED_PERMISSION, true);
+			if (entry.limitFor(advanced) == 0)
+				return Status.LOCKED;
+			ShopQuota quota =
+			    ShopQuota.read(Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY, "shop"));
+			long used = quota.used().getOrDefault(id, 0L);
+			if (entry.limitFor(advanced) != -1 && entry.remainingItems(advanced, used) < amount)
+				return Status.QUOTA;
+			boolean buy = entry.direction() == TradeDirection.BUY;
+			if (buy && Smp3AccountStore.balance(player.getUUID(), entry.currency()) < Smp3Currency.rawUnits(price))
+				return Status.NO_MONEY;
+			var delivery = buy ? entry.delivery().deepCopy() : null;
+			if (buy)
+				delivery.addProperty("count", amount);
+			boolean completed = ItemDelivery.transact(
+			    player,
+			    inventory
+			    -> buy || remove(inventory, entry, amount),
+			    buy ? List.of(delivery) : List.of(),
+			    state -> quota.record(state, entry, amount), Map.of(entry.currency(), buy ? -price : price));
+			if (!completed)
+				return Status.NOT_ENOUGH_ITEMS;
+			Smp3Core.LOGGER.info("Shop trade player={} entry={} direction={} amount={} price={} currency={}",
+			                     player.getUUID(), id, entry.direction(), amount, price, entry.currency().id());
+			return buy ? Status.BOUGHT : Status.SOLD;
+		} catch (RuntimeException error) {
+			Smp3Core.LOGGER.error("Shop trade failed player={} entry={}", player.getUUID(), id, error);
+			return Status.FAILED;
 		}
-
-		Integer balance = EconomyBridge.balance(player, Smp3Currency.TONGBAO);
-		if (balance == null) {
-			return fail(player, entry, new Outcome(Status.NO_ECONOMY), "");
+	}
+	public record Quote(long owned, long used, int limit, int maximum, long balance) {}
+	public static Quote quote(ServerPlayer player, ShopEntry entry) {
+		long owned = 0;
+		for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+			ItemStack stack = player.getInventory().getItem(slot);
+			boolean matches = entry.direction() == TradeDirection.SELL
+			                      ? entry.matches(stack)
+			                      : ItemStack.isSameItemSameComponents(stack, entry.template());
+			if (matches)
+				owned += stack.getCount();
 		}
-		if (balance < entry.price()) {
-			return fail(player, entry, new Outcome(Status.NO_MONEY, balance, 0, false), "");
-		}
-
-		int used = QuotaStore.used(player, entry, today);
-		if (entry.exhausted(advanced, used)) {
-			return fail(player, entry, new Outcome(Status.QUOTA, 0, entry.remainingItems(advanced, used), false), "");
-		}
-
-		EconomyBridge.Outcome payment = EconomyBridge.withdraw(player, Smp3Currency.TONGBAO, entry.price());
-		if (!payment.success()) {
-			return fail(player, entry, new Outcome(Status.PAYMENT_FAILED),
-			            payment.message() == null ? "" : payment.message().getString());
-		}
-
-		boolean dropped = ItemDelivery.give(player, new ItemStack(entry.icon(), entry.amount()));
-		QuotaStore.add(player, entry, entry.amount(), today);
-
-		log(player, entry, "SUCCESS", balance, payment.balanceAfter(), dropped ? "dropped" : "");
-		return new Outcome(Status.BOUGHT, payment.balanceAfter(), entry.remainingItems(advanced, used + entry.amount()),
-		                   dropped);
+		long used = usage(player).getOrDefault(entry.id(), 0L);
+		int limit = entry.limitFor(Permissions.has(player, ADVANCED_PERMISSION, false));
+		long balance = Smp3AccountStore.balance(player.getUUID(), entry.currency());
+		long maximum = Integer.MAX_VALUE / Math.max(entry.amount(), entry.price());
+		maximum =
+		    Math.min(maximum, entry.direction() == TradeDirection.BUY ? balance / Smp3Currency.rawUnits(entry.price())
+			                                                          : owned / entry.amount());
+		if (limit != -1)
+			maximum = Math.min(maximum, Math.max(0, limit - used) / entry.amount());
+		return new Quote(owned, used, limit, (int)maximum, balance);
 	}
 
-	public static Outcome sell(ServerPlayer player, ShopEntry entry) {
-		LocalDate today = ServerDates.today();
-		boolean advanced = Permissions.has(player, ShopService.ADVANCED_PERMISSION, true);
-
-		if (entry.isLockedFor(advanced)) {
-			return fail(player, entry, new Outcome(Status.LOCKED), "");
-		}
-
-		Inventory inventory = player.getInventory();
-		int owned = countInInventory(inventory, entry);
-		if (owned < entry.amount()) {
-			return fail(player, entry, new Outcome(Status.NOT_ENOUGH_ITEMS), "");
-		}
-
-		int used = QuotaStore.used(player, entry, today);
-		if (entry.exhausted(advanced, used)) {
-			return fail(player, entry, new Outcome(Status.QUOTA, 0, entry.remainingItems(advanced, used), false), "");
-		}
-
-		List<ItemStack> removed = removeFromInventory(inventory, entry, entry.amount());
-
-		EconomyBridge.Outcome income = EconomyBridge.deposit(player, Smp3Currency.TONGBAO, entry.price());
-		if (!income.success()) {
-			removed.forEach(stack -> ItemDelivery.give(player, stack.copy()));
-			return fail(player, entry, new Outcome(Status.DEPOSIT_FAILED),
-			            income.message() == null ? "" : income.message().getString());
-		}
-
-		QuotaStore.add(player, entry, entry.amount(), today);
-
-		log(player, entry, "SUCCESS", null, income.balanceAfter(), "");
-		return new Outcome(Status.SOLD, income.balanceAfter(), entry.remainingItems(advanced, used + entry.amount()),
-		                   false);
-	}
-
-	private static int countInInventory(Inventory inventory, ShopEntry entry) {
-		int total = 0;
-		for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-			ItemStack stack = inventory.getItem(slot);
-			if (!stack.isEmpty() && entry.matches(stack)) {
-				total += stack.getCount();
-			}
-		}
-		return total;
-	}
-
-	private static List<ItemStack> removeFromInventory(Inventory inventory, ShopEntry entry, int amount) {
-		List<ItemStack> removed = new ArrayList<>();
-		int remaining = amount;
-		for (int slot = 0; slot < inventory.getContainerSize() && remaining > 0; slot++) {
-			ItemStack stack = inventory.getItem(slot);
-			if (stack.isEmpty() || !entry.matches(stack)) {
+	private static boolean remove(List<ItemStack> inventory, ShopEntry entry, int remaining) {
+		for (ItemStack stack : inventory) {
+			if (!entry.matches(stack))
 				continue;
-			}
 			int take = Math.min(remaining, stack.getCount());
-			removed.add(stack.copyWithCount(take));
 			stack.shrink(take);
 			remaining -= take;
-			if (stack.isEmpty()) {
-				inventory.setItem(slot, ItemStack.EMPTY);
-			}
+			if (remaining == 0)
+				return true;
 		}
-		inventory.setChanged();
-		return removed;
-	}
-
-	private static Outcome fail(ServerPlayer player, ShopEntry entry, Outcome result, String detail) {
-		log(player, entry, result.status().name(), null, null, detail);
-		return result;
-	}
-
-	private static void log(ServerPlayer player, ShopEntry entry, String result, Integer before, Integer after,
-	                        String note) {
-		Smp3Core.LOGGER.info("[SMP3] player={}({}) entry={} dir={} amount={} price={} balance={}->{} 通宝 result={}{}",
-		                     player.getName().getString(), player.getUUID(), entry.id(), entry.direction(),
-		                     entry.amount(), entry.price(), before == null ? "-" : before, after == null ? "-" : after,
-		                     result, note.isEmpty() ? "" : " (" + note + ")");
+		return false;
 	}
 }

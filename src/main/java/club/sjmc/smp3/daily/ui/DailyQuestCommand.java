@@ -2,7 +2,6 @@ package club.sjmc.smp3.daily.ui;
 
 import java.util.List;
 
-import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
@@ -25,16 +24,17 @@ public final class DailyQuestCommand {
 	public static final String RESET_PERMISSION = "smp.dailyquest.reset";
 	private DailyQuestCommand() {}
 
-	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-		var command = dispatcher.register(
-		    Commands.literal("dailyquest")
-		        .executes(context -> DailyQuestGui.show(context.getSource().getPlayerOrException()) ? 1 : 0)
-		        .then(Commands.argument("player", EntityArgument.player())
-				          .requires(DailyQuestCommand::mayReset)
-				          .then(operation("reset"))
-				          .then(operation("reroll"))));
+	public static void register(LiteralArgumentBuilder<CommandSourceStack> root) {
+		var command = Commands.literal("dailyquest")
+		                  .executes(context -> DailyQuestGui.show(context.getSource().getPlayerOrException()) ? 1 : 0)
+		                  .then(Commands.argument("player", EntityArgument.player())
+		                            .requires(DailyQuestCommand::mayReset)
+		                            .then(operation("reset"))
+		                            .then(operation("reroll")))
+		                  .build();
+		root.then(command);
 		for (String alias : List.of("dailyquests", "dailyrequest"))
-			dispatcher.register(Commands.literal(alias).executes(command.getCommand()).redirect(command));
+			root.then(Commands.literal(alias).executes(command.getCommand()).redirect(command));
 	}
 
 	private static LiteralArgumentBuilder<CommandSourceStack> operation(String name) {

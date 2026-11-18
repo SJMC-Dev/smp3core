@@ -1,4 +1,4 @@
-package club.sjmc.smp3.hud;
+package club.sjmc.smp3.ui;
 
 import io.netty.buffer.ByteBuf;
 

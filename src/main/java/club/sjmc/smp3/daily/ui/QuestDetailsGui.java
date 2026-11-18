@@ -8,7 +8,7 @@ import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.daily.QuestDay;
 import club.sjmc.smp3.daily.QuestField;
-import club.sjmc.smp3.gui.GuiStyle;
+import club.sjmc.smp3.ui.GuiStyle;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

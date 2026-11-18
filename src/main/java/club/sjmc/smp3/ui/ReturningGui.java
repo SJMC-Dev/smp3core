@@ -1,4 +1,4 @@
-package club.sjmc.smp3.gui;
+package club.sjmc.smp3.ui;
 
 import eu.pb4.sgui.api.gui.SimpleGui;
 

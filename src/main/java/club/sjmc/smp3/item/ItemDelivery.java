@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import com.google.gson.Gson;
@@ -14,6 +16,7 @@ import com.mojang.serialization.Codec;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.economy.Smp3AccountStore;
+import club.sjmc.smp3.economy.Smp3Currency;
 
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
@@ -78,10 +81,12 @@ public final class ItemDelivery {
 		return player.getAttachedOrElse(APPLIED, 0L) < state.sequence ? read(player).state : state;
 	}
 
-	private static void commit(ServerPlayer player, Stored stored) {
+	private static void commit(ServerPlayer player, Stored stored, Consumer<JsonObject> update,
+	                           Map<Smp3Currency, Integer> changes) {
 		JsonObject next = stored.expected == null ? new JsonObject() : stored.expected.deepCopy();
 		JSON.toJsonTree(stored.state).getAsJsonObject().entrySet().forEach(e -> next.add(e.getKey(), e.getValue()));
-		Smp3AccountStore.commitReward(player.getUUID(), LEDGER_KEY, stored.expected, next, Map.of());
+		update.accept(next);
+		Smp3AccountStore.commitChange(player.getUUID(), LEDGER_KEY, stored.expected, next, changes);
 	}
 
 	// Quest settlement appends items in the same ledger commit as its currency and receipt.
@@ -124,6 +129,19 @@ public final class ItemDelivery {
 		checkpoint(player, stored, inventory);
 		return true;
 	}
+	public static boolean transact(ServerPlayer player, Predicate<List<ItemStack>> inventoryChange,
+	                               List<JsonObject> received, Consumer<JsonObject> update,
+	                               Map<Smp3Currency, Integer> changes) {
+		Stored stored = read(player);
+		List<ItemStack> inventory = inventory(player);
+		if (!inventoryChange.test(inventory))
+			return false;
+		stored.state.pending.addAll(received);
+		insert(player, stored.state, inventory);
+		checkpoint(player, stored, inventory, update, changes);
+		return true;
+	}
+
 	public static void deliver(ServerPlayer player) {
 		if (pendingState(player).pending.isEmpty())
 			return;
@@ -167,12 +185,16 @@ public final class ItemDelivery {
 		return items;
 	}
 	private static void checkpoint(ServerPlayer player, Stored stored, List<ItemStack> inventory) {
+		checkpoint(player, stored, inventory, state -> {}, Map.of());
+	}
+	private static void checkpoint(ServerPlayer player, Stored stored, List<ItemStack> inventory,
+	                               Consumer<JsonObject> update, Map<Smp3Currency, Integer> changes) {
 		stored.state.sequence = Math.incrementExact(stored.state.sequence);
 		stored.state.inventory =
 		    inventory.stream()
 		        .map(stack -> stack.isEmpty() ? new JsonObject() : ItemDefinitions.json(stack, player.registryAccess()))
 		        .toList();
-		commit(player, stored);
+		commit(player, stored, update, changes);
 		apply(player, stored.state);
 	}
 	private static void apply(ServerPlayer player, State state) {

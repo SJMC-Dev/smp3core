@@ -1,4 +1,4 @@
-package club.sjmc.smp3.client;
+package club.sjmc.smp3.ui;
 
 final class HudLayout {
 	static final int PANEL = 0x88000000, TEXT = 0xFFF3EEE0, MUTED = 0xFFAAAAAA;

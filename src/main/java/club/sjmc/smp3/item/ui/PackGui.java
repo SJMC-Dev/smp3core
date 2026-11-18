@@ -7,10 +7,10 @@ import java.util.Random;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 
 import club.sjmc.smp3.Smp3Core;
-import club.sjmc.smp3.gui.GuiStyle;
-import club.sjmc.smp3.gui.ReturningGui;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.PackItem;
+import club.sjmc.smp3.ui.GuiStyle;
+import club.sjmc.smp3.ui.ReturningGui;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;

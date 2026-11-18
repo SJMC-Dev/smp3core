@@ -7,14 +7,14 @@ import club.sjmc.smp3.config.ServerConfig;
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.ui.DailyQuestCommand;
 import club.sjmc.smp3.economy.Smp3EconomyProvider;
-import club.sjmc.smp3.hud.HudSettingsPayload;
 import club.sjmc.smp3.item.Smp3Items;
 import club.sjmc.smp3.notice.NoticeModule;
 import club.sjmc.smp3.notice.ui.NoticeCommand;
-import club.sjmc.smp3.shop.ShopCatalog;
+import club.sjmc.smp3.shop.ShopModule;
 import club.sjmc.smp3.shop.ui.ShopCommand;
 import club.sjmc.smp3.sign.ui.SignCommand;
 import club.sjmc.smp3.time.ServerDates;
+import club.sjmc.smp3.ui.HudSettingsPayload;
 import club.sjmc.smp3.watchdog.WatchdogModule;
 import club.sjmc.smp3.watchdog.ui.SmpPerfCommand;
 
@@ -41,7 +41,7 @@ public final class Smp3Core implements ModInitializer {
 			}
 		});
 		Smp3Items.init();
-		ShopCatalog.init();
+		ShopModule.register();
 		Smp3EconomyProvider.register();
 
 		DailyQuestModule.register();
@@ -50,22 +50,23 @@ public final class Smp3Core implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(HudSettingsPayload.TYPE, HudSettingsPayload.CODEC);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-			ShopCommand.register(dispatcher);
-			SignCommand.register(dispatcher);
-			DailyQuestCommand.register(dispatcher);
-			dispatcher.register(Commands.literal("smp3")
-			                        .then(SmpPerfCommand.command())
-			                        .then(NoticeCommand.command())
-			                        .then(Commands.literal("hud").executes(context -> {
-				                        var player = context.getSource().getPlayerOrException();
-				                        if (!ServerPlayNetworking.canSend(player, HudSettingsPayload.TYPE)) {
-					                        context.getSource().sendFailure(
-					                            Component.literal("请更新 SMP3 客户端以打开 HUD 设置"));
-					                        return 0;
-				                        }
-				                        ServerPlayNetworking.send(player, HudSettingsPayload.INSTANCE);
-				                        return 1;
-			                        })));
+			var root =
+			    Commands.literal("smp3")
+			        .then(ShopCommand.command())
+			        .then(SignCommand.command())
+			        .then(SmpPerfCommand.command())
+			        .then(NoticeCommand.command())
+			        .then(Commands.literal("hud").executes(context -> {
+				        var player = context.getSource().getPlayerOrException();
+				        if (!ServerPlayNetworking.canSend(player, HudSettingsPayload.TYPE)) {
+					        context.getSource().sendFailure(Component.literal("请更新 SMP3 客户端以打开 HUD 设置"));
+					        return 0;
+				        }
+				        ServerPlayNetworking.send(player, HudSettingsPayload.INSTANCE);
+				        return 1;
+			        }));
+			DailyQuestCommand.register(root);
+			dispatcher.register(root);
 		});
 
 		LOGGER.info("[SMP3] 初始化完成");

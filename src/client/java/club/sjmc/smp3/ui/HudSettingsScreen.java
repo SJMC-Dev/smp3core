@@ -1,4 +1,4 @@
-package club.sjmc.smp3.client;
+package club.sjmc.smp3.ui;
 
 import com.mojang.blaze3d.platform.InputConstants;
 
