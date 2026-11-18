@@ -123,3 +123,7 @@ if (watchdogBaseline) {
 		doFirst { throw new GradleException('Baseline timing hooks are disabled; build release JARs without watchdogBaseline.') }
 	}
 }
+
+tasks.named('processGametestResources') {
+    from('src/test/resources/dailyquests-fixture.json')
+}

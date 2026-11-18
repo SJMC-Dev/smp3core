@@ -40,6 +40,6 @@ public abstract class SmithingQuestMixin extends ItemCombinerMenu {
 		ItemStack output = smp3$quickResult == null ? result : smp3$quickResult;
 		int amount = smp3$quickResult == null ? result.getCount() : output.getCount() - result.getCount();
 		if (amount > 0 && player instanceof ServerPlayer serverPlayer)
-			DailyQuestEvents.crafted(serverPlayer, output, amount);
+			DailyQuestEvents.crafted(serverPlayer, output, amount, "smithing", getSlot(0).getItem());
 	}
 }

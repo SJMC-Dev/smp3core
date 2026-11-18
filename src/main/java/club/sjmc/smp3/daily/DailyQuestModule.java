@@ -71,8 +71,9 @@ public final class DailyQuestModule {
 					DailyQuestEvents.inventoryLocation(player, day);
 				if (day != null && server.getTickCount() % 20 == 0 &&
 				    day.assignments.stream().anyMatch(a
-				                                      -> !a.complete() && a.definition.objective().event().equals(
-				                                                              QuestEventType.BIOME_VISITED.id()))) {
+				                                      -> !a.complete() &&
+				                                             (a.tracks(QuestEventType.BIOME_VISITED.id()) ||
+				                                              a.tracks(QuestEventType.STRUCTURE_VISITED.id())))) {
 					DailyQuestEvents.explore(player);
 				}
 				instance.settle(player);

@@ -15,7 +15,11 @@ import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.SuspiciousStewEffects;
+import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,6 +27,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -45,15 +50,15 @@ public final class DailyQuestEvents {
 		}
 	}
 	static void inventoryLocation(ServerPlayer player, QuestDay day) {
-		if (day == null ||
-		    !day.assignments.stream().anyMatch(
-		        a
-		        -> !a.complete() && a.definition.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()) &&
-		               (a.definition.objective().conditions().has("biome") ||
-					    a.definition.objective().conditions().has("dimension"))))
+		if (day == null)
 			return;
 		GlobalPos location = GlobalPos.of(player.level().dimension(), player.blockPosition());
-		if (!location.equals(day.inventoryLocation)) {
+		boolean moved = !location.equals(day.inventoryLocation);
+		if (day.assignments.stream().anyMatch(a -> !a.complete() && a.definition.goals().stream().anyMatch(g -> {
+			    var conditions = g.objective().conditions();
+			    return g.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()) &&
+				    (conditions.has("structure") || moved && (conditions.has("biome") || conditions.has("dimension")));
+		    }))) {
 			day.inventoryLocation = location;
 			inventoryChanged(player);
 		}
@@ -64,7 +69,7 @@ public final class DailyQuestEvents {
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, damage) -> {
 			if (damage.getEntity() instanceof ServerPlayer player &&
 			    (damage.getDirectEntity() == player || damage.getDirectEntity() instanceof Projectile)) {
-				Map<String, Set<String>> facts = context(player.level(), entity.blockPosition());
+				Map<String, Set<String>> facts = context(player, player.level(), entity.blockPosition());
 				target(facts, "entity", BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entity.getType()));
 				emit(player, QuestEventType.ENTITY_KILLED.id(), facts);
 			}
@@ -84,7 +89,7 @@ public final class DailyQuestEvents {
 	}
 
 	public static void block(ServerPlayer player, String event, BlockPos pos, BlockState state) {
-		Map<String, Set<String>> facts = context(player.level(), pos);
+		Map<String, Set<String>> facts = context(player, player.level(), pos);
 		target(facts, "block", BuiltInRegistries.BLOCK.wrapAsHolder(state.getBlock()));
 		for (Property<?> property : state.getProperties())
 			facts.put("state." + property.getName(), Set.of(propertyValue(state, property)));
@@ -96,7 +101,7 @@ public final class DailyQuestEvents {
 	}
 
 	public static void items(ServerPlayer player, String event, Entity source, Collection<ItemStack> stacks) {
-		Map<String, Set<String>> facts = context((ServerLevel)source.level(), source.blockPosition());
+		Map<String, Set<String>> facts = context(player, (ServerLevel)source.level(), source.blockPosition());
 		target(facts, "entity", BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(source.getType()));
 		for (ItemStack stack : stacks)
 			if (!stack.isEmpty())
@@ -105,36 +110,95 @@ public final class DailyQuestEvents {
 			emit(player, event, facts);
 	}
 
-	public static void crafted(ServerPlayer player, ItemStack result, int amount) {
-		Map<String, Set<String>> facts = context(player.level(), player.blockPosition());
-		target(facts, "item", BuiltInRegistries.ITEM.wrapAsHolder(result.getItem()));
+	public static void crafted(ServerPlayer player, ItemStack result, int amount, String source) {
+		crafted(player, result, amount, source, ItemStack.EMPTY);
+	}
+
+	public static void crafted(ServerPlayer player, ItemStack result, int amount, String source, ItemStack template) {
+		Map<String, Set<String>> facts = context(player, player.level(), player.blockPosition());
+		item(facts, result, source.equals("loom"));
+		facts.put("source", Set.of(source));
+		if (!template.isEmpty())
+			target(facts, "template", BuiltInRegistries.ITEM.wrapAsHolder(template.getItem()));
 		emit(player, new QuestDefinition.Event(QuestEventType.ITEM_CRAFTED.id(), facts, amount));
+	}
+
+	private static void item(Map<String, Set<String>> facts, ItemStack stack, boolean latestPattern) {
+		target(facts, "item", BuiltInRegistries.ITEM.wrapAsHolder(stack.getItem()));
+		var potion = stack.get(DataComponents.POTION_CONTENTS);
+		if (potion != null) {
+			potion.potion().ifPresent(p -> target(facts, "potion", p));
+			potion.getAllEffects().forEach(e -> target(facts, "effect", e.getEffect()));
+		}
+		for (var effect :
+		     stack.getOrDefault(DataComponents.SUSPICIOUS_STEW_EFFECTS, SuspiciousStewEffects.EMPTY).effects())
+			target(facts, "effect", effect.effect());
+		var patterns = stack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY).layers();
+		if (latestPattern && !patterns.isEmpty())
+			target(facts, "pattern", patterns.getLast().pattern());
+		else
+			for (var pattern : patterns)
+				target(facts, "pattern", pattern.pattern());
 	}
 
 	static List<QuestDefinition.Event> inventory(ServerPlayer player) {
 		var result = new ArrayList<QuestDefinition.Event>();
-		var location = context(player.level(), player.blockPosition());
+		var location = context(player, player.level(), player.blockPosition());
 		var inventory = player.getInventory();
 		for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
 			ItemStack stack = inventory.getItem(slot);
 			if (stack.isEmpty())
 				continue;
 			Map<String, Set<String>> facts = new HashMap<>(location);
-			target(facts, "item", BuiltInRegistries.ITEM.wrapAsHolder(stack.getItem()));
+			item(facts, stack, false);
 			result.add(new QuestDefinition.Event(QuestEventType.INVENTORY_CHANGED.id(), facts, stack.getCount()));
 		}
 		return result;
 	}
 
 	public static void explore(ServerPlayer player) {
-		emit(player, QuestEventType.BIOME_VISITED.id(), context(player.level(), player.blockPosition()));
+		var facts = context(player, player.level(), player.blockPosition());
+		emit(player, QuestEventType.BIOME_VISITED.id(), facts);
+		if (facts.containsKey("structure"))
+			emit(player, QuestEventType.STRUCTURE_VISITED.id(), facts);
 	}
 
-	private static Map<String, Set<String>> context(ServerLevel level, BlockPos pos) {
+	private static Map<String, Set<String>> context(ServerPlayer player, ServerLevel level, BlockPos pos) {
 		Map<String, Set<String>> facts = new HashMap<>();
 		facts.put("dimension", Set.of(level.dimension().identifier().toString()));
 		target(facts, "biome", level.getBiome(pos));
+		var service = DailyQuestModule.current();
+		QuestDay day = service == null ? null : service.state(player);
+		if (day != null &&
+		    day.assignments.stream().anyMatch(
+		        a
+		        -> !a.complete() && a.definition.goals().stream().anyMatch(
+		                                g
+		                                -> g.objective().event().equals(QuestEventType.STRUCTURE_VISITED.id()) ||
+		                                       g.objective().conditions().has("structure"))))
+			structures(level, pos, facts);
 		return facts;
+	}
+
+	private static void structures(ServerLevel level, BlockPos pos, Map<String, Set<String>> facts) {
+		var chunks = level.getChunkSource();
+		var chunk = chunks.getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+		if (chunk == null)
+			return;
+		var registry = level.registryAccess().lookupOrThrow(Registries.STRUCTURE);
+		chunk.getAllReferences().forEach((structure, references) -> {
+			for (long reference : references) {
+				// Structure origins may be in unloaded chunks; never load them for a quest check.
+				var origin = chunks.getChunkNow(ChunkPos.getX(reference), ChunkPos.getZ(reference));
+				if (origin == null)
+					continue;
+				var start = origin.getStartForStructure(structure);
+				if (start != null && start.isValid() && start.getBoundingBox().isInside(pos)) {
+					target(facts, "structure", registry.wrapAsHolder(structure));
+					break;
+				}
+			}
+		});
 	}
 
 	private static void target(Map<String, Set<String>> facts, String key, Holder<?> holder) {

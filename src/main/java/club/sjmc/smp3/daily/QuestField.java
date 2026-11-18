@@ -10,6 +10,12 @@ public enum QuestField {
 	ENTITY("entity", "生物", Registries.ENTITY_TYPE),
 	ITEM("item", "物品", Registries.ITEM),
 	BIOME("biome", "群系", Registries.BIOME),
+	STRUCTURE("structure", "结构", Registries.STRUCTURE),
+	POTION("potion", "药水", Registries.POTION),
+	EFFECT("effect", "效果", Registries.MOB_EFFECT),
+	PATTERN("pattern", "旗帜图案", Registries.BANNER_PATTERN),
+	TEMPLATE("template", "锻造模板", Registries.ITEM),
+	SOURCE("source", "加工方式", null),
 	DIMENSION("dimension", "维度", null),
 	BLOCK_STATE("block_state", "方块状态", null);
 

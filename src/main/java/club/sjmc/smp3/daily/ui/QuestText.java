@@ -21,6 +21,14 @@ final class QuestText {
 
 	static List<Component> lore(QuestDay.Assignment task) {
 		List<Component> parts = new ArrayList<>();
+		if (!task.definition.objectives().isEmpty()) {
+			if (task.definition.description() != null)
+				parts.add(Component.literal(task.definition.description()));
+			else
+				parts.add(Component.literal(task.definition.completion().equals("any") ? "完成任意一个子目标。"
+				                                                                       : "完成全部子目标。"));
+			return wrap(parts);
+		}
 		var conditions = task.definition.objective().conditions();
 		String description = task.definition.description();
 		if (description == null) {
@@ -46,6 +54,8 @@ final class QuestText {
 		return wrap(parts);
 	}
 
+	static List<Component> condition(String key, JsonElement value) { return wrap(targets(key, value)); }
+
 	private static List<Component> targets(String key, JsonElement value) {
 		List<Component> parts = new ArrayList<>();
 		if (key.equals("block_state")) {
@@ -62,6 +72,18 @@ final class QuestText {
 				parts.add(Component.literal("标签 " + target.substring(1)));
 				continue;
 			}
+			if (key.equals("source")) {
+				parts.add(Component.literal(switch (target) {
+					case "crafting" -> "合成";
+					case "smelting" -> "熔炼";
+					case "brewing" -> "酿造";
+					case "smithing" -> "锻造";
+					case "stonecutting" -> "切石";
+					case "loom" -> "织布";
+					default -> target;
+				}));
+				continue;
+			}
 			Identifier id = Identifier.parse(target);
 			parts.add(switch (key) {
 				case "dimension" ->
@@ -71,7 +93,8 @@ final class QuestText {
 						case "minecraft:the_end" -> "末地";
 						default -> target;
 					});
-				case "item" -> new ItemStack(BuiltInRegistries.ITEM.getValue(id)).getHoverName();
+				case "potion", "pattern", "structure" -> Component.literal(target);
+				case "item", "template" -> new ItemStack(BuiltInRegistries.ITEM.getValue(id)).getHoverName();
 				default -> Component.translatable(key + "." + id.getNamespace() + "." + id.getPath().replace('/', '.'));
 			});
 		}

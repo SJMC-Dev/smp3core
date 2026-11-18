@@ -1,6 +1,12 @@
 package club.sjmc.smp3;
 
 import java.time.YearMonth;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
 import java.util.Map;
 
 import com.google.gson.Gson;
@@ -36,7 +42,18 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-public final class FeatureChecks {
+public final class FeatureChecks implements ModInitializer {
+	@Override
+	public void onInitialize() {
+		var path = FabricLoader.getInstance().getConfigDir().resolve("smp3/dailyquests.json");
+		try (var input = FeatureChecks.class.getResourceAsStream("/dailyquests-fixture.json")) {
+			Files.createDirectories(path.getParent());
+			Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
 	public static void run(GameTestHelper test, ServerPlayer player) {
 		player.getInventory().clearContent();
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 10000);

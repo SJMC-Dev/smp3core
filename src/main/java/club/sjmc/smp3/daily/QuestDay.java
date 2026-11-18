@@ -31,7 +31,8 @@ public final class QuestDay {
 		this.tier = config.progression().tier(config.progression().score(completedQuests, playtimeHours));
 		for (String difficulty : QuestConfig.TIERS) {
 			QuestDefinition definition = choose(config, difficulty, random);
-			assignments.add(new Assignment(definition, this.tier, config.rewards().get(difficulty)));
+			assignments.add(
+			    new Assignment(definition, this.tier, config.rewards().get(difficulty), milestones, random));
 		}
 	}
 
@@ -56,11 +57,61 @@ public final class QuestDay {
 		int progress;
 		boolean claimed;
 
-		Assignment(QuestDefinition definition, int tier, QuestReward reward) {
-			this.target = definition.target(tier);
-			this.tier = definition.tiered() ? tier : 0;
-			this.definition = definition.snapshot(target);
-			this.reward = definition.reward(reward);
+		private final int[] goalProgress;
+
+		Assignment(QuestDefinition definition, int tier, QuestReward base, Set<String> milestones,
+		           RandomGenerator random) {
+			this.tier =
+			    definition.tiered() || definition.objectives().stream().anyMatch(g -> !g.tiers().isEmpty()) ? tier : 0;
+			this.definition = definition.resolve(tier, random);
+			this.target = this.definition.objectives().isEmpty()       ? this.definition.count()
+			              : this.definition.completion().equals("any") ? 1
+			                                                           : this.definition.objectives().size();
+			this.goalProgress = new int[this.definition.objectives().size()];
+			this.reward =
+			    this.definition.rewards() == null ? base : this.definition.rewards().resolve(base, milestones, random);
+		}
+
+		public int goalProgress(int index) {
+			return definition.objectives().isEmpty() ? progress : goalProgress[index];
+		}
+
+		boolean tracks(String event) {
+			return definition.goals().stream().anyMatch(g -> g.objective().event().equals(event));
+		}
+
+		private boolean update(List<QuestDefinition.Event> events, boolean inventory) {
+			if (complete())
+				return false;
+			boolean changed = false;
+			var goals = definition.goals();
+			for (int i = 0; i < goals.size(); i++) {
+				var goal = goals.get(i);
+				if (goal.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()) != inventory)
+					continue;
+				int value = inventory ? 0 : goalProgress(i);
+				for (var event : events)
+					if (goal.objective().matches(event))
+						value += Math.min(event.amount(), goal.count() - value);
+				if (value != goalProgress(i)) {
+					if (definition.objectives().isEmpty())
+						progress = value;
+					else
+						goalProgress[i] = value;
+					changed = true;
+				}
+			}
+			// Inventory goals settle at tick end, after crafting has consumed its inputs.
+			if (!definition.objectives().isEmpty() && (inventory || !tracks(QuestEventType.INVENTORY_CHANGED.id()))) {
+				int done = 0;
+				for (int i = 0; i < goals.size(); i++)
+					if (goalProgress[i] >= goals.get(i).count())
+						done++;
+				int updated = Math.min(done, target);
+				changed |= progress != updated;
+				progress = updated;
+			}
+			return changed;
 		}
 
 		public int tier() { return tier; }
@@ -78,41 +129,18 @@ public final class QuestDay {
 
 	public int remaining(QuestConfig config) { return Math.max(0, config.dailyRerollLimit() - rerollsUsed); }
 
-	boolean record(QuestDefinition.Event event) {
-		if (event.amount() <= 0)
-			return false;
-		boolean changed = false;
-		for (Assignment assignment : assignments) {
-			if (!assignment.complete() && assignment.definition.objective().matches(event)) {
-				assignment.progress += Math.min(event.amount(), assignment.target - assignment.progress);
-				changed = true;
-			}
-		}
-		if (changed)
-			revision++;
-		return changed;
-	}
+	boolean record(QuestDefinition.Event event) { return event.amount() > 0 && update(List.of(event), false); }
 
 	boolean tracksInventory() {
-		return assignments.stream().anyMatch(
-		    a -> !a.complete() && a.definition.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()));
+		return assignments.stream().anyMatch(a -> !a.complete() && a.tracks(QuestEventType.INVENTORY_CHANGED.id()));
 	}
 
-	boolean updateInventory(List<QuestDefinition.Event> contents) {
+	boolean updateInventory(List<QuestDefinition.Event> contents) { return update(contents, true); }
+
+	private boolean update(List<QuestDefinition.Event> events, boolean inventory) {
 		boolean changed = false;
-		for (Assignment assignment : assignments) {
-			if (assignment.complete() ||
-			    !assignment.definition.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()))
-				continue;
-			int count = 0;
-			for (var stack : contents)
-				if (assignment.definition.objective().matches(stack))
-					count += Math.min(stack.amount(), assignment.target - count);
-			if (assignment.progress != count) {
-				assignment.progress = count;
-				changed = true;
-			}
-		}
+		for (var assignment : assignments)
+			changed |= assignment.update(events, inventory);
 		if (changed)
 			revision++;
 		return changed;
@@ -125,7 +153,7 @@ public final class QuestDay {
 		QuestDefinition next = choose(config, old.definition.difficulty(), random);
 		if (next == null)
 			return false;
-		assignments.set(slot, new Assignment(next, tier, config.rewards().get(next.difficulty())));
+		assignments.set(slot, new Assignment(next, tier, config.rewards().get(next.difficulty()), milestones, random));
 		if (!admin)
 			rerollsUsed++;
 		revision++;

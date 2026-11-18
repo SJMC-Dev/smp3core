@@ -25,7 +25,7 @@ public abstract class CraftingQuestMixin {
 	@Inject(method = "checkTakeAchievements", at = @At("HEAD"))
 	private void smp3$crafted(ItemStack result, CallbackInfo ci) {
 		if (removeCount > 0 && player instanceof ServerPlayer serverPlayer) {
-			DailyQuestEvents.crafted(serverPlayer, result, removeCount);
+			DailyQuestEvents.crafted(serverPlayer, result, removeCount, "crafting");
 		}
 	}
 }

@@ -14,6 +14,7 @@ import club.sjmc.smp3.item.ItemDelivery;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.MenuType;
@@ -104,12 +105,30 @@ public final class DailyQuestGui extends SimpleGui {
 		    GuiStyle
 		        .item(icon, task.definition.name() + (task.tier() == 0 ? "" : " " + task.tier() + "级"), GuiStyle.TITLE)
 		        .addLoreLine(GuiStyle.text("难度 " + task.definition.difficulty(), GuiStyle.MUTED));
-		QuestText.lore(task).forEach(objective::addLoreLine);
-		setSlot(9 + column, objective.build());
+		objective.addLoreLine(Component.empty());
+		var description = QuestText.lore(task);
+		description.stream().limit(4).forEach(objective::addLoreLine);
+		if (description.size() > 4)
+			objective.addLoreLine(GuiStyle.text("……", GuiStyle.MUTED));
+		objective.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("点击查看详细条件", GuiStyle.MUTED));
+		setSlot(9 + column, GuiStyle.onLeftClick(objective, () -> new QuestDetailsGui(player, task).open()).build());
 		var rewardIcon = GuiStyle.item(Items.WOOL.pick(task.claimed()    ? DyeColor.LIME
 		                                               : task.complete() ? DyeColor.ORANGE
 		                                                                 : DyeColor.WHITE),
 		                               status, color);
+		if (!task.definition.objectives().isEmpty()) {
+			rewardIcon.addLoreLine(Component.empty());
+			rewardIcon.addLoreLine(GuiStyle.text(
+			    task.definition.completion().equals("any") ? "目标：任选一项" : "目标：全部完成", GuiStyle.TITLE));
+			for (int i = 0; i < task.definition.objectives().size(); i++) {
+				var goal = task.definition.objectives().get(i);
+				int progress = task.goalProgress(i);
+				rewardIcon.addLoreLine(GuiStyle.text(goal.name() + " (" + progress + "/" + goal.count() + ")",
+				                                     progress >= goal.count() ? GuiStyle.READY : GuiStyle.MUTED));
+			}
+		}
+		if (task.reward.tongbao() > 0 || task.reward.coffeeStamp() > 0 || !task.reward.items().isEmpty())
+			rewardIcon.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("奖励", GuiStyle.TITLE));
 		if (task.reward.tongbao() > 0)
 			rewardIcon.addLoreLine(GuiStyle.text("通宝 x " + task.reward.tongbao(), GuiStyle.MUTED));
 		if (task.reward.coffeeStamp() > 0)
@@ -120,7 +139,7 @@ public final class DailyQuestGui extends SimpleGui {
 		                    -> rewardIcon.addLoreLine(GuiStyle.text(
 		                        item.getHoverName().getString() + " x " + item.getCount(), GuiStyle.MUTED)));
 		if (!rewardItems.isEmpty())
-			rewardIcon.addLoreLine(GuiStyle.text("点击查看物品奖励", GuiStyle.MUTED));
+			rewardIcon.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("点击查看物品奖励", GuiStyle.MUTED));
 		setSlot(18 + column, GuiStyle
 		                         .onLeftClick(rewardIcon,
 		                                      () -> {

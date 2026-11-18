@@ -10,6 +10,7 @@ import java.util.Random;
 import java.util.Set;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import club.sjmc.smp3.economy.EconomyChecks;
@@ -19,7 +20,7 @@ import club.sjmc.smp3.watchdog.hotspot.HotspotChecks;
 public final class DailyQuestChecks {
 	public static void main(String[] args) throws Exception {
 		String text;
-		try (var input = DailyQuestChecks.class.getResourceAsStream("/dailyquests.json")) {
+		try (var input = DailyQuestChecks.class.getResourceAsStream("/dailyquests-fixture.json")) {
 			text = new String(input.readAllBytes(), StandardCharsets.UTF_8);
 		}
 		QuestConfig config = QuestConfig.parse(text);
@@ -71,7 +72,7 @@ public final class DailyQuestChecks {
 		QuestConfig extended = QuestConfig.parse(custom.toString());
 		assert extended.progression().tier(80) == 4 && extended.progression().tier(100) == 5;
 		var highTier = new QuestDay.Assignment(extended.tasks().getFirst(), extended.progression().tier(100),
-		                                       extended.rewards().get("A"));
+		                                       extended.rewards().get("A"), Set.of(), new Random(1));
 		assert highTier.tier() == 5 && highTier.target == 50;
 		custom = template.deepCopy();
 		var task = custom.getAsJsonArray("tasks").get(0).getAsJsonObject();
@@ -85,6 +86,16 @@ public final class DailyQuestChecks {
 		explorationObjective.addProperty("event", "biome_visited");
 		explorationObjective.getAsJsonObject("conditions").remove("entity");
 		assert QuestConfig.parse(exploration.toString()).tasks().getFirst().target(2) == 73;
+		explorationObjective.addProperty("event", "structure_visited");
+		explorationObjective.getAsJsonObject("conditions")
+		    .add("structure", JsonParser.parseString("[\"minecraft:fortress\",\"#minecraft:village\"]"));
+		exploration.getAsJsonArray("tasks").get(0).getAsJsonObject().addProperty("description", "访问{structure}。");
+		assert QuestConfig.parse(exploration.toString())
+		    .tasks()
+		    .getFirst()
+		    .objective()
+		    .event()
+		    .equals("structure_visited");
 		task.addProperty("count", 11);
 		reject(custom.toString());
 		task.remove("tiers");
@@ -102,7 +113,7 @@ public final class DailyQuestChecks {
 		tiers.get(1).getAsJsonObject().addProperty("tier", 1);
 		reject(custom.toString());
 		tiers.remove(1);
-		reject(custom.toString());
+		assert !QuestConfig.parse(custom.toString()).tasks().getFirst().supports(2);
 
 		assert config.progression().score(0, 10000) == 20;
 		assert config.progression().score(12000, 10000) == 100;
@@ -137,7 +148,11 @@ public final class DailyQuestChecks {
 		assert customReward.tongbao() == 7 && customReward.coffeeStamp() == 0 &&
 		    customReward.items().getFirst().get("count").getAsInt() == 2;
 		gatedTask.getAsJsonObject("rewards").addProperty("base", true);
-		var withBase = QuestConfig.parse(gatedJson.toString()).tasks().getFirst().reward(config.rewards().get("A"));
+		var withBase = QuestConfig.parse(gatedJson.toString())
+		                   .tasks()
+		                   .getFirst()
+		                   .rewards()
+		                   .resolve(config.rewards().get("A"), Set.of(), new Random(1));
 		assert withBase.tongbao() == 7 + config.rewards().get("A").tongbao() &&
 		    withBase.coffeeStamp() == config.rewards().get("A").coffeeStamp();
 		assert customReward.tongbao() == 7;
@@ -147,9 +162,9 @@ public final class DailyQuestChecks {
 		reject(unknown.toString());
 		Random random = new Random(42);
 		QuestDay day = QuestDay.forDate(null, 100, 14, 0, Set.of(), config, random);
-		var snapshot = new QuestDay.Assignment(tiered, 2, config.rewards().get("A"));
+		var snapshot = new QuestDay.Assignment(tiered, 2, config.rewards().get("A"), Set.of(), new Random(1));
 		assert snapshot.target == 73 && snapshot.tier() == 2 && snapshot.definition.tiers().isEmpty();
-		assert new QuestDay.Assignment(fixed, 3, config.rewards().get("A")).tier() == 0;
+		assert new QuestDay.Assignment(fixed, 3, config.rewards().get("A"), Set.of(), new Random(1)).tier() == 0;
 		assert day.assignments.stream().map(a -> a.definition.id()).distinct().count() == 4;
 		assert day.assignments.stream().map(a -> a.definition.difficulty()).toList().equals(QuestConfig.TIERS);
 		QuestDay other = new QuestDay(100, 40, 0, Set.of(), config, random);
@@ -200,7 +215,8 @@ public final class DailyQuestChecks {
 		for (QuestDefinition definition : config.tasks()) {
 			QuestDay fixture = new QuestDay(100, 15, 0, Set.of(), config, random);
 			fixture.assignments.clear();
-			var assignment = new QuestDay.Assignment(definition, 1, config.rewards().get(definition.difficulty()));
+			var assignment = new QuestDay.Assignment(definition, 1, config.rewards().get(definition.difficulty()),
+			                                         Set.of(), new Random(1));
 			fixture.assignments.add(assignment);
 			Map<String, Set<String>> facts = new HashMap<>();
 			definition.objective().conditions().entrySet().forEach(c -> {
@@ -229,11 +245,121 @@ public final class DailyQuestChecks {
 			                       "state.axis", Set.of("y"))));
 		assert !objective.matches(new QuestDefinition.Event(
 		    "block_broken", Map.of("block", Set.of("minecraft:stone"), "dimension", Set.of("minecraft:overworld"))));
+		definitions(template);
 		EconomyChecks.run();
 		HotspotChecks.run();
 		DateChecks.run();
 		System.out.println(
 		    "每日任务验证通过：配置、事件匹配与合成数量、成长档位、跨日、刷新、快照、双货币去重及写入故障恢复。");
+	}
+
+	private static void definitions(JsonObject template) {
+		var configJson = template.deepCopy();
+		var task = configJson.getAsJsonArray("tasks").get(0).getAsJsonObject();
+		task.remove("objective");
+		task.remove("tiers");
+		task.remove("description");
+		task.add("objectives", JsonParser.parseString("""
+            [{"name":"Bread","objective":{"event":"inventory_changed","conditions":{"item":"bread"}},"count":2},
+             {"name":"Apple","objective":{"event":"inventory_changed","conditions":{"item":"apple"}},"count":3}]
+            """));
+		var config = QuestConfig.parse(configJson.toString());
+		var day = new QuestDay(100, 0, 0, Set.of(), config, new Random(1));
+		var assignment =
+		    new QuestDay.Assignment(config.tasks().getFirst(), 1, new QuestReward(0, 0), Set.of(), new Random(1));
+		day.assignments.clear();
+		day.assignments.add(assignment);
+		var bread = new QuestDefinition.Event("inventory_changed", Map.of("item", Set.of("minecraft:bread")), 2);
+		var apple = new QuestDefinition.Event("inventory_changed", Map.of("item", Set.of("minecraft:apple")), 3);
+		assert day.updateInventory(List.of(bread)) && assignment.progress() == 1;
+		assert day.updateInventory(List.of(apple)) && !assignment.complete() && assignment.goalProgress(0) == 0;
+		assert day.updateInventory(List.of(bread, apple)) && assignment.complete();
+		assert !day.updateInventory(List.of()) && assignment.complete();
+		var restored = QuestConfig.JSON.fromJson(QuestConfig.JSON.toJson(day), QuestDay.class);
+		assert restored.assignments.getFirst().goalProgress(1) == 3 && restored.assignments.getFirst().complete();
+
+		task.getAsJsonArray("objectives")
+		    .get(1)
+		    .getAsJsonObject()
+		    .getAsJsonObject("objective")
+		    .addProperty("event", "item_crafted");
+		config = QuestConfig.parse(configJson.toString());
+		assignment =
+		    new QuestDay.Assignment(config.tasks().getFirst(), 1, new QuestReward(0, 0), Set.of(), new Random(1));
+		day.assignments.set(0, assignment);
+		day.updateInventory(List.of(bread));
+		day.record(new QuestDefinition.Event("item_crafted", apple.facts(), 3));
+		assert !assignment.complete();
+		day.updateInventory(List.of());
+		assert !assignment.complete() && assignment.goalProgress(0) == 0;
+		day.updateInventory(List.of(bread));
+		assert assignment.complete();
+
+		task.addProperty("completion", "any");
+		for (var goal : task.getAsJsonArray("objectives"))
+			goal.getAsJsonObject().getAsJsonObject("objective").addProperty("event", "item_crafted");
+		config = QuestConfig.parse(configJson.toString());
+		assignment =
+		    new QuestDay.Assignment(config.tasks().getFirst(), 1, new QuestReward(0, 0), Set.of(), new Random(1));
+		day.assignments.set(0, assignment);
+		assert day.record(new QuestDefinition.Event("item_crafted", bread.facts(), 1));
+		assert day.record(new QuestDefinition.Event("item_crafted", apple.facts(), 2));
+		assert !assignment.complete();
+		day.record(new QuestDefinition.Event("item_crafted", apple.facts(), 1));
+		assert assignment.complete() && assignment.goalProgress(0) == 1;
+
+		task.remove("objectives");
+		task.remove("completion");
+		task.add("choices", JsonParser.parseString("""
+            [{"name":"Bread","description":"Craft {count} {item}","objective":{"event":"item_crafted","conditions":{"item":"bread"}}},
+             {"name":"Apple","description":"Craft {count} {item}","objective":{"event":"item_crafted","conditions":{"item":"apple"}}}]
+            """));
+		task.add("tiers", JsonParser.parseString("""
+            [{"tier":2,"count":4,"rewards":{"base":false,"tongbao":7,"random":[{"draws":3,"unique":true,"entries":[
+                {"item":{"id":"minecraft:red_dye","count":16}}, {"item":{"id":"minecraft:blue_dye","count":16}},
+                {"item":{"id":"minecraft:white_dye","count":16}}]}],
+                "when":[{"requires":["nether_access"],"rewards":{"base":false,"coffeeStamp":2}}]}}]
+            """));
+		config = QuestConfig.parse(configJson.toString());
+		var definition = config.tasks().getFirst();
+		assert !definition.supports(1) && definition.supports(2) && !definition.supports(3);
+		assignment = new QuestDay.Assignment(definition, 2, config.rewards().get("A"), Set.of(), new Random(3));
+		assert assignment.target == 4 && assignment.reward.tongbao() == 7;
+		assert assignment.reward.items().stream().map(i -> i.get("id").getAsString()).distinct().count() == 3;
+		assert assignment.reward.items().stream().allMatch(i -> i.get("count").getAsInt() == 16);
+		var saved = QuestConfig.JSON.fromJson(QuestConfig.JSON.toJson(assignment), QuestDay.Assignment.class);
+		assert saved.definition.equals(assignment.definition) && saved.reward.equals(assignment.reward);
+		assert new QuestDay.Assignment(definition, 2, config.rewards().get("A"), Set.of("nether_access"), new Random(3))
+		        .reward.coffeeStamp() == 2;
+		var choice = task.getAsJsonArray("choices").get(0).getAsJsonObject();
+		choice.add("rewards", JsonParser.parseString("{\"base\":false,\"tongbao\":11}"));
+		task.getAsJsonArray("choices").remove(1);
+		config = QuestConfig.parse(configJson.toString());
+		assert new QuestDay
+		        .Assignment(config.tasks().getFirst(), 2, config.rewards().get("A"), Set.of("nether_access"),
+				            new Random(3))
+		        .reward.tongbao() == 11;
+		var draw = task.getAsJsonArray("tiers")
+		               .get(0)
+		               .getAsJsonObject()
+		               .getAsJsonObject("rewards")
+		               .getAsJsonArray("random")
+		               .get(0)
+		               .getAsJsonObject();
+		draw.addProperty("draws", 4);
+		reject(configJson.toString());
+		draw.addProperty("draws", 3);
+		draw.getAsJsonArray("entries").set(1, draw.getAsJsonArray("entries").get(0).deepCopy());
+		reject(configJson.toString());
+		configJson = template.deepCopy();
+		for (var value : configJson.getAsJsonArray("tasks")) {
+			var entry = value.getAsJsonObject();
+			if (entry.get("difficulty").getAsString().equals("A")) {
+				entry.remove("count");
+				entry.add("tiers", JsonParser.parseString("[{\"tier\":2,\"count\":1}]"));
+			}
+		}
+		reject(configJson.toString());
 	}
 
 	private static void reject(String text) {

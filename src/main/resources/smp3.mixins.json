@@ -9,6 +9,7 @@
     "BrewingQuestMixin",
     "BrewingSlotQuestMixin",
     "SmithingQuestMixin",
+    "WorkstationQuestMixin",
     "PlacementQuestMixin",
     "FishingQuestMixin",
     "TradeQuestMixin",

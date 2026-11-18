@@ -94,8 +94,11 @@ public final class DailyQuestService {
 	public void record(ServerPlayer player, QuestDefinition.Event event) {
 		long today = ServerDates.today().toEpochDay();
 		QuestDay day = state(player, today);
-		if (day != null && day.date == today && day.record(event))
+		if (day != null && day.date == today && day.record(event)) {
+			if (day.tracksInventory())
+				DailyQuestEvents.inventoryChanged(player);
 			changed(player, day);
+		}
 	}
 
 	private void changed(ServerPlayer player, QuestDay day) {

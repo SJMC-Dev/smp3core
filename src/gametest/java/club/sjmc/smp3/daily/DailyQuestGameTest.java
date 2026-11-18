@@ -231,6 +231,7 @@ public final class DailyQuestGameTest {
 			QuestUpdateChecks.ownership(test, player, gold);
 
 			select(player, "forest_c");
+			StructureChecks.run(test, player);
 			QuestDay day = service.state(player);
 			var forest =
 			    service.config.tasks().stream().filter(t -> t.id().equals("forest_c")).findFirst().orElseThrow();
@@ -238,8 +239,8 @@ public final class DailyQuestGameTest {
 			conditions.addProperty("dimension", "minecraft:the_nether");
 			var exploration = new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
 			                                      new QuestDefinition.Objective("biome_visited", conditions), null,
-			                                      List.of(), List.of(), null);
-			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"));
+			                                      List.of(), List.of(), null, List.of(), "all", List.of());
+			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1));
 			day.assignments.set(0, task);
 			DailyQuestEvents.explore(player);
 			test.assertTrue(task.progress == 0, "错误维度探索被计数");
@@ -247,8 +248,8 @@ public final class DailyQuestGameTest {
 			conditions.addProperty("biome", level.getBiome(player.blockPosition()).getRegisteredName());
 			exploration = new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
 			                                  new QuestDefinition.Objective("biome_visited", conditions), null,
-			                                  List.of(), List.of(), null);
-			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"));
+			                                  List.of(), List.of(), null, List.of(), "all", List.of());
+			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1));
 			day.assignments.set(0, task);
 			DailyQuestEvents.explore(player);
 			test.assertTrue(task.complete(), "探索目标未完成");
@@ -262,7 +263,7 @@ public final class DailyQuestGameTest {
 			                              new JsonObject(), Map.of());
 			data.players.put(player.getUUID(), yesterday);
 			day = service.state(player);
-			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"));
+			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1));
 			task.progress = task.target;
 			day.assignments.set(0, task);
 			long stampsBefore = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP);
@@ -396,8 +397,8 @@ public final class DailyQuestGameTest {
 		player.removeAttached(ItemDelivery.APPLIED);
 		QuestDefinition definition =
 		    service.config.tasks().stream().filter(t -> t.id().equals(id)).findFirst().orElseThrow();
-		QuestDay.Assignment assignment =
-		    new QuestDay.Assignment(definition, 1, service.config.rewards().get(definition.difficulty()));
+		QuestDay.Assignment assignment = new QuestDay.Assignment(
+		    definition, 1, service.config.rewards().get(definition.difficulty()), Set.of(), new Random(1));
 		day.assignments.set(0, assignment);
 		return assignment;
 	}

@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "environment": "*",
   "entrypoints": {
+    "main": ["club.sjmc.smp3.FeatureChecks"],
     "fabric-gametest": [
       "club.sjmc.smp3.daily.DailyQuestGameTest",
       "club.sjmc.smp3.watchdog.WatchdogGameTest",

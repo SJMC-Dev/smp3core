@@ -58,6 +58,14 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("quest-menu-description");
 			hoverSlot(context, 19);
 			context.takeScreenshot("quest-menu-progress-rewards");
+			hoverSlot(context, 10);
+			context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+			context.waitFor(client -> client.player.containerMenu instanceof ChestMenu menu && menu.getRowCount() == 3);
+			hoverSlot(context, 1);
+			context.takeScreenshot("quest-menu-conditions");
+			hoverSlot(context, 22);
+			context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+			context.waitFor(client -> client.player.containerMenu instanceof ChestMenu menu && menu.getRowCount() == 4);
 
 			world.getServer().runOnServer(server -> {
 				var player = world.getConnection().getServerPlayer();
@@ -142,7 +150,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("hud-preview-narrow");
 			context.clickScreenButton("服规");
 			context.getInput().setCursorPos(80, 180);
-			context.getInput().pressMouse(0);
+			context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
 			context.waitTicks(2);
 			context.takeScreenshot("hud-preview-narrow-detail");
 			context.clickScreenButton("我已阅读并确认");

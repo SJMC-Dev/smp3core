@@ -45,6 +45,6 @@ public abstract class BrewingSlotQuestMixin extends Slot {
 		int amount = smp3$taken;
 		smp3$taken = 0;
 		if (amount > 0 && player instanceof ServerPlayer serverPlayer)
-			DailyQuestEvents.crafted(serverPlayer, result, amount);
+			DailyQuestEvents.crafted(serverPlayer, result, amount, "brewing");
 	}
 }

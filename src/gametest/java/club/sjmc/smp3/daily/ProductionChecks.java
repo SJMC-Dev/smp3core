@@ -1,12 +1,24 @@
 package club.sjmc.smp3.daily;
 
+import java.util.Random;
+import java.util.Set;
 import java.util.List;
 
 import com.google.gson.JsonParser;
 
 import club.sjmc.smp3.item.ItemDelivery;
+import club.sjmc.smp3.daily.ui.DailyQuestGui;
+import eu.pb4.sgui.api.SguiUtils;
+import eu.pb4.sgui.api.ClickType;
+import eu.pb4.sgui.api.gui.SimpleGui;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.component.SuspiciousStewEffects;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.inventory.StonecutterMenu;
+import net.minecraft.world.inventory.LoomMenu;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
@@ -36,8 +48,8 @@ final class ProductionChecks {
 		                            .parseString("{\"item\":[\"minecraft:iron_ingot\",\"minecraft:cooked_cod\","
 		                                         + "\"minecraft:netherite_pickaxe\",\"minecraft:potion\"]}")
 		                            .getAsJsonObject()),
-		    100, List.of(), List.of(), null);
-		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0));
+		    100, List.of(), List.of(), null, List.of(), "all", List.of());
+		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1));
 		DailyQuestModule.current().state(player).assignments.set(0, task);
 		player.getInventory().clearContent();
 		var furnace = new FurnaceMenu(6, player.getInventory());
@@ -97,6 +109,7 @@ final class ProductionChecks {
 		player.getInventory().setItem(0, PotionContents.createItemStack(Items.POTION, Potions.WATER));
 		brewing.clicked(2, 0, ContainerInput.SWAP, player);
 		test.assertTrue(task.progress == 14, "Shift-click or hotbar-swap brewing missed output");
+		definitions(test, player, pos);
 		var service = DailyQuestModule.current();
 		definition = new QuestDefinition(
 		    "inventory", "Inventory", null, "collecting", "A", "minecraft:oak_planks",
@@ -104,11 +117,12 @@ final class ProductionChecks {
 		        "inventory_changed",
 		        JsonParser.parseString("{\"item\":[\"minecraft:oak_planks\",\"#minecraft:planks\"]}")
 		            .getAsJsonObject()),
-		    6, List.of(), List.of(), null);
+		    6, List.of(), List.of(), null, List.of(), "all", List.of());
 		task = new QuestDay.Assignment(
 		    definition, 1,
 		    new QuestReward(
-		        0, 0, List.of(JsonParser.parseString("{\"id\":\"minecraft:bread\",\"count\":2}").getAsJsonObject())));
+		        0, 0, List.of(JsonParser.parseString("{\"id\":\"minecraft:bread\",\"count\":2}").getAsJsonObject())),
+		    Set.of(), new Random(1));
 		service.state(player).assignments.set(0, task);
 		player.getInventory().clearContent();
 		player.getInventory().setItem(0, new ItemStack(Items.OAK_PLANKS, 2));
@@ -158,5 +172,109 @@ final class ProductionChecks {
 		test.assertTrue(ItemDelivery.pending(player).isEmpty() && player.getInventory().getItem(0).is(Items.BREAD) &&
 		                    player.getInventory().getItem(0).getCount() == 2,
 		                "Freeing space lost or duplicated the pending reward");
+	}
+	private static void definitions(GameTestHelper test, ServerPlayer player, BlockPos pos) {
+		var definition = QuestConfig.JSON.fromJson("""
+            {"id":"definitions","name":"制作清单","description":"完成五种加工目标。","category":"crafting","difficulty":"A","icon":"minecraft:stone",
+             "objectives":[
+              {"name":"切石","count":100,"objective":{"event":"item_crafted","conditions":{"source":"stonecutting"}}},
+              {"name":"苦力怕旗帜","count":100,"objective":{"event":"item_crafted","conditions":{"source":"loom","pattern":"minecraft:creeper"}}},
+              {"name":"夜视药水","count":100,"objective":{"event":"item_crafted","conditions":{"source":"brewing","potion":"minecraft:night_vision"}}},
+              {"name":"隐身炖菜","count":100,"objective":{"event":"item_crafted","conditions":{"item":"minecraft:suspicious_stew","effect":"minecraft:invisibility"}}},
+              {"name":"下界合金升级","count":100,"objective":{"event":"item_crafted","conditions":{"source":"smithing","template":"minecraft:netherite_upgrade_smithing_template"}}}
+             ]}
+            """, QuestDefinition.class);
+		var service = DailyQuestModule.current();
+		new QuestConfig(0, service.config.progression(), service.config.milestones(), service.config.rewards(),
+		                List.of(definition))
+		    .validateRegistries(player.registryAccess(), Set.of("minecraft:overworld"));
+		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1));
+		service.state(player).assignments.set(0, task);
+		player.getInventory().clearContent();
+		var level = player.level();
+		level.setBlockAndUpdate(pos, Blocks.STONECUTTER.defaultBlockState());
+		var stone = new StonecutterMenu(11, player.getInventory(), ContainerLevelAccess.create(level, pos));
+		stone.getSlot(0).set(new ItemStack(Items.STONE, 2));
+		stone.clickMenuButton(player, 0);
+		int amount = stone.getSlot(1).getItem().getCount();
+		test.assertTrue(amount > 0 && task.goalProgress(0) == 0, "Stonecutting preview counted");
+		stone.clicked(1, 0, ContainerInput.PICKUP, player);
+		stone.setCarried(ItemStack.EMPTY);
+		stone.clicked(1, 0, ContainerInput.QUICK_MOVE, player);
+		test.assertTrue(task.goalProgress(0) == amount * 2, "Normal/quick stonecutting quantity incorrect");
+		stone.getSlot(0).set(new ItemStack(Items.STONE));
+		stone.clickMenuButton(player, 0);
+		player.getInventory().setItem(0, ItemStack.EMPTY);
+		stone.clicked(1, 0, ContainerInput.SWAP, player);
+		test.assertTrue(task.goalProgress(0) == amount * 3, "Stonecutting hotbar swap missed");
+		stone.getSlot(0).set(new ItemStack(Items.STONE));
+		stone.clickMenuButton(player, 0);
+		for (int i = 0; i < 36; i++)
+			player.getInventory().setItem(i, new ItemStack(Items.DIRT, 64));
+		stone.clicked(1, 0, ContainerInput.QUICK_MOVE, player);
+		test.assertTrue(task.goalProgress(0) == amount * 3, "Failed stonecutting transfer counted");
+		player.getInventory().clearContent();
+
+		level.setBlockAndUpdate(pos, Blocks.LOOM.defaultBlockState());
+		var loom = new LoomMenu(12, player.getInventory(), ContainerLevelAccess.create(level, pos));
+		loom.getSlot(0).set(new ItemStack(Items.BANNER.pick(DyeColor.WHITE), 2));
+		loom.getSlot(1).set(new ItemStack(Items.DYE.pick(DyeColor.BLACK), 2));
+		loom.getSlot(2).set(new ItemStack(Items.CREEPER_BANNER_PATTERN));
+		test.assertTrue(!loom.getSlot(3).getItem().isEmpty() && task.goalProgress(1) == 0, "Loom preview counted");
+		loom.clicked(3, 0, ContainerInput.PICKUP, player);
+		var banner = loom.getCarried().copy();
+		loom.setCarried(ItemStack.EMPTY);
+		loom.clicked(3, 0, ContainerInput.QUICK_MOVE, player);
+		test.assertTrue(task.goalProgress(1) == 2, "Normal/quick loom output not counted");
+		loom.getSlot(2).set(ItemStack.EMPTY);
+		loom.getSlot(0).set(banner);
+		loom.getSlot(1).set(new ItemStack(Items.DYE.pick(DyeColor.RED)));
+		loom.clickMenuButton(player, 0);
+		player.getInventory().setItem(0, ItemStack.EMPTY);
+		loom.clicked(3, 0, ContainerInput.SWAP, player);
+		test.assertTrue(task.goalProgress(1) == 2, "Old banner layer credited as newly woven");
+
+		DailyQuestEvents.crafted(player, PotionContents.createItemStack(Items.POTION, Potions.INVISIBILITY), 1,
+		                         "brewing");
+		DailyQuestEvents.crafted(player, PotionContents.createItemStack(Items.POTION, Potions.NIGHT_VISION), 1,
+		                         "crafting");
+		DailyQuestEvents.crafted(player, PotionContents.createItemStack(Items.POTION, Potions.NIGHT_VISION), 2,
+		                         "brewing");
+		var stew = new ItemStack(Items.SUSPICIOUS_STEW);
+		DailyQuestEvents.crafted(player, stew, 1, "crafting");
+		stew.set(DataComponents.SUSPICIOUS_STEW_EFFECTS,
+		         new SuspiciousStewEffects(List.of(new SuspiciousStewEffects.Entry(MobEffects.INVISIBILITY, 160))));
+		DailyQuestEvents.crafted(player, stew, 1, "crafting");
+		level.setBlockAndUpdate(pos, Blocks.SMITHING_TABLE.defaultBlockState());
+		var smithing = new SmithingMenu(13, player.getInventory(), ContainerLevelAccess.create(level, pos));
+		smithing.getSlot(0).set(new ItemStack(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE));
+		smithing.getSlot(1).set(new ItemStack(Items.DIAMOND_PICKAXE));
+		smithing.getSlot(2).set(new ItemStack(Items.NETHERITE_INGOT));
+		smithing.clicked(3, 0, ContainerInput.QUICK_MOVE, player);
+		test.assertTrue(task.goalProgress(2) == 2 && task.goalProgress(3) == 1 && task.goalProgress(4) == 1,
+		                "Component, source or consumed template matching failed");
+		test.assertTrue(DailyQuestGui.show(player), "Multi-objective GUI failed to open");
+		var menu = (SimpleGui)SguiUtils.getCurrentGui(player);
+		var lore = menu.getGuiElement(19).getItemStack().get(DataComponents.LORE).lines().toString();
+		test.assertTrue(lore.contains("全部完成") && lore.contains("夜视药水 (2/100)"),
+		                "Sub-goal progress missing from GUI");
+		var summary = menu.getGuiElement(10).getItemStack().get(DataComponents.LORE).lines().toString();
+		test.assertTrue(summary.contains("完成五种加工目标。") && !summary.contains("minecraft:night_vision") &&
+		                    !summary.contains("夜视药水"),
+		                "Task description duplicates detailed conditions");
+		menu.getGuiElement(10).getGuiCallback().click(10, ClickType.MOUSE_LEFT, ContainerInput.PICKUP, menu);
+		var details = (SimpleGui)SguiUtils.getCurrentGui(player);
+		boolean hasPotion = false;
+		for (int i = 0; i < 18; i++) {
+			var lines = details.getGuiElement(i).getItemStack().get(DataComponents.LORE).lines();
+			hasPotion |= lines.toString().contains("minecraft:night_vision");
+		}
+		test.assertTrue(hasPotion, "Detailed conditions are inaccessible from the task icon");
+		details.getGuiElement(22).getGuiCallback().click(22, ClickType.MOUSE_LEFT, ContainerInput.PICKUP, details);
+		test.assertTrue(SguiUtils.getCurrentGui(player) instanceof DailyQuestGui,
+		                "Task details cannot return to the overview");
+		player.closeContainer();
+		test.assertTrue(QuestHudPayload.of(service.state(player)).entries().getFirst().target() == 5,
+		                "Multi-objective HUD target does not count goals");
 	}
 }
