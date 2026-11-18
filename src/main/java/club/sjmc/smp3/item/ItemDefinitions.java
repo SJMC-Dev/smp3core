@@ -1,6 +1,5 @@
 package club.sjmc.smp3.item;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.random.RandomGenerator;
@@ -17,6 +16,7 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
 public final class ItemDefinitions {
@@ -60,67 +60,25 @@ public final class ItemDefinitions {
 		JsonObject pack = stack.get(PACK);
 		if (pack == null)
 			throw new IllegalArgumentException("Missing smp3:pack component");
-		if (packItem.choice()) {
-			if (!pack.keySet().equals(Set.of("options")) || pack.getAsJsonArray("options").isEmpty())
-				throw new IllegalArgumentException("Choice pack needs options");
-			for (var option : pack.getAsJsonArray("options")) {
-				var entry = option.getAsJsonObject();
-				if (!entry.keySet().equals(Set.of("name", "items")) || entry.get("name").getAsString().isBlank() ||
-				    entry.getAsJsonArray("items").isEmpty())
-					throw new IllegalArgumentException("Invalid choice option");
-				for (var content : entry.getAsJsonArray("items"))
-					validate(content.getAsJsonObject(), registries);
-			}
-		} else {
-			if (!Set.of("draws", "entries").containsAll(pack.keySet()) || integer(pack, "draws", 1) < 1 ||
-			    !pack.has("entries") || pack.getAsJsonArray("entries").isEmpty())
-				throw new IllegalArgumentException("Random pack needs entries and positive draws");
-			long total = 0;
-			for (var value : pack.getAsJsonArray("entries")) {
-				var entry = value.getAsJsonObject();
-				if (!entry.keySet().equals(Set.of("item", "weight", "min", "max")))
-					throw new IllegalArgumentException("Invalid random entry fields");
-				int weight = integer(entry, "weight", 1), min = integer(entry, "min", 1),
-				    max = integer(entry, "max", 1);
-				if (weight <= 0 || min <= 0 || max < min)
-					throw new IllegalArgumentException("Invalid weight or quantity range");
-				total = Math.addExact(total, weight);
-				if (integer(entry.getAsJsonObject("item"), "count", 1) != 1)
-					throw new IllegalArgumentException("Use min/max for random quantities");
-				validate(entry.getAsJsonObject("item"), registries);
-			}
-		}
+		if (!Set.of("options", "draws").containsAll(pack.keySet()) || !pack.has("options") ||
+		    integer(pack, "draws", 1) < 1)
+			throw new IllegalArgumentException("Pack needs options and positive draws");
+		if (packItem.choice() && pack.has("draws"))
+			throw new IllegalArgumentException("Choice pack selects one bundle");
+		RewardBundle.validateOptions(pack.getAsJsonArray("options"), registries);
 	}
-	public static List<JsonObject> contents(ItemStack pack, int option, RandomGenerator random) {
+	public static RewardBundle contents(ItemStack pack, int option, RandomGenerator random, ServerPlayer player) {
 		JsonObject definition = pack.get(PACK);
 		if (((PackItem)pack.getItem()).choice())
-			return definition.getAsJsonArray("options")
-			    .get(option)
-			    .getAsJsonObject()
-			    .getAsJsonArray("items")
-			    .asList()
-			    .stream()
-			    .map(v -> v.getAsJsonObject().deepCopy())
-			    .toList();
-		var entries = definition.getAsJsonArray("entries");
-		long total = entries.asList().stream().mapToLong(v -> v.getAsJsonObject().get("weight").getAsLong()).sum();
-		List<JsonObject> result = new ArrayList<>();
-		for (int i = 0; i < integer(definition, "draws", 1); i++) {
-			long roll = random.nextLong(total);
-			for (var value : entries) {
-				var entry = value.getAsJsonObject();
-				roll -= entry.get("weight").getAsLong();
-				if (roll < 0) {
-					JsonObject item = entry.getAsJsonObject("item").deepCopy();
-					item.addProperty(
-					    "count", random.nextLong(entry.get("min").getAsInt(), (long)entry.get("max").getAsInt() + 1));
-					result.add(item);
-					break;
-				}
-			}
-		}
-		return result;
+			return RewardBundle.resolve(
+			    RewardBundle.objects(
+			        definition.getAsJsonArray("options").get(option).getAsJsonObject().getAsJsonArray("grants")),
+			    random, player);
+		var draw = definition.deepCopy();
+		draw.addProperty("type", "random");
+		return RewardBundle.resolve(List.of(draw), random, player);
 	}
+
 	private static int integer(JsonObject object, String key, int fallback) {
 		if (!object.has(key))
 			return fallback;

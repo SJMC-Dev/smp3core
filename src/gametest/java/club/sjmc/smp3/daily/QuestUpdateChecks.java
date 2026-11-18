@@ -111,12 +111,39 @@ final class QuestUpdateChecks {
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, before);
 		player.getInventory().clearContent();
 		var definition = JsonParser.parseString("""
-   {"id":"smp3:random_pack","count":2,"components":{"smp3:pack":{"draws":2,"entries":[{"item":{"id":"minecraft:diamond"},"weight":1,"min":2,"max":2}]}}}
-   """).getAsJsonObject();
+{
+  "id": "smp3:random_pack",
+  "count": 2,
+  "components": {
+    "smp3:pack": {
+      "draws": 2,
+      "options": [
+        {
+          "name": "minecraft:diamond",
+          "weight": 1,
+          "grants": [
+            {
+              "id": "minecraft:diamond",
+              "type": "item",
+              "count": {
+                "min": 2,
+                "max": 2
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+""").getAsJsonObject();
 		var pack = ItemDefinitions.stack(definition, player.registryAccess());
 		player.setItemInHand(InteractionHand.MAIN_HAND, pack);
-		test.assertTrue(PackItem.open(player, InteractionHand.MAIN_HAND, pack, 0, new Random(1)), "Pack did not open");
-		test.assertTrue(!PackItem.open(player, InteractionHand.MAIN_HAND, pack, 0, new Random(2)),
+		test.assertTrue(PackItem.open(player, InteractionHand.MAIN_HAND, pack, 0, new Random(1)) ==
+		                    PackItem.OpenResult.OPENED,
+		                "Pack did not open");
+		test.assertTrue(PackItem.open(player, InteractionHand.MAIN_HAND, pack, 0, new Random(2)) ==
+		                    PackItem.OpenResult.CHANGED,
 		                "Stale callback consumed another pack");
 		long sequence = player.getAttachedOrElse(ItemDelivery.APPLIED, 0L);
 		player.getInventory().clearContent();
@@ -134,18 +161,22 @@ final class QuestUpdateChecks {
 		                           .findFirst()
 		                           .orElseThrow()
 		                           .rewards()
-		                           .items()
-		                           .getFirst();
+		                           .grants()
+		                           .getFirst()
+		                           .deepCopy();
+		choiceDefinition.remove("type");
 		var choice = ItemDefinitions.stack(choiceDefinition, player.registryAccess());
 		player.getInventory().clearContent();
 		player.setItemInHand(InteractionHand.MAIN_HAND, choice);
-		test.assertTrue(PackItem.open(player, InteractionHand.MAIN_HAND, choice, 1, new Random(1)),
+		test.assertTrue(PackItem.open(player, InteractionHand.MAIN_HAND, choice, 1, new Random(1)) ==
+		                    PackItem.OpenResult.OPENED,
 		                "Choice pack did not open");
 		test.assertTrue(player.getInventory().getItem(0).is(Items.OAK_PLANKS) &&
 		                    player.getInventory().getItem(0).getCount() == 32 &&
 		                    player.getInventory().getItem(1).is(Items.GLASS),
 		                "Choice pack delivered the wrong option");
-		test.assertTrue(!PackItem.open(player, InteractionHand.MAIN_HAND, choice, 0, new Random(1)),
+		test.assertTrue(PackItem.open(player, InteractionHand.MAIN_HAND, choice, 0, new Random(1)) ==
+		                    PackItem.OpenResult.CHANGED,
 		                "Choice pack redeemed twice");
 		test.assertTrue(QuestRewards.progress(player).completed() == count + 1 &&
 		                    QuestRewards.progress(player).paid(day, 0),

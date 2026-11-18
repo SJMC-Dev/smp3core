@@ -7,6 +7,7 @@ import java.util.random.RandomGenerator;
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.ItemDelivery;
+import club.sjmc.smp3.item.RewardBundle;
 import club.sjmc.smp3.time.ServerDates;
 
 import net.minecraft.network.chat.Component;
@@ -34,11 +35,15 @@ public final class DailyQuestService {
 
 	public QuestDay state(ServerPlayer player) { return state(player, ServerDates.today().toEpochDay()); }
 
+	QuestDay current(ServerPlayer player) { return failed ? null : data.players.get(player.getUUID()); }
+
 	private QuestDay state(ServerPlayer player, long today) {
 		if (failed)
 			return null;
 		try {
 			QuestDay previous = data.player(player.getUUID());
+			if (previous != null && previous.reconciled && today <= previous.date)
+				return previous;
 			var progress = QuestRewards.progress(player);
 			if (previous != null && player.level().getGameTime() < previous.retryAt)
 				return previous;
@@ -67,10 +72,11 @@ public final class DailyQuestService {
 				});
 				day = QuestDay.forDate(previous, today, QuestRewards.progress(player).completed(),
 				                       player.getStats().getValue(Stats.CUSTOM.get(Stats.PLAY_TIME)) / 72000.0,
-				                       milestones, config, random);
+				                       milestones, config, random, player);
 			}
 			if (day != previous) {
 				data.players.put(player.getUUID(), day);
+				QuestMovement.reset(player, day);
 				DailyQuestEvents.inventoryChanged(player);
 				data.setDirty(player.getUUID());
 			}
@@ -83,6 +89,8 @@ public final class DailyQuestService {
 					data.setDirty(player.getUUID());
 				}
 			}
+			day.reconciled = true;
+			day.settlementPending = true;
 			return day;
 		} catch (RuntimeException e) {
 			failed = true;
@@ -103,6 +111,9 @@ public final class DailyQuestService {
 
 	private void changed(ServerPlayer player, QuestDay day) {
 		data.setDirty(player.getUUID());
+		if (day.assignments.stream().noneMatch(a -> a.complete() && !a.claimed))
+			return;
+		day.settlementPending = true;
 		if (player.level().getGameTime() >= day.retryAt) {
 			try {
 				var progress = QuestRewards.progress(player);
@@ -136,6 +147,8 @@ public final class DailyQuestService {
 			data.setDirty(player.getUUID());
 			throw error;
 		}
+		QuestStructures.forget(player.getUUID());
+		QuestMovement.reset(player, next);
 		inventoryChanged(player);
 		return Integer.bitCount(slots);
 	}
@@ -150,9 +163,10 @@ public final class DailyQuestService {
 			return new Outcome(Status.COMPLETE);
 		if (!admin && day.remaining(config) == 0)
 			return new Outcome(Status.LIMIT_REACHED);
-		if (!day.reroll(slot, token, admin, config, random))
+		if (!day.reroll(slot, token, admin, config, random, player))
 			return new Outcome(Status.NO_CANDIDATE);
 		data.setDirty(player.getUUID());
+		QuestMovement.reset(player, day);
 		DailyQuestEvents.inventoryChanged(player);
 		Smp3Core.LOGGER.info("[SMP3] 任务刷新 player={} slot={} admin={} {} -> {}", player.getUUID(), slot + 1, admin,
 		                     previous.definition.id(), day.assignments.get(slot).definition.id());
@@ -173,9 +187,16 @@ public final class DailyQuestService {
 	void settle(ServerPlayer player, QuestDay day) {
 		long today = ServerDates.today().toEpochDay();
 		long now = player.level().getGameTime();
-		if (day == null || day.date > today || now < day.retryAt)
+		if (day == null || day.date > today || now < day.retryAt ||
+		    !day.settlementPending && day.assignments.stream().noneMatch(a -> a.complete() && !a.claimed))
 			return;
 		try {
+			var completed = QuestRewards.progress(player);
+			for (int slot = 0; slot < day.assignments.size(); slot++) {
+				var task = day.assignments.get(slot);
+				if (task.complete() && !completed.completed(day.date, slot))
+					QuestRewards.complete(player, day.date, slot, task.definition.name(), task.reward);
+			}
 			for (var reward : QuestRewards.ready(player))
 				pay(player, reward);
 			var progress = QuestRewards.progress(player);
@@ -187,6 +208,7 @@ public final class DailyQuestService {
 					data.setDirty(player.getUUID());
 				}
 			}
+			day.settlementPending = false;
 			day.retryAt = 0;
 			day.rewardFailureReported = false;
 		} catch (RuntimeException e) {
@@ -222,9 +244,14 @@ public final class DailyQuestService {
 			var stack = ItemDefinitions.stack(item, player.registryAccess());
 			parts.add(stack.getHoverName().getString() + " x " + stack.getCount());
 		});
+		reward.effects().forEach(
+		    effect -> parts.add(RewardBundle.description(effect, player.registryAccess()).getString()));
 		player.sendSystemMessage(Component.literal(
 		    "已完成「" + name + "」" + (parts.isEmpty() ? "" : "，奖励已结算：" + String.join("，", parts)) +
-		    (ItemDelivery.pending(player).isEmpty() ? "" : "；背包不足，剩余物品保留待领取")));
+		    (ItemDelivery.pending(player).isEmpty() ? "" : "；背包不足，剩余物品保留待领取") +
+		    (ItemDelivery.pendingEffects(player).isEmpty()
+		         ? ""
+				 : "；剩余奖励保留待发，生物需附近合适空间（水生生物需水域）")));
 	}
 
 	private static boolean valid(QuestDay day, long today, long date, int slot, String token) {

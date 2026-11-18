@@ -104,10 +104,11 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				var service = DailyQuestModule.current();
 				var task = service.state(player).assignments().getFirst();
 				var facts = new HashMap<String, Set<String>>();
-				task.definition.objective().conditions().entrySet().forEach(
+				task.definition.objectives().getFirst().objective().conditions().entrySet().forEach(
 				    c -> facts.put(c.getKey(), Set.of(QuestDefinition.values(c.getValue()).getFirst())));
 				for (int i = 0; i < task.target; i++) {
-					service.record(player, new QuestDefinition.Event(task.definition.objective().event(), facts));
+					service.record(player, new QuestDefinition.Event(
+					                           task.definition.objectives().getFirst().objective().event(), facts));
 				}
 			});
 			context.waitFor(client
@@ -131,8 +132,10 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 					                 .findFirst()
 					                 .orElseThrow()
 					                 .rewards()
-					                 .items()
-					                 .getFirst();
+					                 .grants()
+					                 .getFirst()
+					                 .deepCopy();
+					reward.remove("type");
 					player.setItemInHand(InteractionHand.MAIN_HAND,
 					                     ItemDefinitions.stack(reward, player.registryAccess()));
 					PackGui.open(player, InteractionHand.MAIN_HAND);

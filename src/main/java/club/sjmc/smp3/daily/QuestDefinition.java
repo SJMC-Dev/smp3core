@@ -1,107 +1,154 @@
 package club.sjmc.smp3.daily;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.random.RandomGenerator;
 import java.util.Map;
 import java.util.Set;
+import java.util.random.RandomGenerator;
 import java.util.regex.Pattern;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public record QuestDefinition(String id, String name, String description, String category, String difficulty,
-                              String icon, Objective objective, Integer count, List<Tier> tiers, List<String> requires,
-                              QuestRewardSpec rewards, List<Goal> objectives, String completion, List<Choice> choices) {
+                              String icon, List<Goal> objectives, String completion, List<Tier> tiers,
+                              List<String> requires, QuestRewardSpec rewards) {
 	public static final Pattern DESCRIPTION_FIELD = Pattern.compile("\\{([^{}]*)}");
 
 	public QuestDefinition {
 		tiers = tiers == null ? List.of() : List.copyOf(tiers);
 		requires = requires == null ? List.of() : List.copyOf(requires);
-		objectives = objectives == null ? List.of() : List.copyOf(objectives);
-		choices = choices == null ? List.of() : List.copyOf(choices);
+		objectives = List.copyOf(objectives);
 		completion = completion == null ? "all" : completion;
 	}
 	public record Tier(int tier, Integer count, QuestRewardSpec rewards) {}
+	public record Candidate(String id, String name, String description, String icon, JsonObject conditions,
+	                        QuestRewardSpec rewards) {}
+	public record Target(String field, JsonElement values, List<Candidate> candidates) {
+		public Target { candidates = candidates == null ? List.of() : List.copyOf(candidates); }
+		public Target(String field, JsonElement values) { this(field, values, List.of()); }
+	}
 
-	public record Goal(String name, Objective objective, Integer count, List<Tier> tiers) {
-		public Goal { tiers = tiers == null ? List.of() : List.copyOf(tiers); }
+	public record Goal(String name, String event, Target target, JsonObject conditions, Integer count, List<Tier> tiers,
+	                   String countBy, String selection) {
+		public Goal {
+			tiers = tiers == null ? List.of() : List.copyOf(tiers);
+			conditions = conditions == null ? new JsonObject() : conditions.deepCopy();
+			countBy = countBy == null ? "amount" : countBy;
+			selection = selection == null ? "any" : selection;
+		}
+		public Objective objective() {
+			var filters = conditions.deepCopy();
+			if (target != null)
+				filters.add(target.field, target.values);
+			return new Objective(event, filters);
+		}
+		boolean hasCondition(String field) {
+			return conditions.has(field) || target != null && target.field.equals(field);
+		}
+		boolean supports(int tier) { return tiers.isEmpty() || tiers.stream().anyMatch(t -> t.tier == tier); }
 		int target(int tier) {
 			return tiers.isEmpty() ? (count == null ? 1 : count)
 			                       : tiers.stream().filter(t -> t.tier == tier).findFirst().orElseThrow().count;
 		}
-		Goal resolve(int tier) { return new Goal(name, objective, target(tier), List.of()); }
-	}
-
-	public record Choice(String name, String description, String icon, Objective objective, QuestRewardSpec rewards) {}
-
-	public List<Goal> goals() {
-		return objectives.isEmpty() ? List.of(new Goal(name, objective, count, tiers)) : objectives;
-	}
-
-	QuestDefinition select(Choice choice) {
-		return new QuestDefinition(id, choice.name, choice.description == null ? description : choice.description,
-		                           category, difficulty, choice.icon == null ? icon : choice.icon, choice.objective,
-		                           count, tiers, requires, choice.rewards == null ? rewards : choice.rewards, List.of(),
-		                           completion, List.of());
+		Goal resolve(int tier, RandomGenerator random) {
+			int quantity = target(tier);
+			Target chosen = target;
+			var filters = conditions.deepCopy();
+			if (target != null && !target.candidates.isEmpty()) {
+				var candidate = target.candidates.get(random.nextInt(target.candidates.size()));
+				var ids = new JsonArray();
+				ids.add(candidate.id);
+				chosen = new Target(target.field, ids, List.of(candidate));
+				if (candidate.conditions != null)
+					candidate.conditions.entrySet().forEach(e -> filters.add(e.getKey(), e.getValue()));
+			} else if (selection.equals("random")) {
+				var candidates = new ArrayList<>(values(target.values));
+				var selected = new JsonArray();
+				int size = countBy.equals("distinct") ? quantity : 1;
+				for (int i = 0; i < size; i++)
+					selected.add(candidates.remove(random.nextInt(candidates.size())));
+				chosen = new Target(target.field, selected);
+			}
+			return new Goal(name, event, chosen, filters, quantity, List.of(), countBy, "any");
+		}
+		public Set<String> identities(Event action) {
+			if (target == null)
+				return Set.of();
+			var accepted = values(target.values);
+			var found = new HashSet<String>();
+			for (String id : action.facts.getOrDefault(target.field, Set.of())) {
+				if (id.startsWith("#") || !accepted.contains(id))
+					continue;
+				found.add(target.field.equals("block") ? id.replace("_wall_coral_fan", "_coral_fan") : id);
+			}
+			return found;
+		}
 	}
 
 	QuestDefinition resolve(int tier, RandomGenerator random) {
 		QuestRewardSpec selected = rewards;
-		if (tiered()) {
+		if (!tiers.isEmpty()) {
 			var band = tiers.stream().filter(t -> t.tier == tier).findFirst().orElseThrow();
 			if (band.rewards != null)
 				selected = band.rewards;
 		}
-		var selectedTask = new QuestDefinition(id, name, description, category, difficulty, icon, objective, count,
-		                                       tiers, requires, selected, objectives, completion, List.of());
-		if (!choices.isEmpty())
-			selectedTask = selectedTask.select(choices.get(random.nextInt(choices.size())));
-		return new QuestDefinition(
-		    id, selectedTask.name, selectedTask.description, category, difficulty, selectedTask.icon,
-		    selectedTask.objective, objectives.isEmpty() ? target(tier) : null, List.of(), requires,
-		    selectedTask.rewards, objectives.stream().map(g -> g.resolve(tier)).toList(), completion, List.of());
+		var goals = objectives.stream().map(g -> g.resolve(tier, random)).toList();
+		String resolvedName = name, resolvedDescription = description, resolvedIcon = icon;
+		if (goals.size() == 1 && goals.getFirst().target != null && !goals.getFirst().target.candidates.isEmpty()) {
+			var candidate = goals.getFirst().target.candidates.getFirst();
+			if (candidate.name != null)
+				resolvedName = candidate.name;
+			if (candidate.description != null)
+				resolvedDescription = candidate.description;
+			if (candidate.icon != null)
+				resolvedIcon = candidate.icon;
+			if (candidate.rewards != null)
+				selected = candidate.rewards;
+		}
+		return new QuestDefinition(id, resolvedName, resolvedDescription, category, difficulty, resolvedIcon, goals,
+		                           completion, List.of(), requires, selected);
 	}
 
-	public boolean tiered() { return !tiers.isEmpty(); }
-
-	boolean supports(int tier) { return !tiered() || tiers.stream().anyMatch(value -> value.tier == tier); }
-
-	int target(int tier) {
-		if (!tiered())
-			return count == null ? 1 : count;
-		return tiers.stream().filter(value -> value.tier == tier).findFirst().orElseThrow().count;
+	public boolean tiered() { return !tiers.isEmpty() || objectives.stream().anyMatch(g -> !g.tiers.isEmpty()); }
+	boolean supports(int tier) {
+		return (tiers.isEmpty() || tiers.stream().anyMatch(t -> t.tier == tier)) &&
+		    objectives.stream().allMatch(g -> g.supports(tier));
 	}
 
 	public record Event(String type, Map<String, Set<String>> facts, int amount) {
 		public Event(String type, Map<String, Set<String>> facts) { this(type, facts, 1); }
 	}
 
-	public record Objective(String event, JsonObject conditions) {
-		public Objective { conditions = conditions.deepCopy(); }
-
-		@Override
-		public JsonObject conditions() {
-			return conditions.deepCopy();
+	public static final class Objective {
+		private final String event;
+		private final JsonObject conditions;
+		private final Map<String, Set<String>> filters = new HashMap<>();
+		public Objective(String event, JsonObject conditions) {
+			this.event = event;
+			this.conditions = conditions.deepCopy();
+			conditions.entrySet().forEach(condition -> {
+				if (condition.getKey().equals("block_state"))
+					condition.getValue().getAsJsonObject().entrySet().forEach(
+					    property
+					    -> filters.put("state." + property.getKey(), Set.of(property.getValue().getAsString())));
+				else
+					filters.put(condition.getKey(), Set.copyOf(values(condition.getValue())));
+			});
 		}
-
+		public String event() { return event; }
+		public JsonObject conditions() { return conditions.deepCopy(); }
 		public boolean matches(Event action) {
 			if (!event.equals(action.type()))
 				return false;
-			for (var condition : conditions.entrySet()) {
-				if (condition.getKey().equals("block_state")) {
-					for (var property : condition.getValue().getAsJsonObject().entrySet()) {
-						if (!action.facts()
-						         .getOrDefault("state." + property.getKey(), Set.of())
-						         .contains(property.getValue().getAsString()))
-							return false;
-					}
-				} else if (values(condition.getValue())
-				               .stream()
-				               .noneMatch(
-				                   value
-				                   -> action.facts().getOrDefault(condition.getKey(), Set.of()).contains(value))) {
+			for (var filter : filters.entrySet()) {
+				var actual = action.facts().getOrDefault(filter.getKey(), Set.of());
+				if (Collections.disjoint(filter.getValue(), actual))
 					return false;
-				}
 			}
 			return true;
 		}

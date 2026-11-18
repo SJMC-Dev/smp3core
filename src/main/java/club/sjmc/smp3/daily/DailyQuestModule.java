@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import club.sjmc.smp3.Smp3Core;
+import club.sjmc.smp3.time.ServerDates;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -19,7 +20,9 @@ import net.minecraft.server.level.ServerPlayer;
 
 public final class DailyQuestModule {
 	private static DailyQuestService instance;
-	private static final Map<UUID, QuestHudPayload> hudSnapshots = new HashMap<>();
+	private static final Map<UUID, HudSnapshot> hudSnapshots = new HashMap<>();
+	private record HudSnapshot(QuestDay day, int revision, QuestHudPayload payload) {}
+	private static long currentDate = Long.MIN_VALUE;
 	private DailyQuestModule() {}
 
 	public static DailyQuestService current() { return instance; }
@@ -32,6 +35,7 @@ public final class DailyQuestModule {
 				QuestConfig config = QuestConfig.load(
 				    FabricLoader.getInstance().getConfigDir().resolve("smp3/dailyquests.json"), server.registryAccess(),
 				    server.levelKeys().stream().map(key -> key.identifier().toString()).collect(Collectors.toSet()));
+				config.validateLoot(server);
 				config.milestones().forEach((name, id) -> {
 					if (server.getAdvancements().get(Identifier.parse(id)) == null)
 						throw new IllegalArgumentException("milestones." + name + ": unknown advancement " + id);
@@ -51,7 +55,10 @@ public final class DailyQuestModule {
 			DailyQuestData.clear();
 			instance = null;
 			hudSnapshots.clear();
+			currentDate = Long.MIN_VALUE;
 			DailyQuestEvents.clearInventories();
+			QuestStructures.clear();
+			QuestMovement.clear();
 		});
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			if (instance != null) {
@@ -63,18 +70,30 @@ public final class DailyQuestModule {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			hudSnapshots.remove(handler.player.getUUID());
 			DailyQuestEvents.forgetInventory(handler.player.getUUID());
+			QuestStructures.forget(handler.player.getUUID());
+			QuestMovement.forget(handler.player.getUUID());
+		});
+		ServerTickEvents.START_SERVER_TICK.register(server -> {
+			long date = ServerDates.today().toEpochDay();
+			if (instance != null && date != currentDate) {
+				currentDate = date;
+				server.getPlayerList().getPlayers().forEach(instance::state);
+			}
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (instance == null)
 				return;
 			DailyQuestEvents.flushInventories(server);
-			if (server.getTickCount() % 5 != 0)
-				return;
+			QuestStructures.tick(server);
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+				int phase = Math.floorMod(player.getUUID().hashCode(), 20);
+				if (server.getTickCount() % 5 != phase % 5)
+					continue;
 				QuestDay day = instance.state(player);
-				if (server.getTickCount() % 20 == 0)
+				QuestMovement.tick(player, day);
+				if (server.getTickCount() % 20 == phase)
 					DailyQuestEvents.inventoryLocation(player, day);
-				if (day != null && server.getTickCount() % 20 == 0 &&
+				if (day != null && server.getTickCount() % 20 == phase &&
 				    day.assignments.stream().anyMatch(a
 				                                      -> !a.complete() &&
 				                                             (a.tracks(QuestEventType.BIOME_VISITED.id()) ||
@@ -86,13 +105,20 @@ public final class DailyQuestModule {
 			}
 		});
 		DailyQuestEvents.register();
+		QuestConversions.register();
+		QuestStructures.register();
 	}
 
 	private static void syncHud(ServerPlayer player, QuestDay day) {
 		if (!ServerPlayNetworking.canSend(player, QuestHudPayload.TYPE))
 			return;
+		var previous = hudSnapshots.get(player.getUUID());
+		int revision = day == null ? 0 : day.revision;
+		if (previous != null && previous.day == day && previous.revision == revision)
+			return;
 		QuestHudPayload snapshot = QuestHudPayload.of(day);
-		if (!snapshot.equals(hudSnapshots.put(player.getUUID(), snapshot)))
+		hudSnapshots.put(player.getUUID(), new HudSnapshot(day, revision, snapshot));
+		if (previous == null || !snapshot.equals(previous.payload))
 			ServerPlayNetworking.send(player, snapshot);
 	}
 }

@@ -23,6 +23,11 @@ public final class Smp3Items {
 
 	public static final Item CHOICE_PACK = pack("choice_pack", true);
 	public static final Item RANDOM_PACK = pack("random_pack", false);
+	public static final Identifier CORAL_TOOL_ID = Identifier.fromNamespaceAndPath("smp3", "coral_tool");
+	public static final Item CORAL_TOOL = Registry.register(
+	    BuiltInRegistries.ITEM, CORAL_TOOL_ID,
+	    new CoralToolItem(
+	        new Item.Properties().setId(ResourceKey.create(Registries.ITEM, CORAL_TOOL_ID)).durability(250)));
 	private static Item pack(String name, boolean choice) {
 		var id = Identifier.fromNamespaceAndPath("smp3", name);
 		return Registry.register(
@@ -33,6 +38,7 @@ public final class Smp3Items {
 
 	public static void init() {
 		ItemDefinitions.register();
+		Smp3CreativeTab.register();
 		ItemDelivery.register();
 		Smp3Core.LOGGER.info("[SMP3] 已注册物品 {}", ANY_ENCHANTED_BOOK_ID);
 	}

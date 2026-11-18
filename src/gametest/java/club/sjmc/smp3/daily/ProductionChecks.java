@@ -1,55 +1,57 @@
 package club.sjmc.smp3.daily;
 
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.List;
 
 import com.google.gson.JsonParser;
-
-import club.sjmc.smp3.item.ItemDelivery;
-import club.sjmc.smp3.daily.ui.DailyQuestGui;
-import eu.pb4.sgui.api.SguiUtils;
 import eu.pb4.sgui.api.ClickType;
+import eu.pb4.sgui.api.SguiUtils;
 import eu.pb4.sgui.api.gui.SimpleGui;
+
+import club.sjmc.smp3.daily.ui.DailyQuestGui;
+import club.sjmc.smp3.item.ItemDelivery;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.item.component.SuspiciousStewEffects;
-import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.inventory.StonecutterMenu;
-import net.minecraft.world.inventory.LoomMenu;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.inventory.BlastFurnaceMenu;
 import net.minecraft.world.inventory.BrewingStandMenu;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.FurnaceMenu;
+import net.minecraft.world.inventory.LoomMenu;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.SmithingMenu;
 import net.minecraft.world.inventory.SmokerMenu;
+import net.minecraft.world.inventory.StonecutterMenu;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.item.component.SuspiciousStewEffects;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BrewingStandBlockEntity;
 import net.minecraft.world.level.storage.TagValueInput;
 
 final class ProductionChecks {
 	static void run(GameTestHelper test, ServerPlayer player, BlockPos pos) {
-		var definition = new QuestDefinition(
-		    "production", "Production", null, "crafting", "A", "minecraft:iron_ingot",
-		    new QuestDefinition.Objective(
-		        "item_crafted", JsonParser
-		                            .parseString("{\"item\":[\"minecraft:iron_ingot\",\"minecraft:cooked_cod\","
-		                                         + "\"minecraft:netherite_pickaxe\",\"minecraft:potion\"]}")
-		                            .getAsJsonObject()),
-		    100, List.of(), List.of(), null, List.of(), "all", List.of());
-		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1));
+		var definition =
+		    new QuestDefinition("production", "Production", null, "crafting", "A", "minecraft:iron_ingot",
+			                    List.of(new QuestDefinition.Goal(
+		                            "Production", "item_crafted", null,
+		                            JsonParser
+		                                .parseString("{\"item\":[\"minecraft:iron_ingot\",\"minecraft:cooked_cod\","
+		                                             + "\"minecraft:netherite_pickaxe\",\"minecraft:potion\"]}")
+		                                .getAsJsonObject(),
+		                            100, List.of(), "amount", "any")),
+			                    "all", List.of(), List.of(), null);
+		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
 		DailyQuestModule.current().state(player).assignments.set(0, task);
 		player.getInventory().clearContent();
 		var furnace = new FurnaceMenu(6, player.getInventory());
@@ -113,16 +115,16 @@ final class ProductionChecks {
 		var service = DailyQuestModule.current();
 		definition = new QuestDefinition(
 		    "inventory", "Inventory", null, "collecting", "A", "minecraft:oak_planks",
-		    new QuestDefinition.Objective(
-		        "inventory_changed",
-		        JsonParser.parseString("{\"item\":[\"minecraft:oak_planks\",\"#minecraft:planks\"]}")
-		            .getAsJsonObject()),
-		    6, List.of(), List.of(), null, List.of(), "all", List.of());
+		    List.of(new QuestDefinition.Goal(
+		        "Inventory", "inventory_changed", null,
+		        JsonParser.parseString("{\"item\":[\"minecraft:oak_planks\",\"#minecraft:planks\"]}").getAsJsonObject(),
+		        6, List.of(), "amount", "any")),
+		    "all", List.of(), List.of(), null);
 		task = new QuestDay.Assignment(
 		    definition, 1,
 		    new QuestReward(
 		        0, 0, List.of(JsonParser.parseString("{\"id\":\"minecraft:bread\",\"count\":2}").getAsJsonObject())),
-		    Set.of(), new Random(1));
+		    Set.of(), new Random(1), player);
 		service.state(player).assignments.set(0, task);
 		player.getInventory().clearContent();
 		player.getInventory().setItem(0, new ItemStack(Items.OAK_PLANKS, 2));
@@ -175,20 +177,66 @@ final class ProductionChecks {
 	}
 	private static void definitions(GameTestHelper test, ServerPlayer player, BlockPos pos) {
 		var definition = QuestConfig.JSON.fromJson("""
-            {"id":"definitions","name":"制作清单","description":"完成五种加工目标。","category":"crafting","difficulty":"A","icon":"minecraft:stone",
-             "objectives":[
-              {"name":"切石","count":100,"objective":{"event":"item_crafted","conditions":{"source":"stonecutting"}}},
-              {"name":"苦力怕旗帜","count":100,"objective":{"event":"item_crafted","conditions":{"source":"loom","pattern":"minecraft:creeper"}}},
-              {"name":"夜视药水","count":100,"objective":{"event":"item_crafted","conditions":{"source":"brewing","potion":"minecraft:night_vision"}}},
-              {"name":"隐身炖菜","count":100,"objective":{"event":"item_crafted","conditions":{"item":"minecraft:suspicious_stew","effect":"minecraft:invisibility"}}},
-              {"name":"下界合金升级","count":100,"objective":{"event":"item_crafted","conditions":{"source":"smithing","template":"minecraft:netherite_upgrade_smithing_template"}}}
-             ]}
-            """, QuestDefinition.class);
+{
+  "id": "definitions",
+  "name": "制作清单",
+  "description": "完成五种加工目标。",
+  "category": "crafting",
+  "difficulty": "A",
+  "icon": "minecraft:stone",
+  "objectives": [
+    {
+      "event": "item_crafted",
+      "conditions": {
+        "source": "stonecutting"
+      },
+      "name": "切石",
+      "count": 100
+    },
+    {
+      "event": "item_crafted",
+      "conditions": {
+        "source": "loom",
+        "pattern": "minecraft:creeper"
+      },
+      "name": "苦力怕旗帜",
+      "count": 100
+    },
+    {
+      "event": "item_crafted",
+      "conditions": {
+        "source": "brewing",
+        "potion": "minecraft:night_vision"
+      },
+      "name": "夜视药水",
+      "count": 100
+    },
+    {
+      "event": "item_crafted",
+      "conditions": {
+        "item": "minecraft:suspicious_stew",
+        "effect": "minecraft:invisibility"
+      },
+      "name": "隐身炖菜",
+      "count": 100
+    },
+    {
+      "event": "item_crafted",
+      "conditions": {
+        "source": "smithing",
+        "template": "minecraft:netherite_upgrade_smithing_template"
+      },
+      "name": "下界合金升级",
+      "count": 100
+    }
+  ]
+}
+""", QuestDefinition.class);
 		var service = DailyQuestModule.current();
 		new QuestConfig(0, service.config.progression(), service.config.milestones(), service.config.rewards(),
 		                List.of(definition))
 		    .validateRegistries(player.registryAccess(), Set.of("minecraft:overworld"));
-		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1));
+		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
 		service.state(player).assignments.set(0, task);
 		player.getInventory().clearContent();
 		var level = player.level();

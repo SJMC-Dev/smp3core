@@ -2,6 +2,7 @@ package club.sjmc.smp3.daily;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -9,6 +10,7 @@ import java.util.UUID;
 import java.util.random.RandomGenerator;
 
 import net.minecraft.core.GlobalPos;
+import net.minecraft.server.level.ServerPlayer;
 
 public final class QuestDay {
 	transient GlobalPos inventoryLocation;
@@ -22,9 +24,10 @@ public final class QuestDay {
 	transient int revision;
 	transient long retryAt;
 	transient boolean rewardFailureReported;
+	transient boolean reconciled, settlementPending;
 
 	QuestDay(long date, long completedQuests, double playtimeHours, Set<String> milestones, QuestConfig config,
-	         RandomGenerator random) {
+	         RandomGenerator random, ServerPlayer player) {
 		this.date = date;
 		this.completedQuests = completedQuests;
 		this.playtimeHours = playtimeHours;
@@ -33,17 +36,17 @@ public final class QuestDay {
 		for (String difficulty : QuestConfig.TIERS) {
 			QuestDefinition definition = choose(config, difficulty, random);
 			assignments.add(
-			    new Assignment(definition, this.tier, config.rewards().get(difficulty), milestones, random));
+			    new Assignment(definition, this.tier, config.rewards().get(difficulty), milestones, random, player));
 		}
 	}
 
 	static QuestDay forDate(QuestDay previous, long date, long completed, double hours, Set<String> milestones,
-	                        QuestConfig config, RandomGenerator random) {
+	                        QuestConfig config, RandomGenerator random, ServerPlayer player) {
 		if (previous == null)
-			return new QuestDay(date, completed, hours, milestones, config, random);
+			return new QuestDay(date, completed, hours, milestones, config, random, player);
 		if (date <= previous.date)
 			return previous;
-		QuestDay next = new QuestDay(date, completed, hours, milestones, config, random);
+		QuestDay next = new QuestDay(date, completed, hours, milestones, config, random, player);
 		next.retryAt = previous.retryAt;
 		next.rewardFailureReported = previous.rewardFailureReported;
 		return next;
@@ -59,62 +62,83 @@ public final class QuestDay {
 		boolean claimed;
 
 		private final int[] goalProgress;
+		private transient List<QuestDefinition.Objective> matchers;
+		private final List<Set<String>> distinct = new ArrayList<>();
+		final List<UUID> bindings = new ArrayList<>();
 
 		Assignment(QuestDefinition definition, int tier, QuestReward base, Set<String> milestones,
-		           RandomGenerator random) {
-			this.tier =
-			    definition.tiered() || definition.objectives().stream().anyMatch(g -> !g.tiers().isEmpty()) ? tier : 0;
+		           RandomGenerator random, ServerPlayer player) {
+			this.tier = definition.tiered() ? tier : 0;
 			this.definition = definition.resolve(tier, random);
-			this.target = this.definition.objectives().isEmpty()       ? this.definition.count()
+			this.target = this.definition.objectives().size() == 1     ? this.definition.objectives().getFirst().count()
 			              : this.definition.completion().equals("any") ? 1
 			                                                           : this.definition.objectives().size();
 			this.goalProgress = new int[this.definition.objectives().size()];
-			this.reward =
-			    this.definition.rewards() == null ? base : this.definition.rewards().resolve(base, milestones, random);
+			for (var goal : this.definition.objectives()) {
+				distinct.add(new HashSet<>());
+				bindings.add(null);
+			}
+			this.reward = this.definition.rewards() == null
+			                  ? base
+			                  : this.definition.rewards().resolve(base, milestones, random, player);
 		}
 
 		void reset() {
 			progress = 0;
 			claimed = false;
 			Arrays.fill(goalProgress, 0);
+			distinct.forEach(Set::clear);
+			Collections.fill(bindings, null);
 		}
 
-		public int goalProgress(int index) {
-			return definition.objectives().isEmpty() ? progress : goalProgress[index];
-		}
+		public int goalProgress(int index) { return goalProgress[index]; }
 
-		boolean tracks(String event) {
-			return definition.goals().stream().anyMatch(g -> g.objective().event().equals(event));
-		}
+		public Set<String> completedTargets(int index) { return Set.copyOf(distinct.get(index)); }
+		public UUID binding(int index) { return bindings.get(index); }
+
+		boolean tracks(String event) { return definition.objectives().stream().anyMatch(g -> g.event().equals(event)); }
 
 		private boolean update(List<QuestDefinition.Event> events, boolean inventory) {
 			if (complete())
 				return false;
 			boolean changed = false;
-			var goals = definition.goals();
+			if (matchers == null)
+				matchers = definition.objectives().stream().map(QuestDefinition.Goal::objective).toList();
+			var goals = definition.objectives();
 			for (int i = 0; i < goals.size(); i++) {
 				var goal = goals.get(i);
-				if (goal.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()) != inventory)
+				if (goal.event().equals(QuestEventType.INVENTORY_CHANGED.id()) != inventory)
 					continue;
 				int value = inventory ? 0 : goalProgress(i);
-				for (var event : events)
-					if (goal.objective().matches(event))
+				Set<String> completed = distinct.get(i);
+				if (inventory)
+					completed.clear();
+				for (var event : events) {
+					if (!matchers.get(i).matches(event))
+						continue;
+					if (goal.event().equals("entity_converted") && bindings.get(i) != null &&
+					    !event.facts().getOrDefault("subject", Set.of()).contains(bindings.get(i).toString()))
+						continue;
+					if (goal.countBy().equals("distinct")) {
+						for (String identity : goal.identities(event))
+							if (completed.size() < goal.count())
+								completed.add(identity);
+						value = completed.size();
+					} else
 						value += Math.min(event.amount(), goal.count() - value);
+				}
 				if (value != goalProgress(i)) {
-					if (definition.objectives().isEmpty())
-						progress = value;
-					else
-						goalProgress[i] = value;
+					goalProgress[i] = value;
 					changed = true;
 				}
 			}
 			// Inventory goals settle at tick end, after crafting has consumed its inputs.
-			if (!definition.objectives().isEmpty() && (inventory || !tracks(QuestEventType.INVENTORY_CHANGED.id()))) {
+			if (inventory || !tracks(QuestEventType.INVENTORY_CHANGED.id())) {
 				int done = 0;
 				for (int i = 0; i < goals.size(); i++)
 					if (goalProgress[i] >= goals.get(i).count())
 						done++;
-				int updated = Math.min(done, target);
+				int updated = goals.size() == 1 ? goalProgress[0] : Math.min(done, target);
 				changed |= progress != updated;
 				progress = updated;
 			}
@@ -153,14 +177,16 @@ public final class QuestDay {
 		return changed;
 	}
 
-	boolean reroll(int slot, String token, boolean admin, QuestConfig config, RandomGenerator random) {
+	boolean reroll(int slot, String token, boolean admin, QuestConfig config, RandomGenerator random,
+	               ServerPlayer player) {
 		Assignment old = assignments.get(slot);
 		if (!old.token.equals(token) || old.complete() || (!admin && remaining(config) == 0))
 			return false;
 		QuestDefinition next = choose(config, old.definition.difficulty(), random);
 		if (next == null)
 			return false;
-		assignments.set(slot, new Assignment(next, tier, config.rewards().get(next.difficulty()), milestones, random));
+		assignments.set(
+		    slot, new Assignment(next, tier, config.rewards().get(next.difficulty()), milestones, random, player));
 		if (!admin)
 			rerollsUsed++;
 		revision++;

@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -17,12 +18,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import club.sjmc.smp3.item.ItemDefinitions;
+import club.sjmc.smp3.item.RewardBundle;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.block.Block;
 
 public record QuestConfig(int dailyRerollLimit, Progression progression, Map<String, String> milestones,
@@ -73,7 +76,10 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 
 	public static QuestConfig parse(String text) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
-		fields(root, "配置", "dailyRerollLimit", "progression", "milestones", "rewards", "tasks");
+		shape(root, "配置", "dailyRerollLimit progression milestones rewards tasks", "rewardPools");
+		var pools = root.has("rewardPools") ? root.getAsJsonObject("rewardPools") : new JsonObject();
+		expandPools(root.get("tasks"), pools, new HashSet<>());
+		root.remove("rewardPools");
 		integer(root.get("dailyRerollLimit"), "dailyRerollLimit");
 		var progression = root.getAsJsonObject("progression");
 		fields(progression, "progression", "questWeight", "timeWeight", "questCap", "hourCap", "bands");
@@ -93,42 +99,72 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 		fields(root.getAsJsonObject("rewards"), "奖励", "A", "B", "C");
 		for (var reward : root.getAsJsonObject("rewards").entrySet()) {
 			fields(reward.getValue().getAsJsonObject(), "奖励." + reward.getKey(), "tongbao", "coffeeStamp");
+			integer(reward.getValue().getAsJsonObject().get("tongbao"), "rewards." + reward.getKey() + ".tongbao");
+			integer(reward.getValue().getAsJsonObject().get("coffeeStamp"),
+			        "rewards." + reward.getKey() + ".coffeeStamp");
 		}
 		for (var element : root.getAsJsonArray("tasks")) {
 			var task = element.getAsJsonObject();
 			String at = "任务 " + task.get("id");
-			shape(task, at, "id name category difficulty icon",
-			      "description requires rewards objective objectives completion choices count tiers");
-			int kinds =
-			    (task.has("objective") ? 1 : 0) + (task.has("objectives") ? 1 : 0) + (task.has("choices") ? 1 : 0);
-			require(kinds == 1, at + ": specify exactly one of objective, objectives, choices");
-			require(!task.has("completion") || task.has("objectives"), at + ": completion requires objectives");
-			if (task.has("objective"))
-				objective(task.getAsJsonObject("objective"), at + ".objective");
-			if (task.has("objectives")) {
-				require(!task.getAsJsonArray("objectives").isEmpty(), at + ".objectives is empty");
-				require(!task.has("count"), at + ": use each objective's count");
-				for (int i = 0; i < task.getAsJsonArray("objectives").size(); i++) {
-					var goal = task.getAsJsonArray("objectives").get(i).getAsJsonObject();
-					String where = at + ".objectives[" + i + "]";
-					shape(goal, where, "name objective", "count tiers");
-					require(!goal.get("name").getAsString().isBlank(), where + ": empty name");
-					objective(goal.getAsJsonObject("objective"), where + ".objective");
-					counts(goal, where, false, false);
-				}
+			shape(task, at, "id name category difficulty icon objectives",
+			      "description requires rewards completion tiers");
+			require(!task.getAsJsonArray("objectives").isEmpty(), at + ".objectives is empty");
+			for (int i = 0; i < task.getAsJsonArray("objectives").size(); i++) {
+				var goal = task.getAsJsonArray("objectives").get(i).getAsJsonObject();
+				String where = at + ".objectives[" + i + "]";
+				shape(goal, where, "event", "name target conditions count tiers countBy selection");
+				if (!goal.has("name"))
+					goal.addProperty("name", task.get("name").getAsString());
+				if (!goal.has("conditions"))
+					goal.add("conditions", new JsonObject());
+				String countBy = goal.has("countBy") ? goal.get("countBy").getAsString() : "amount";
+				String selection = goal.has("selection") ? goal.get("selection").getAsString() : "any";
+				require(Set.of("amount", "distinct").contains(countBy), where + ": countBy must be amount/distinct");
+				require(Set.of("any", "random").contains(selection), where + ": selection must be any/random");
+				require(goal.has("target") || countBy.equals("amount") && selection.equals("any"),
+				        where + ": target required");
+				var filters = new JsonObject();
+				filters.add("event", goal.get("event"));
+				filters.add("conditions", goal.getAsJsonObject("conditions").deepCopy());
+				if (goal.has("target")) {
+					var target = goal.getAsJsonObject("target");
+					shape(target, where + ".target", "field values", "");
+					String field = target.get("field").getAsString();
+					require(!field.equals("block_state") && !goal.getAsJsonObject("conditions").has(field),
+					        where + ": duplicate or invalid target field");
+					if (target.get("values").isJsonArray() &&
+					    target.getAsJsonArray("values").asList().stream().anyMatch(JsonElement::isJsonObject)) {
+						require(selection.equals("random") && countBy.equals("amount") &&
+						            task.getAsJsonArray("objectives").size() == 1,
+						        where + ": detailed candidates require a single random amount objective");
+						var candidates = target.getAsJsonArray("values");
+						var ids = new JsonArray();
+						for (var entry : candidates) {
+							var candidate = entry.getAsJsonObject();
+							shape(candidate, where + ".target.values", "id",
+							      "name description icon conditions rewards");
+							candidate.addProperty("id", Identifier.parse(candidate.get("id").getAsString()).toString());
+							ids.add(candidate.get("id"));
+							if (candidate.has("rewards"))
+								reward(candidate.getAsJsonObject("rewards"), where + ".candidate.rewards", true);
+							var additional = new JsonObject();
+							additional.add("event", goal.get("event"));
+							additional.add("conditions", candidate.has("conditions") ? candidate.get("conditions")
+							                                                         : new JsonObject());
+							objective(additional, where + ".candidate");
+						}
+						target.add("candidates", candidates);
+						target.add("values", ids);
+					}
+					filters.getAsJsonObject("conditions").add(field, target.get("values"));
+					objective(filters, where);
+					target.add("values", filters.getAsJsonObject("conditions").remove(field));
+				} else
+					objective(filters, where);
+				goal.add("conditions", filters.get("conditions"));
+				counts(goal, where, false, false);
 			}
-			if (task.has("choices")) {
-				require(!task.getAsJsonArray("choices").isEmpty(), at + ".choices is empty");
-				for (int i = 0; i < task.getAsJsonArray("choices").size(); i++) {
-					var choice = task.getAsJsonArray("choices").get(i).getAsJsonObject();
-					String where = at + ".choices[" + i + "]";
-					shape(choice, where, "name objective", "description icon rewards");
-					objective(choice.getAsJsonObject("objective"), where + ".objective");
-					if (choice.has("rewards"))
-						reward(choice.getAsJsonObject("rewards"), where + ".rewards", true);
-				}
-			}
-			counts(task, at, task.has("objectives"), true);
+			counts(task, at, true, true);
 			if (task.has("rewards"))
 				reward(task.getAsJsonObject("rewards"), at + ".rewards", true);
 		}
@@ -167,33 +203,27 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 			Set<Integer> tiers = new HashSet<>();
 			for (var tier : task.tiers()) {
 				require(tiers.add(tier.tier()), task.id() + ": duplicate tier");
-				validateReward(tier.rewards(), task.id() + ".tiers[" + tier.tier() + "].rewards",
-				               rewards.get(task.difficulty()));
+				validateReward(tier.rewards(), task.id() + ".tiers[" + tier.tier() + "].rewards");
 			}
-			validateReward(task.rewards(), task.id() + ".rewards", rewards.get(task.difficulty()));
-			List<QuestDefinition> variants =
-			    task.choices().isEmpty() ? List.of(task) : task.choices().stream().map(task::select).toList();
-			for (var variant : variants) {
-				validateReward(variant.rewards(), task.id() + ".choices.rewards", rewards.get(task.difficulty()));
-				if (variant.description() != null) {
-					var placeholders = QuestDefinition.DESCRIPTION_FIELD.matcher(variant.description());
-					while (placeholders.find()) {
-						String field = placeholders.group(1);
-						require(variant.objectives().isEmpty() &&
-						            (field.equals("count") ||
-						             variant.objective().conditions().has(field) && !field.equals("block_state")),
-						        task.id() + ": invalid description placeholder " + field);
+			validateReward(task.rewards(), task.id() + ".rewards");
+			validateDescription(task.description(),
+			                    task.objectives().size() == 1 ? task.objectives().getFirst().objective().conditions()
+			                                                  : null,
+			                    task.id());
+			for (var goal : task.objectives()) {
+				if (goal.target() != null)
+					for (var candidate : goal.target().candidates()) {
+						validateReward(candidate.rewards(), task.id() + ".candidate.rewards");
+						var filters = goal.objective().conditions();
+						if (candidate.conditions() != null)
+							candidate.conditions().entrySet().forEach(e -> filters.add(e.getKey(), e.getValue()));
+						validateDescription(candidate.description() == null ? task.description()
+						                                                    : candidate.description(),
+						                    filters, task.id());
 					}
-				}
-				for (var goal : variant.objectives()) {
-					var defined = new HashSet<Integer>();
-					for (var tier : goal.tiers())
-						require(defined.add(tier.tier()), task.id() + ": duplicate objective tier");
-					for (var band : progression.bands)
-						if (task.supports(band.tier))
-							require(goal.tiers().isEmpty() || defined.contains(band.tier),
-							        task.id() + ": objective missing tier " + band.tier);
-				}
+				var defined = new HashSet<Integer>();
+				for (var tier : goal.tiers())
+					require(defined.add(tier.tier()), task.id() + ": duplicate objective tier");
 			}
 		}
 		for (var band : progression.bands) {
@@ -209,34 +239,74 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 		}
 	}
 
-	private void validateReward(QuestRewardSpec reward, String at, QuestReward category) {
+	private static void validateDescription(String description, JsonObject conditions, String at) {
+		if (description == null)
+			return;
+		var placeholders = QuestDefinition.DESCRIPTION_FIELD.matcher(description);
+		while (placeholders.find()) {
+			String field = placeholders.group(1);
+			require(conditions != null &&
+			            (field.equals("count") || conditions.has(field) && !field.equals("block_state")),
+			        at + ": invalid description placeholder " + field);
+		}
+	}
+
+	private void validateReward(QuestRewardSpec reward, String at) {
 		if (reward == null)
 			return;
 		for (var branch : reward.when()) {
 			require(!branch.requires().isEmpty() && milestones.keySet().containsAll(branch.requires()),
 			        at + ": invalid milestone references");
-			validateReward(branch.rewards(), at + ".when.rewards", category);
+			validateReward(branch.rewards(), at + ".when.rewards");
 		}
-		Math.addExact(Boolean.FALSE.equals(reward.base()) ? 0 : category.tongbao(), reward.tongbao());
-		Math.addExact(Boolean.FALSE.equals(reward.base()) ? 0 : category.coffeeStamp(), reward.coffeeStamp());
 	}
 
 	public void validateRegistries(RegistryAccess registries, Set<String> dimensions) {
 		for (QuestDefinition task : tasks) {
 			try {
-				List<QuestDefinition> variants =
-				    task.choices().isEmpty() ? List.of(task) : task.choices().stream().map(task::select).toList();
-				for (var variant : variants) {
-					require(registries.lookupOrThrow(Registries.ITEM).containsKey(Identifier.parse(variant.icon())),
-					        "icon does not exist: " + variant.icon());
-					for (int i = 0; i < variant.goals().size(); i++) {
-						try {
-							validateObjective(variant.goals().get(i).objective(), registries, dimensions);
-						} catch (RuntimeException e) {
-							throw new IllegalArgumentException("objectives[" + i + "]: " + e.getMessage(), e);
+				require(registries.lookupOrThrow(Registries.ITEM).containsKey(Identifier.parse(task.icon())),
+				        "icon does not exist: " + task.icon());
+				for (int i = 0; i < task.objectives().size(); i++) {
+					var goal = task.objectives().get(i);
+					validateObjective(goal.objective(), registries, dimensions);
+					if (goal.target() != null) {
+						var expanded = new TreeSet<String>();
+						for (String value : QuestDefinition.values(goal.target().values())) {
+							if (!value.startsWith("#"))
+								expanded.add(value);
+							else
+								QuestField.find(goal.target().field())
+								    .registry(registries)
+								    .getTags()
+								    .filter(t -> t.key().location().equals(Identifier.parse(value.substring(1))))
+								    .forEach(
+								        t
+								        -> t.forEach(
+								            h -> expanded.add(h.unwrapKey().orElseThrow().identifier().toString())));
+						}
+						var values = goal.target().values().getAsJsonArray();
+						values.asList().clear();
+						expanded.stream()
+						    .map(id
+							     -> goal.countBy().equals("distinct") && goal.target().field().equals("block")
+						                ? id.replace("_wall_coral_fan", "_coral_fan")
+										: id)
+						    .distinct()
+						    .forEach(values::add);
+						if (goal.countBy().equals("distinct")) {
+							long size = expanded.stream()
+							                .map(id
+							                     -> goal.target().field().equals("block")
+							                            ? id.replace("_wall_coral_fan", "_coral_fan")
+							                            : id)
+							                .distinct()
+							                .count();
+							for (var band : progression.bands)
+								if (task.supports(band.tier))
+									require(size >= goal.target(band.tier),
+									        "objectives[" + i + "]: insufficient distinct candidates");
 						}
 					}
-					validateItems(variant.rewards(), registries, "rewards/choices");
 				}
 				validateItems(task.rewards(), registries, "rewards");
 				for (var tier : task.tiers())
@@ -247,11 +317,29 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 		}
 	}
 
+	public void validateLoot(MinecraftServer server) { validateLoot(JSON.toJsonTree(tasks), server); }
+	private static void validateLoot(JsonElement value, MinecraftServer server) {
+		if (value.isJsonArray()) {
+			for (var child : value.getAsJsonArray())
+				validateLoot(child, server);
+		} else if (value.isJsonObject()) {
+			var object = value.getAsJsonObject();
+			if (object.has("type") && object.get("type").getAsString().equals("loot_table"))
+				server.reloadableRegistries()
+				    .lookup()
+				    .lookupOrThrow(Registries.LOOT_TABLE)
+				    .getOrThrow(
+				        ResourceKey.create(Registries.LOOT_TABLE, Identifier.parse(object.get("id").getAsString())));
+			for (var entry : object.entrySet())
+				validateLoot(entry.getValue(), server);
+		}
+	}
+
 	private static void validateObjective(QuestDefinition.Objective objective, RegistryAccess registries,
 	                                      Set<String> dimensions) {
 		for (var condition : objective.conditions().entrySet()) {
 			String key = condition.getKey();
-			if (key.equals("block_state") || key.equals("source"))
+			if (key.equals("block_state") || literalValues(key) != null)
 				continue;
 			for (String value : QuestDefinition.values(condition.getValue())) {
 				if (key.equals("dimension")) {
@@ -273,26 +361,31 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 		if (reward == null)
 			return;
 		try {
-			for (int i = 0; i < reward.items().size(); i++) {
-				try {
-					ItemDefinitions.validate(reward.items().get(i), registries);
-				} catch (RuntimeException e) {
-					throw new IllegalArgumentException("items[" + i + "]: " + e.getMessage(), e);
-				}
-			}
-			for (var draw : reward.random()) {
-				var identities = new HashSet<JsonObject>();
-				for (var entry : draw.entries()) {
-					ItemDefinitions.validate(entry.item(), registries);
-					var identity = ItemDefinitions.json(
-					    ItemDefinitions.stack(entry.item(), registries).copyWithCount(1), registries);
-					require(!draw.unique() || identities.add(identity), "random.entries: duplicate unique item");
-				}
-			}
+			RewardBundle.validate(reward.grants(), registries);
 			for (var branch : reward.when())
 				validateItems(branch.rewards(), registries, "when.rewards");
 		} catch (RuntimeException e) {
 			throw new IllegalArgumentException(at + ": " + e.getMessage(), e);
+		}
+	}
+
+	private static void expandPools(JsonElement value, JsonObject pools, Set<String> visiting) {
+		if (value.isJsonArray()) {
+			for (var child : value.getAsJsonArray())
+				expandPools(child, pools, visiting);
+		} else if (value.isJsonObject()) {
+			var object = value.getAsJsonObject();
+			if (object.has("pool")) {
+				String name = object.remove("pool").getAsString();
+				require(pools.has(name) && visiting.add(name), "Unknown or cyclic reward pool: " + name);
+				var options = pools.getAsJsonArray(name).deepCopy();
+				expandPools(options, pools, visiting);
+				visiting.remove(name);
+				require(!object.has("options"), "pool and options are mutually exclusive");
+				object.add("options", options);
+			}
+			for (var child : object.entrySet())
+				expandPools(child.getValue(), pools, visiting);
 		}
 	}
 
@@ -336,9 +429,8 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 				require(value.isJsonPrimitive() && value.getAsJsonPrimitive().isString(),
 				        at + ": condition must be string(s)");
 				String id = value.getAsString();
-				if (key.equals("source"))
-					require(Set.of("crafting", "smelting", "brewing", "smithing", "stonecutting", "loom").contains(id),
-					        at + ": unknown source " + id);
+				if (literalValues(key) != null)
+					require(literalValues(key).contains(id), at + ": unknown " + key + " " + id);
 				else
 					id = id.startsWith("#") ? "#" + Identifier.parse(id.substring(1)) : Identifier.parse(id).toString();
 				normalized.add(id);
@@ -347,42 +439,24 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 		}
 	}
 
+	private static Set<String> literalValues(String key) {
+		return switch (key) {
+			case "source" -> Set.of("crafting", "smelting", "brewing", "smithing", "stonecutting", "loom");
+			case "action" -> Set.of("talk", "repair", "brush");
+			case "movement" -> Set.of("sprint", "swim", "elytra", "crawl");
+			case "variant" -> Set.of("red", "brown");
+			case "loot" -> Set.of("fish", "junk", "treasure");
+			default -> null;
+		};
+	}
+
 	private static void reward(JsonObject reward, String at, boolean branches) {
-		shape(reward, at, "",
-		      branches ? "base tongbao coffeeStamp items random when" : "base tongbao coffeeStamp items random");
+		shape(reward, at, "", branches ? "base grants when" : "base grants");
 		if (reward.has("base"))
 			require(reward.get("base").isJsonPrimitive() && reward.get("base").getAsJsonPrimitive().isBoolean(),
 			        at + ": base must be boolean");
-		for (String field : List.of("tongbao", "coffeeStamp"))
-			if (reward.has(field))
-				require(integer(reward.get(field), at + "." + field) >= 0, at + ": negative currency");
-		if (reward.has("random"))
-			for (var value : reward.getAsJsonArray("random")) {
-				var draw = value.getAsJsonObject();
-				shape(draw, at + ".random", "entries", "draws unique");
-				if (!draw.has("draws"))
-					draw.addProperty("draws", 1);
-				int draws = integer(draw.get("draws"), at + ".random.draws");
-				if (draw.has("unique"))
-					require(draw.get("unique").isJsonPrimitive() && draw.get("unique").getAsJsonPrimitive().isBoolean(),
-					        at + ": unique must be boolean");
-				boolean unique = draw.has("unique") && draw.get("unique").getAsBoolean();
-				var entries = draw.getAsJsonArray("entries");
-				require(draws > 0 && !entries.isEmpty() && (!unique || draws <= entries.size()),
-				        at + ": insufficient random candidates or invalid draws");
-				var identities = new HashSet<JsonObject>();
-				for (var candidate : entries) {
-					var entry = candidate.getAsJsonObject();
-					shape(entry, at + ".random.entries", "item", "weight");
-					if (!entry.has("weight"))
-						entry.addProperty("weight", 1);
-					require(integer(entry.get("weight"), at + ".weight") > 0, at + ": weight must be positive");
-					var identity = entry.getAsJsonObject("item").deepCopy();
-					identity.remove("count");
-					identity.addProperty("id", Identifier.parse(identity.get("id").getAsString()).toString());
-					require(!unique || identities.add(identity), at + ": duplicate unique candidate");
-				}
-			}
+		if (reward.has("grants"))
+			require(reward.get("grants").isJsonArray(), at + ": grants must be an array");
 		if (reward.has("when"))
 			for (var value : reward.getAsJsonArray("when")) {
 				var branch = value.getAsJsonObject();

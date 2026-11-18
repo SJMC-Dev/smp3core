@@ -33,8 +33,7 @@ public final class DailyQuestCommand {
 		                            .then(operation("reroll")))
 		                  .build();
 		root.then(command);
-		for (String alias : List.of("dailyquests", "dailyrequest"))
-			root.then(Commands.literal(alias).executes(command.getCommand()).redirect(command));
+		root.then(Commands.literal("dailyquests").executes(command.getCommand()).redirect(command));
 	}
 
 	private static LiteralArgumentBuilder<CommandSourceStack> operation(String name) {

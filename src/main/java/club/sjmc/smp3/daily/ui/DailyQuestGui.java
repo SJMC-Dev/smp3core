@@ -10,6 +10,7 @@ import club.sjmc.smp3.daily.DailyQuestService;
 import club.sjmc.smp3.daily.QuestDay;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.ItemDelivery;
+import club.sjmc.smp3.item.RewardBundle;
 import club.sjmc.smp3.ui.GuiStyle;
 
 import net.minecraft.ChatFormatting;
@@ -63,7 +64,8 @@ public final class DailyQuestGui extends SimpleGui {
 	}
 
 	private long pendingCount() {
-		return ItemDelivery.pending(player).stream().mapToLong(stack -> stack.getCount()).sum();
+		return ItemDelivery.pending(player).stream().mapToLong(stack -> stack.getCount()).sum() +
+		    ItemDelivery.pendingEffects(player).size();
 	}
 	private void refresh(QuestDay current) {
 		pending = pendingCount();
@@ -117,7 +119,7 @@ public final class DailyQuestGui extends SimpleGui {
 		                                               : task.complete() ? DyeColor.ORANGE
 		                                                                 : DyeColor.WHITE),
 		                               status, color);
-		if (!task.definition.objectives().isEmpty()) {
+		if (task.definition.objectives().size() > 1) {
 			rewardIcon.addLoreLine(Component.empty());
 			rewardIcon.addLoreLine(GuiStyle.text(
 			    task.definition.completion().equals("any") ? "目标：任选一项" : "目标：全部完成", GuiStyle.HEADING));
@@ -128,7 +130,8 @@ public final class DailyQuestGui extends SimpleGui {
 				                                     progress >= goal.count() ? GuiStyle.READY : GuiStyle.MUTED));
 			}
 		}
-		if (task.reward.tongbao() > 0 || task.reward.coffeeStamp() > 0 || !task.reward.items().isEmpty())
+		if (task.reward.tongbao() > 0 || task.reward.coffeeStamp() > 0 || !task.reward.items().isEmpty() ||
+		    !task.reward.effects().isEmpty())
 			rewardIcon.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("奖励", GuiStyle.HEADING));
 		if (task.reward.tongbao() > 0)
 			rewardIcon.addLoreLine(GuiStyle.text("通宝 x " + task.reward.tongbao(), GuiStyle.MUTED));
@@ -139,6 +142,9 @@ public final class DailyQuestGui extends SimpleGui {
 		rewardItems.forEach(item
 		                    -> rewardIcon.addLoreLine(GuiStyle.text(
 		                        item.getHoverName().getString() + " x " + item.getCount(), GuiStyle.MUTED)));
+		for (var effect : task.reward.effects())
+			rewardIcon.addLoreLine(
+			    RewardBundle.description(effect, player.registryAccess()).copy().withStyle(GuiStyle.MUTED));
 		if (!rewardItems.isEmpty())
 			rewardIcon.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("点击查看物品奖励", GuiStyle.ACTION));
 		setSlot(18 + column, GuiStyle

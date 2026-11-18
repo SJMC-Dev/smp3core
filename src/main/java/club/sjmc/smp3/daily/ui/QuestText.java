@@ -21,7 +21,7 @@ final class QuestText {
 
 	static List<Component> lore(QuestDay.Assignment task) {
 		List<Component> parts = new ArrayList<>();
-		if (!task.definition.objectives().isEmpty()) {
+		if (task.definition.objectives().size() > 1) {
 			if (task.definition.description() != null)
 				parts.add(Component.literal(task.definition.description()));
 			else
@@ -29,7 +29,7 @@ final class QuestText {
 				                                                                       : "完成全部子目标。"));
 			return wrap(parts);
 		}
-		var conditions = task.definition.objective().conditions();
+		var conditions = task.definition.objectives().getFirst().objective().conditions();
 		String description = task.definition.description();
 		if (description == null) {
 			conditions.entrySet().forEach(condition -> {
@@ -93,7 +93,22 @@ final class QuestText {
 						case "minecraft:the_end" -> "末地";
 						default -> target;
 					});
-				case "potion", "pattern", "structure" -> Component.literal(target);
+				case "potion", "pattern", "structure", "variant" -> Component.literal(target);
+				case "profession" -> Component.translatable("entity.minecraft.villager." + id.getPath());
+				case "result" -> BuiltInRegistries.ENTITY_TYPE.getValue(id).getDescription();
+				case "movement" ->
+					Component.literal(switch (target) {
+						case "sprint" -> "疾跑";
+						case "swim" -> "游泳";
+						case "elytra" -> "鞘翅滑翔";
+						default -> "爬行";
+					});
+				case "action" ->
+					Component.literal(switch (target) {
+						case "talk" -> "交谈";
+						case "repair" -> "修复";
+						default -> "刷取";
+					});
 				case "item", "template" -> new ItemStack(BuiltInRegistries.ITEM.getValue(id)).getHoverName();
 				default -> Component.translatable(key + "." + id.getNamespace() + "." + id.getPath().replace('/', '.'));
 			});

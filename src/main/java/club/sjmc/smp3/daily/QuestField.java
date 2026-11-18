@@ -15,6 +15,11 @@ public enum QuestField {
 	EFFECT("effect", "效果", Registries.MOB_EFFECT),
 	PATTERN("pattern", "旗帜图案", Registries.BANNER_PATTERN),
 	TEMPLATE("template", "锻造模板", Registries.ITEM),
+	RESULT("result", "转化结果", Registries.ENTITY_TYPE),
+	PROFESSION("profession", "职业", Registries.VILLAGER_PROFESSION),
+	ACTION("action", "交互", null),
+	MOVEMENT("movement", "移动方式", null),
+	VARIANT("variant", "变体", null),
 	SOURCE("source", "加工方式", null),
 	DIMENSION("dimension", "维度", null),
 	BLOCK_STATE("block_state", "方块状态", null);

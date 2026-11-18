@@ -65,7 +65,7 @@ final class ShopScreen extends Screen {
 		contentWidth = x + panelWidth - 18 - contentLeft;
 		headerExtra = headerExtra();
 		bodyTop = y + 50 + headerExtra;
-		footer = y + panelHeight - 55;
+		footer = y + panelHeight - 63;
 		bodyBottom = footer - 20;
 		treeBottom = footer - 4;
 		rowHeight = narrow ? 18 : 24;
@@ -92,9 +92,10 @@ final class ShopScreen extends Screen {
 		int controls = footer + 17, left = x + 18;
 		minus = addRenderableWidget(
 		    new PaperButton(left + 28, controls, 22, "−", false, () -> changeQuantity(Math.max(1, count() - 1))));
-		batches = new EditBox(font, left + 55, controls + 1, 44, 18, Component.literal("交易批数"));
+		batches = new EditBox(font, left + 55, controls + 6, 44, 13, Component.literal("交易批数"));
 		batches.setMaxLength(10);
 		batches.setBordered(false);
+		batches.setCentered(true);
 		batches.setTextShadow(false);
 		batches.setTextColor(PaperStyle.INK);
 		batches.setTooltip(Tooltip.create(Component.literal("输入交易批数")));

@@ -6,6 +6,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import club.sjmc.smp3.daily.DailyQuestEvents;
+import club.sjmc.smp3.item.ItemDelivery;
 
 import net.minecraft.advancements.triggers.InventoryChangeTrigger;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,5 +21,6 @@ public abstract class InventoryQuestMixin {
 	private void
 	smp3$changed(ServerPlayer player, Inventory inventory, ItemStack changed, CallbackInfo ci) {
 		DailyQuestEvents.inventoryChanged(player);
+		ItemDelivery.inventoryChanged(player);
 	}
 }

@@ -13,16 +13,17 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 public final class PackItem extends Item {
+	public enum OpenResult { OPENED, CHANGED, EMPTY }
 	private final boolean choice;
 	public PackItem(Properties properties, boolean choice) {
 		super(properties);
 		this.choice = choice;
 	}
-	public static boolean open(ServerPlayer player, InteractionHand hand, ItemStack expected, int option,
-	                           RandomGenerator random) {
+	public static OpenResult open(ServerPlayer player, InteractionHand hand, ItemStack expected, int option,
+	                              RandomGenerator random) {
 		return ItemDelivery.exchange(player, hand, expected, () -> {
 			ItemDefinitions.validate(ItemDefinitions.json(expected, player.registryAccess()), player.registryAccess());
-			return ItemDefinitions.contents(expected, option, random);
+			return ItemDefinitions.contents(expected, option, random, player);
 		});
 	}
 	public boolean choice() { return choice; }

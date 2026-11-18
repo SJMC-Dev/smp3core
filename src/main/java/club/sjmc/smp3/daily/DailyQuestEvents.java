@@ -16,25 +16,32 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.item.component.SuspiciousStewEffects;
-import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.SuspiciousStewEffects;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 
 public final class DailyQuestEvents {
 	private DailyQuestEvents() {}
 	private static final Set<UUID> inventoryChanges = new HashSet<>();
+	static boolean active(ServerPlayer player, String event) {
+		var service = DailyQuestModule.current();
+		var day = service == null ? null : service.current(player);
+		return day != null && day.assignments.stream().anyMatch(a -> !a.complete() && a.tracks(event));
+	}
+	public static void teleported(ServerPlayer player) { QuestMovement.forget(player.getUUID()); }
 	public static void inventoryChanged(ServerPlayer player) { inventoryChanges.add(player.getUUID()); }
 	static void forgetInventory(UUID player) { inventoryChanges.remove(player); }
 	static void clearInventories() { inventoryChanges.clear(); }
@@ -54,10 +61,9 @@ public final class DailyQuestEvents {
 			return;
 		GlobalPos location = GlobalPos.of(player.level().dimension(), player.blockPosition());
 		boolean moved = !location.equals(day.inventoryLocation);
-		if (day.assignments.stream().anyMatch(a -> !a.complete() && a.definition.goals().stream().anyMatch(g -> {
-			    var conditions = g.objective().conditions();
-			    return g.objective().event().equals(QuestEventType.INVENTORY_CHANGED.id()) &&
-				    (conditions.has("structure") || moved && (conditions.has("biome") || conditions.has("dimension")));
+		if (day.assignments.stream().anyMatch(a -> !a.complete() && a.definition.objectives().stream().anyMatch(g -> {
+			    return g.event().equals(QuestEventType.INVENTORY_CHANGED.id()) &&
+				    (g.hasCondition("structure") || moved && (g.hasCondition("biome") || g.hasCondition("dimension")));
 		    }))) {
 			day.inventoryLocation = location;
 			inventoryChanged(player);
@@ -77,23 +83,29 @@ public final class DailyQuestEvents {
 		PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
 			if (player instanceof ServerPlayer serverPlayer) {
 				block(serverPlayer, QuestEventType.BLOCK_BROKEN.id(), pos, state);
-				if (harvestable(state))
-					block(serverPlayer, QuestEventType.CROP_HARVESTED.id(), pos, state);
 			}
 		});
 	}
 
-	public static boolean harvestable(BlockState state) {
-		return state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state) || state.is(Blocks.PUMPKIN) ||
-		    state.is(Blocks.MELON);
+	public static void entity(ServerPlayer player, String event, Entity entity) {
+		var facts = context(player, player.level(), entity.blockPosition());
+		target(facts, "entity", BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entity.getType()));
+		emit(player, event, facts);
 	}
 
 	public static void block(ServerPlayer player, String event, BlockPos pos, BlockState state) {
 		Map<String, Set<String>> facts = context(player, player.level(), pos);
+		blockFacts(facts, state);
+		emit(player, event, facts);
+	}
+
+	static void blockFacts(Map<String, Set<String>> facts, BlockState state) {
 		target(facts, "block", BuiltInRegistries.BLOCK.wrapAsHolder(state.getBlock()));
+		String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+		if (id.contains("_wall_coral_fan"))
+			facts.get("block").add(id.replace("_wall_coral_fan", "_coral_fan"));
 		for (Property<?> property : state.getProperties())
 			facts.put("state." + property.getName(), Set.of(propertyValue(state, property)));
-		emit(player, event, facts);
 	}
 
 	private static <T extends Comparable<T>> String propertyValue(BlockState state, Property<T> property) {
@@ -103,11 +115,25 @@ public final class DailyQuestEvents {
 	public static void items(ServerPlayer player, String event, Entity source, Collection<ItemStack> stacks) {
 		Map<String, Set<String>> facts = context(player, (ServerLevel)source.level(), source.blockPosition());
 		target(facts, "entity", BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(source.getType()));
+		if (source instanceof Villager villager)
+			target(facts, "profession", villager.getVillagerData().profession());
 		for (ItemStack stack : stacks)
-			if (!stack.isEmpty())
+			if (!stack.isEmpty()) {
 				target(facts, "item", BuiltInRegistries.ITEM.wrapAsHolder(stack.getItem()));
+				if (event.equals(QuestEventType.FISH_CAUGHT.id()))
+					facts.computeIfAbsent("loot", key -> new HashSet<>()).add(fishingLoot(stack));
+			}
 		if (facts.containsKey("item"))
 			emit(player, event, facts);
+	}
+	private static String fishingLoot(ItemStack stack) {
+		if (stack.is(ItemTags.FISHES))
+			return "fish";
+		return stack.is(Items.NAME_TAG) || stack.is(Items.SADDLE) || stack.is(Items.BOW) ||
+		        stack.is(Items.ENCHANTED_BOOK) || stack.is(Items.NAUTILUS_SHELL) ||
+		        stack.is(Items.FISHING_ROD) && stack.isEnchanted()
+		    ? "treasure"
+			: "junk";
 	}
 
 	public static void crafted(ServerPlayer player, ItemStack result, int amount, String source) {
@@ -163,19 +189,18 @@ public final class DailyQuestEvents {
 			emit(player, QuestEventType.STRUCTURE_VISITED.id(), facts);
 	}
 
-	private static Map<String, Set<String>> context(ServerPlayer player, ServerLevel level, BlockPos pos) {
+	public static Map<String, Set<String>> context(ServerPlayer player, ServerLevel level, BlockPos pos) {
 		Map<String, Set<String>> facts = new HashMap<>();
 		facts.put("dimension", Set.of(level.dimension().identifier().toString()));
 		target(facts, "biome", level.getBiome(pos));
 		var service = DailyQuestModule.current();
-		QuestDay day = service == null ? null : service.state(player);
-		if (day != null &&
-		    day.assignments.stream().anyMatch(
-		        a
-		        -> !a.complete() && a.definition.goals().stream().anyMatch(
-		                                g
-		                                -> g.objective().event().equals(QuestEventType.STRUCTURE_VISITED.id()) ||
-		                                       g.objective().conditions().has("structure"))))
+		QuestDay day = service == null ? null : service.current(player);
+		if (day != null && day.assignments.stream().anyMatch(
+		                       a
+		                       -> !a.complete() && a.definition.objectives().stream().anyMatch(
+		                                               g
+		                                               -> g.event().equals(QuestEventType.STRUCTURE_VISITED.id()) ||
+		                                                      g.hasCondition("structure"))))
 			structures(level, pos, facts);
 		return facts;
 	}
@@ -201,17 +226,17 @@ public final class DailyQuestEvents {
 		});
 	}
 
-	private static void target(Map<String, Set<String>> facts, String key, Holder<?> holder) {
+	public static void target(Map<String, Set<String>> facts, String key, Holder<?> holder) {
 		Set<String> values = facts.computeIfAbsent(key, ignored -> new HashSet<>());
 		holder.unwrapKey().ifPresent(id -> values.add(id.identifier().toString()));
 		holder.tags().forEach(tag -> values.add("#" + tag.location()));
 	}
 
-	private static void emit(ServerPlayer player, String event, Map<String, Set<String>> facts) {
+	public static void emit(ServerPlayer player, String event, Map<String, Set<String>> facts) {
 		emit(player, new QuestDefinition.Event(event, facts));
 	}
 
-	private static void emit(ServerPlayer player, QuestDefinition.Event event) {
+	public static void emit(ServerPlayer player, QuestDefinition.Event event) {
 		DailyQuestService service = DailyQuestModule.current();
 		if (service != null && player.isAlive() && !player.isCreative() && !player.isSpectator()) {
 			service.record(player, event);

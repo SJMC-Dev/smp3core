@@ -15,5 +15,8 @@
   "smp3.hud.reset": "Reset Positions",
   "smp3.hud.drag": "Drag the panels to reposition them.",
   "smp3.hud.quests": "Daily Tasks",
-  "smp3.hud.notices": "Notifications"
+  "smp3.hud.notices": "Notifications",
+  "item.smp3.coral_tool": "Coral Wand",
+  "item.smp3.coral_tool.needs_water": "Coral needs water and suitable support to revive",
+  "item.smp3.map_pouch": "Explorer Map Pouch"
 }

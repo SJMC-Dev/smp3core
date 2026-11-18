@@ -27,17 +27,50 @@ final class StructureChecks {
 		var service = DailyQuestModule.current();
 		var day = service.state(player);
 		var definition = QuestConfig.JSON.fromJson("""
-            {"id":"structure_test","name":"结构任务","category":"exploration","difficulty":"C","icon":"minecraft:map",
-             "objectives":[
-              {"name":"访问","count":100,"objective":{"event":"structure_visited","conditions":{"structure":["minecraft:fortress","#minecraft:cats_spawn_as_black"]}}},
-              {"name":"持有","count":100,"objective":{"event":"inventory_changed","conditions":{"item":"minecraft:apple","structure":"minecraft:swamp_hut"}}},
-              {"name":"击杀","count":100,"objective":{"event":"entity_killed","conditions":{"entity":"minecraft:zombie","structure":"minecraft:swamp_hut"}}}
-             ]}
-            """, QuestDefinition.class);
+{
+  "id": "structure_test",
+  "name": "结构任务",
+  "category": "exploration",
+  "difficulty": "C",
+  "icon": "minecraft:map",
+  "objectives": [
+    {
+      "event": "structure_visited",
+      "conditions": {
+        "structure": [
+          "minecraft:fortress",
+          "#minecraft:cats_spawn_as_black"
+        ]
+      },
+      "name": "访问",
+      "count": 100
+    },
+    {
+      "event": "inventory_changed",
+      "conditions": {
+        "item": "minecraft:apple",
+        "structure": "minecraft:swamp_hut"
+      },
+      "name": "持有",
+      "count": 100
+    },
+    {
+      "event": "entity_killed",
+      "conditions": {
+        "entity": "minecraft:zombie",
+        "structure": "minecraft:swamp_hut"
+      },
+      "name": "击杀",
+      "count": 100
+    }
+  ]
+}
+""", QuestDefinition.class);
 		new QuestConfig(0, service.config.progression(), service.config.milestones(), service.config.rewards(),
 		                List.of(definition))
 		    .validateRegistries(player.registryAccess(), Set.of("minecraft:overworld"));
-		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0, List.of()), Set.of(), new Random(1));
+		var task =
+		    new QuestDay.Assignment(definition, 1, new QuestReward(0, 0, List.of()), Set.of(), new Random(1), player);
 		var previous = day.assignments.set(0, task);
 		var position = player.position();
 		var held = player.getInventory().getItem(0);

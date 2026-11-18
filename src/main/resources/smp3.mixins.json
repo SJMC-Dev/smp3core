@@ -20,7 +20,21 @@
     "WatchdogNeighborMixin",
     "WatchdogPlayerMixin",
     "WatchdogServerLevelMixin",
-    "WatchdogServerMixin"
+    "WatchdogServerMixin",
+    "BreedingQuestMixin",
+    "TamingQuestMixin",
+    "ShieldQuestMixin",
+    "ArchaeologyQuestMixin",
+    "PlayerActionQuestMixin",
+    "HarvestQuestMixin",
+    "PortalQuestMixin",
+    "GolemQuestMixin",
+    "EntityInteractionQuestMixin",
+    "OcelotQuestMixin",
+    "AllayQuestMixin",
+    "ArmadilloQuestMixin",
+    "LightningQuestMixin",
+    "MovementQuestMixin"
   ],
   "injectors": {
     "defaultRequire": 1

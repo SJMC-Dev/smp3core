@@ -27,14 +27,17 @@ public final class QuestRewards {
 		return new Stored(json, json == null ? new State() : JSON.fromJson(json, State.class));
 	}
 	private static void commit(ServerPlayer player, Stored stored, Map<Smp3Currency, Integer> credits,
-	                           List<JsonObject> items) {
+	                           List<JsonObject> items, List<JsonObject> effects) {
 		JsonObject next = stored.expected == null ? new JsonObject() : stored.expected.deepCopy();
 		JSON.toJsonTree(stored.state).getAsJsonObject().entrySet().forEach(e -> next.add(e.getKey(), e.getValue()));
 		var day = DailyQuestData.get(player.level().getServer()).players.get(player.getUUID());
 		if (day != null)
 			next.add("questDay", DailyQuestData.JSON.toJsonTree(day));
 		ItemDelivery.queue(next, items);
+		ItemDelivery.queueEffects(next, effects);
 		Smp3AccountStore.commitReward(player.getUUID(), ItemDelivery.LEDGER_KEY, stored.expected, next, credits);
+		if (!items.isEmpty() || !effects.isEmpty())
+			ItemDelivery.request(player);
 	}
 	public record Progress(long completed, long completionDay, int completionSlots, long paidDay, int paidSlots) {
 		public boolean completed(long day, int slot) {
@@ -63,7 +66,7 @@ public final class QuestRewards {
 		state.completionSlots |= 1 << slot;
 		state.completed = Math.incrementExact(state.completed);
 		state.ready.add(new DailyReward(day, slot, name, reward));
-		commit(player, stored, Map.of(), List.of());
+		commit(player, stored, Map.of(), List.of(), List.of());
 	}
 	static void reset(ServerPlayer player, QuestDay day, int slots) {
 		Stored stored = read(player);
@@ -73,7 +76,7 @@ public final class QuestRewards {
 		if (state.paidDay == day.date)
 			state.paidSlots &= ~slots;
 		state.ready.removeIf(entry -> entry.day == day.date && (slots & 1 << entry.slot) != 0);
-		commit(player, stored, Map.of(), List.of());
+		commit(player, stored, Map.of(), List.of(), List.of());
 	}
 	public record DailyReward(long day, int slot, String name, QuestReward reward) {}
 	public static List<DailyReward> ready(ServerPlayer player) {
@@ -96,6 +99,6 @@ public final class QuestRewards {
 		state.ready.removeIf(entry -> entry.day == day && entry.slot == slot);
 		commit(player, stored,
 		       Map.of(Smp3Currency.TONGBAO, reward.tongbao(), Smp3Currency.COFFEE_STAMP, reward.coffeeStamp()),
-		       reward.items());
+		       reward.items(), reward.effects());
 	}
 }

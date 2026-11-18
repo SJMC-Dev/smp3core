@@ -54,33 +54,35 @@
       "category": "crafting",
       "difficulty": "A",
       "icon": "minecraft:oak_planks",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "#minecraft:planks"
-        }
-      },
       "description": "制作 {count} 个{item}。",
-      "tiers": [
+      "objectives": [
         {
-          "tier": 1,
-          "count": 8
-        },
-        {
-          "tier": 2,
-          "count": 16
-        },
-        {
-          "tier": 3,
-          "count": 24
-        },
-        {
-          "tier": 4,
-          "count": 32
-        },
-        {
-          "tier": 5,
-          "count": 64
+          "event": "item_crafted",
+          "conditions": {
+            "item": "#minecraft:planks"
+          },
+          "tiers": [
+            {
+              "tier": 1,
+              "count": 8
+            },
+            {
+              "tier": 2,
+              "count": 16
+            },
+            {
+              "tier": 3,
+              "count": 24
+            },
+            {
+              "tier": 4,
+              "count": 32
+            },
+            {
+              "tier": 5,
+              "count": 64
+            }
+          ]
         }
       ]
     },
@@ -90,29 +92,30 @@
       "category": "collecting",
       "difficulty": "A",
       "icon": "minecraft:oak_log",
-      "objective": {
-        "event": "inventory_changed",
-        "conditions": {
-          "item": [
-            "#minecraft:logs",
-            "minecraft:oak_log"
-          ]
-        }
-      },
       "description": "同时持有 {count} 个{item}。\n可以混合木材，不会收走物品。",
-      "count": 16,
       "requires": [],
       "rewards": {
         "base": false,
-        "tongbao": 0,
-        "coffeeStamp": 0,
-        "items": [
+        "grants": [
           {
+            "type": "item",
             "id": "minecraft:bread",
             "count": 130
           }
         ]
-      }
+      },
+      "objectives": [
+        {
+          "event": "inventory_changed",
+          "conditions": {
+            "item": [
+              "#minecraft:logs",
+              "minecraft:oak_log"
+            ]
+          },
+          "count": 16
+        }
+      ]
     },
     {
       "id": "zombies_a",
@@ -120,19 +123,21 @@
       "category": "combat",
       "difficulty": "A",
       "icon": "minecraft:rotten_flesh",
-      "objective": {
-        "event": "entity_killed",
-        "conditions": {
-          "entity": [
-            "minecraft:zombie",
-            "minecraft:husk"
-          ],
-          "dimension": "minecraft:overworld"
-        }
-      },
       "description": "在{dimension}击败 {count} 只{entity}。",
-      "count": 4,
-      "rewards": {}
+      "rewards": {},
+      "objectives": [
+        {
+          "event": "entity_killed",
+          "conditions": {
+            "entity": [
+              "minecraft:zombie",
+              "minecraft:husk"
+            ],
+            "dimension": "minecraft:overworld"
+          },
+          "count": 4
+        }
+      ]
     },
     {
       "id": "hunting_a",
@@ -140,12 +145,14 @@
       "category": "combat",
       "difficulty": "A",
       "icon": "minecraft:bow",
-      "objective": {
-        "event": "entity_killed",
-        "conditions": {}
-      },
       "description": "亲手或用投射物击杀 {count} 个生物。",
-      "count": 3
+      "objectives": [
+        {
+          "event": "entity_killed",
+          "conditions": {},
+          "count": 3
+        }
+      ]
     },
     {
       "id": "wheat_b",
@@ -153,20 +160,31 @@
       "category": "farming",
       "difficulty": "B",
       "icon": "minecraft:wheat",
-      "objective": {
-        "event": "crop_harvested",
-        "conditions": {
-          "block": "minecraft:wheat"
-        }
-      },
       "description": "收获 {count} 株成熟的{block}。",
-      "count": 16,
       "rewards": {
         "base": true,
-        "tongbao": 5,
-        "coffeeStamp": 1,
-        "items": []
-      }
+        "grants": [
+          {
+            "type": "currency",
+            "id": "smp3:tongbao",
+            "count": 5
+          },
+          {
+            "type": "currency",
+            "id": "smp3:coffee_stamp",
+            "count": 1
+          }
+        ]
+      },
+      "objectives": [
+        {
+          "event": "crop_harvested",
+          "conditions": {
+            "block": "minecraft:wheat"
+          },
+          "count": 16
+        }
+      ]
     },
     {
       "id": "cocoa_b",
@@ -174,18 +192,20 @@
       "category": "farming",
       "difficulty": "B",
       "icon": "minecraft:cocoa_beans",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "minecraft:cocoa",
-          "block_state": {
-            "age": "2"
-          },
-          "biome": "#minecraft:is_jungle"
-        }
-      },
       "description": "在{biome}采收 {count} 个成熟的{block}。",
-      "count": 6
+      "objectives": [
+        {
+          "event": "block_broken",
+          "conditions": {
+            "block": "minecraft:cocoa",
+            "block_state": {
+              "age": "2"
+            },
+            "biome": "#minecraft:is_jungle"
+          },
+          "count": 6
+        }
+      ]
     },
     {
       "id": "logs_b",
@@ -193,21 +213,23 @@
       "category": "forestry",
       "difficulty": "B",
       "icon": "minecraft:oak_log",
-      "objective": {
-        "event": "block_broken",
-        "conditions": {
-          "block": "#minecraft:logs",
-          "block_state": {
-            "axis": "y"
-          },
-          "dimension": [
-            "minecraft:overworld",
-            "minecraft:the_nether"
-          ]
-        }
-      },
       "description": "在{dimension}挖掘 {count} 个竖直放置的{block}。",
-      "count": 12
+      "objectives": [
+        {
+          "event": "block_broken",
+          "conditions": {
+            "block": "#minecraft:logs",
+            "block_state": {
+              "axis": "y"
+            },
+            "dimension": [
+              "minecraft:overworld",
+              "minecraft:the_nether"
+            ]
+          },
+          "count": 12
+        }
+      ]
     },
     {
       "id": "smelting_b",
@@ -215,17 +237,11 @@
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:iron_ingot",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": "minecraft:iron_ingot"
-        }
-      },
       "description": "制作并取出 {count} 个{item}，熔炼或普通合成都可。",
-      "count": 16,
       "rewards": {
-        "items": [
+        "grants": [
           {
+            "type": "item",
             "id": "minecraft:iron_pickaxe",
             "components": {
               "minecraft:custom_name": {
@@ -252,7 +268,16 @@
             }
           }
         ]
-      }
+      },
+      "objectives": [
+        {
+          "event": "item_crafted",
+          "conditions": {
+            "item": "minecraft:iron_ingot"
+          },
+          "count": 16
+        }
+      ]
     },
     {
       "id": "brewing_b",
@@ -260,21 +285,35 @@
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:brewing_stand",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": [
-            "minecraft:potion",
-            "minecraft:splash_potion",
-            "minecraft:lingering_potion"
-          ]
-        }
-      },
       "description": "取出 {count} 瓶实际酿成的药水，任意效果均可。",
-      "count": 3,
       "rewards": {
-        "coffeeStamp": 2
-      }
+        "base": false,
+        "grants": [
+          {
+            "type": "currency",
+            "id": "smp3:tongbao",
+            "count": 50
+          },
+          {
+            "type": "currency",
+            "id": "smp3:coffee_stamp",
+            "count": 2
+          }
+        ]
+      },
+      "objectives": [
+        {
+          "event": "item_crafted",
+          "conditions": {
+            "item": [
+              "minecraft:potion",
+              "minecraft:splash_potion",
+              "minecraft:lingering_potion"
+            ]
+          },
+          "count": 3
+        }
+      ]
     },
     {
       "id": "forest_c",
@@ -282,15 +321,17 @@
       "category": "exploration",
       "difficulty": "C",
       "icon": "minecraft:oak_sapling",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "biome": [
-            "minecraft:forest",
-            "#minecraft:is_taiga"
-          ]
+      "objectives": [
+        {
+          "event": "biome_visited",
+          "conditions": {
+            "biome": [
+              "minecraft:forest",
+              "#minecraft:is_taiga"
+            ]
+          }
         }
-      }
+      ]
     },
     {
       "id": "torch_c",
@@ -298,21 +339,12 @@
       "category": "building",
       "difficulty": "C",
       "icon": "minecraft:torch",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": [
-            "minecraft:torch",
-            "minecraft:wall_torch"
-          ]
-        }
-      },
       "description": "放置 {count} 个{block}，地面或墙上均可。",
-      "count": 8,
       "requires": [],
       "rewards": {
-        "items": [
+        "grants": [
           {
+            "type": "item",
             "id": "minecraft:torch",
             "count": 16,
             "components": {
@@ -320,7 +352,19 @@
             }
           }
         ]
-      }
+      },
+      "objectives": [
+        {
+          "event": "block_placed",
+          "conditions": {
+            "block": [
+              "minecraft:torch",
+              "minecraft:wall_torch"
+            ]
+          },
+          "count": 8
+        }
+      ]
     },
     {
       "id": "trapdoor_c",
@@ -328,18 +372,20 @@
       "category": "building",
       "difficulty": "C",
       "icon": "minecraft:oak_trapdoor",
-      "objective": {
-        "event": "block_placed",
-        "conditions": {
-          "block": "minecraft:oak_trapdoor",
-          "block_state": {
-            "open": "false",
-            "waterlogged": "false"
-          }
-        }
-      },
       "description": "放置 {count} 个关闭且未含水的{block}。",
-      "count": 4
+      "objectives": [
+        {
+          "event": "block_placed",
+          "conditions": {
+            "block": "minecraft:oak_trapdoor",
+            "block_state": {
+              "open": "false",
+              "waterlogged": "false"
+            }
+          },
+          "count": 4
+        }
+      ]
     },
     {
       "id": "fishing_c",
@@ -347,17 +393,19 @@
       "category": "fishing",
       "difficulty": "C",
       "icon": "minecraft:fishing_rod",
-      "objective": {
-        "event": "fish_caught",
-        "conditions": {
-          "item": [
-            "minecraft:cod",
-            "minecraft:salmon"
-          ]
-        }
-      },
       "description": "成功钓到{item}共 {count} 次。",
-      "count": 3
+      "objectives": [
+        {
+          "event": "fish_caught",
+          "conditions": {
+            "item": [
+              "minecraft:cod",
+              "minecraft:salmon"
+            ]
+          },
+          "count": 3
+        }
+      ]
     },
     {
       "id": "food_c",
@@ -365,21 +413,11 @@
       "category": "trading",
       "difficulty": "C",
       "icon": "minecraft:bread",
-      "objective": {
-        "event": "villager_trade",
-        "conditions": {
-          "entity": "minecraft:villager",
-          "item": [
-            "minecraft:bread",
-            "minecraft:apple"
-          ]
-        }
-      },
       "description": "与{entity}交易 {count} 次，购买{item}，任一种均可。",
-      "count": 2,
       "rewards": {
-        "items": [
+        "grants": [
           {
+            "type": "item",
             "id": "smp3:choice_pack",
             "components": {
               "minecraft:custom_name": {
@@ -391,8 +429,9 @@
                 "options": [
                   {
                     "name": "矿工补给",
-                    "items": [
+                    "grants": [
                       {
+                        "type": "item",
                         "id": "minecraft:iron_pickaxe",
                         "components": {
                           "minecraft:enchantments": {
@@ -402,6 +441,7 @@
                         }
                       },
                       {
+                        "type": "item",
                         "id": "minecraft:torch",
                         "count": 32
                       }
@@ -409,12 +449,14 @@
                   },
                   {
                     "name": "旅途补给",
-                    "items": [
+                    "grants": [
                       {
+                        "type": "item",
                         "id": "minecraft:bread",
                         "count": 16
                       },
                       {
+                        "type": "item",
                         "id": "minecraft:potion",
                         "components": {
                           "minecraft:potion_contents": {
@@ -423,25 +465,38 @@
                         }
                       },
                       {
+                        "type": "item",
                         "id": "smp3:random_pack",
                         "components": {
                           "smp3:pack": {
-                            "entries": [
+                            "options": [
                               {
-                                "item": {
-                                  "id": "minecraft:emerald"
-                                },
+                                "name": "minecraft:emerald",
                                 "weight": 3,
-                                "min": 1,
-                                "max": 2
+                                "grants": [
+                                  {
+                                    "id": "minecraft:emerald",
+                                    "type": "item",
+                                    "count": {
+                                      "min": 1,
+                                      "max": 2
+                                    }
+                                  }
+                                ]
                               },
                               {
-                                "item": {
-                                  "id": "minecraft:diamond"
-                                },
+                                "name": "minecraft:diamond",
                                 "weight": 1,
-                                "min": 1,
-                                "max": 1
+                                "grants": [
+                                  {
+                                    "id": "minecraft:diamond",
+                                    "type": "item",
+                                    "count": {
+                                      "min": 1,
+                                      "max": 1
+                                    }
+                                  }
+                                ]
                               }
                             ]
                           }
@@ -454,7 +509,20 @@
             }
           }
         ]
-      }
+      },
+      "objectives": [
+        {
+          "event": "villager_trade",
+          "conditions": {
+            "entity": "minecraft:villager",
+            "item": [
+              "minecraft:bread",
+              "minecraft:apple"
+            ]
+          },
+          "count": 2
+        }
+      ]
     },
     {
       "id": "raiders_c",
@@ -462,16 +530,18 @@
       "category": "combat",
       "difficulty": "C",
       "icon": "minecraft:crossbow",
-      "objective": {
-        "event": "entity_killed",
-        "conditions": {
-          "entity": "#minecraft:raiders"
-        }
-      },
       "description": "击败 {count} 只{entity}。",
-      "count": 2,
       "requires": [
         "diamonds"
+      ],
+      "objectives": [
+        {
+          "event": "entity_killed",
+          "conditions": {
+            "entity": "#minecraft:raiders"
+          },
+          "count": 2
+        }
       ]
     },
     {
@@ -480,61 +550,85 @@
       "category": "trading",
       "difficulty": "C",
       "icon": "minecraft:gold_ingot",
-      "objective": {
-        "event": "piglin_barter",
-        "conditions": {
-          "entity": "minecraft:piglin",
-          "dimension": "minecraft:the_nether"
-        }
-      },
       "description": "在{dimension}与成年{entity}完成 {count} 次金锭交易。",
-      "count": 4,
       "requires": [
         "nether_access",
         "diamonds"
       ],
       "rewards": {
         "base": false,
-        "tongbao": 10,
-        "items": [
+        "grants": [
           {
+            "type": "currency",
+            "id": "smp3:tongbao",
+            "count": 10
+          },
+          {
+            "type": "item",
             "id": "smp3:random_pack",
             "count": 2,
             "components": {
               "smp3:pack": {
                 "draws": 3,
-                "entries": [
+                "options": [
                   {
-                    "item": {
-                      "id": "minecraft:iron_ingot"
-                    },
+                    "name": "minecraft:iron_ingot",
                     "weight": 6,
-                    "min": 2,
-                    "max": 5
+                    "grants": [
+                      {
+                        "id": "minecraft:iron_ingot",
+                        "type": "item",
+                        "count": {
+                          "min": 2,
+                          "max": 5
+                        }
+                      }
+                    ]
                   },
                   {
-                    "item": {
-                      "id": "minecraft:gold_ingot",
-                      "count": 1
-                    },
+                    "name": "minecraft:gold_ingot",
                     "weight": 3,
-                    "min": 1,
-                    "max": 3
+                    "grants": [
+                      {
+                        "id": "minecraft:gold_ingot",
+                        "count": {
+                          "min": 1,
+                          "max": 3
+                        },
+                        "type": "item"
+                      }
+                    ]
                   },
                   {
-                    "item": {
-                      "id": "minecraft:diamond"
-                    },
+                    "name": "minecraft:diamond",
                     "weight": 1,
-                    "min": 1,
-                    "max": 1
+                    "grants": [
+                      {
+                        "id": "minecraft:diamond",
+                        "type": "item",
+                        "count": {
+                          "min": 1,
+                          "max": 1
+                        }
+                      }
+                    ]
                   }
                 ]
               }
             }
           }
         ]
-      }
+      },
+      "objectives": [
+        {
+          "event": "piglin_barter",
+          "conditions": {
+            "entity": "minecraft:piglin",
+            "dimension": "minecraft:the_nether"
+          },
+          "count": 4
+        }
+      ]
     },
     {
       "id": "smithing_c",
@@ -542,23 +636,15 @@
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:smithing_table",
-      "objective": {
-        "event": "item_crafted",
-        "conditions": {
-          "item": [
-            "minecraft:netherite_pickaxe",
-            "minecraft:netherite_sword"
-          ]
-        }
-      },
       "description": "锻造并取出 {count} 件{item}。",
       "requires": [
         "nether_access",
         "diamonds"
       ],
       "rewards": {
-        "items": [
+        "grants": [
           {
+            "type": "item",
             "id": "minecraft:enchanted_book",
             "components": {
               "minecraft:stored_enchantments": {
@@ -567,7 +653,18 @@
             }
           }
         ]
-      }
+      },
+      "objectives": [
+        {
+          "event": "item_crafted",
+          "conditions": {
+            "item": [
+              "minecraft:netherite_pickaxe",
+              "minecraft:netherite_sword"
+            ]
+          }
+        }
+      ]
     },
     {
       "id": "end_visit_c",
@@ -575,18 +672,174 @@
       "category": "exploration",
       "difficulty": "C",
       "icon": "minecraft:end_stone",
-      "objective": {
-        "event": "biome_visited",
-        "conditions": {
-          "dimension": "minecraft:the_end"
-        }
-      },
       "description": "前往{dimension}。本例仅记录完成，不发放奖励。",
       "requires": [
         "end_access"
       ],
       "rewards": {
         "base": false
+      },
+      "objectives": [
+        {
+          "event": "biome_visited",
+          "conditions": {
+            "dimension": "minecraft:the_end"
+          }
+        }
+      ]
+    },
+    {
+      "id": "craft_travel",
+      "name": "扬帆起航",
+      "description": "制作 {count} 件旅行用品：矿车、船、鞍、挽具或两种引导钓竿。",
+      "category": "crafting",
+      "difficulty": "C",
+      "icon": "minecraft:oak_boat",
+      "objectives": [
+        {
+          "event": "item_crafted",
+          "target": {
+            "field": "item",
+            "values": [
+              "#minecraft:boats",
+              "#minecraft:harnesses",
+              "minecraft:minecart",
+              "minecraft:chest_minecart",
+              "minecraft:furnace_minecart",
+              "minecraft:tnt_minecart",
+              "minecraft:hopper_minecart",
+              "minecraft:saddle",
+              "minecraft:carrot_on_a_stick",
+              "minecraft:warped_fungus_on_a_stick"
+            ]
+          },
+          "tiers": [
+            {
+              "tier": 1,
+              "count": 1
+            },
+            {
+              "tier": 2,
+              "count": 2
+            },
+            {
+              "tier": 3,
+              "count": 4
+            }
+          ]
+        }
+      ],
+      "rewards": {
+        "grants": [
+          {
+            "type": "item",
+            "id": "smp3:random_pack",
+            "count": 1,
+            "components": {
+              "minecraft:item_name": {
+                "translate": "item.smp3.map_pouch"
+              },
+              "minecraft:item_model": "smp3:map_pouch",
+              "minecraft:lore": [
+                {
+                  "text": "在主世界开启，随机获得一张探险家地图",
+                  "color": "gray",
+                  "italic": false
+                }
+              ],
+              "smp3:pack": {
+                "draws": 1,
+                "options": [
+                  {
+                    "name": "探险家地图",
+                    "grants": [
+                      {
+                        "type": "loot_table",
+                        "id": "smp3:quests/explorer_maps",
+                        "rolls": 1
+                      }
+                    ]
+                  }
+                ]
+              },
+              "minecraft:use_cooldown": {
+                "seconds": 5,
+                "cooldown_group": "smp3:map_pouch"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "coral_broken",
+      "name": "五彩斑斓的海",
+      "description": "挖掘 {count} 种活珊瑚。珊瑚、珊瑚扇与珊瑚块分别计数，墙扇与地面扇合并计数。",
+      "category": "gathering",
+      "difficulty": "B",
+      "icon": "minecraft:brain_coral",
+      "objectives": [
+        {
+          "event": "block_broken",
+          "target": {
+            "field": "block",
+            "values": [
+              "minecraft:tube_coral",
+              "minecraft:tube_coral_fan",
+              "minecraft:tube_coral_block",
+              "minecraft:brain_coral",
+              "minecraft:brain_coral_fan",
+              "minecraft:brain_coral_block",
+              "minecraft:bubble_coral",
+              "minecraft:bubble_coral_fan",
+              "minecraft:bubble_coral_block",
+              "minecraft:fire_coral",
+              "minecraft:fire_coral_fan",
+              "minecraft:fire_coral_block",
+              "minecraft:horn_coral",
+              "minecraft:horn_coral_fan",
+              "minecraft:horn_coral_block"
+            ]
+          },
+          "countBy": "distinct",
+          "tiers": [
+            {
+              "tier": 1,
+              "count": 3
+            },
+            {
+              "tier": 2,
+              "count": 5
+            },
+            {
+              "tier": 3,
+              "count": 7
+            }
+          ]
+        }
+      ],
+      "rewards": {
+        "grants": [
+          {
+            "type": "item",
+            "id": "smp3:coral_tool",
+            "count": 1,
+            "components": {
+              "minecraft:lore": [
+                {
+                  "text": "右键转换活珊瑚与失活珊瑚",
+                  "color": "gray",
+                  "italic": false
+                },
+                {
+                  "text": "复活需有水，每次成功转换消耗 1 点耐久",
+                  "color": "gray",
+                  "italic": false
+                }
+              ]
+            }
+          }
+        ]
       }
     }
   ]

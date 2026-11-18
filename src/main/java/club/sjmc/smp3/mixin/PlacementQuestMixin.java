@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import club.sjmc.smp3.daily.DailyQuestEvents;
 import club.sjmc.smp3.daily.QuestEventType;
+import club.sjmc.smp3.daily.QuestStructures;
 
 import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.advancements.triggers.ItemUsedOnLocationTrigger;
@@ -20,6 +21,7 @@ public abstract class PlacementQuestMixin {
 	private void smp3$placed(ServerPlayer player, BlockPos pos, ItemInstance tool, CallbackInfo ci) {
 		if ((Object)this == CriteriaTriggers.PLACED_BLOCK) {
 			DailyQuestEvents.block(player, QuestEventType.BLOCK_PLACED.id(), pos, player.level().getBlockState(pos));
+			QuestStructures.placed(player, pos);
 		}
 	}
 }

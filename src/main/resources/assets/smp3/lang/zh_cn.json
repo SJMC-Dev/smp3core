@@ -15,5 +15,8 @@
   "smp3.hud.reset": "重置位置",
   "smp3.hud.drag": "拖动任务与通知区域来调整位置。",
   "smp3.hud.quests": "每日任务",
-  "smp3.hud.notices": "通知"
+  "smp3.hud.notices": "通知",
+  "item.smp3.coral_tool": "珊瑚调色杖",
+  "item.smp3.coral_tool.needs_water": "复活珊瑚需要合适的水域与支撑",
+  "item.smp3.map_pouch": "探险家地图袋"
 }

@@ -121,7 +121,7 @@ public final class DailyQuestGameTest {
 			test.assertTrue(task.progress == 0, "未成熟作物被计数");
 			level.setBlockAndUpdate(pos, Blocks.CARROTS.defaultBlockState().setValue(CropBlock.AGE, 7));
 			player.gameMode.destroyBlock(pos);
-			test.assertTrue(task.progress == 1, "成熟作物未计数");
+			test.assertTrue(task.progress > 1, "成熟作物未按产物数量计数");
 
 			task = select(player, "build_a");
 			level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
@@ -237,25 +237,31 @@ public final class DailyQuestGameTest {
 			    service.config.tasks().stream().filter(t -> t.id().equals("forest_c")).findFirst().orElseThrow();
 			JsonObject conditions = new JsonObject();
 			conditions.addProperty("dimension", "minecraft:the_nether");
-			var exploration = new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
-			                                      new QuestDefinition.Objective("biome_visited", conditions), null,
-			                                      List.of(), List.of(), null, List.of(), "all", List.of());
-			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1));
+			var exploration =
+			    new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
+				                    List.of(new QuestDefinition.Goal("Explore", "biome_visited", null, conditions, 1,
+				                                                     List.of(), "amount", "any")),
+				                    "all", List.of(), List.of(), null);
+			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1),
+			                               player);
 			day.assignments.set(0, task);
 			DailyQuestEvents.explore(player);
 			test.assertTrue(task.progress == 0, "错误维度探索被计数");
 			conditions.remove("dimension");
 			conditions.addProperty("biome", level.getBiome(player.blockPosition()).getRegisteredName());
-			exploration = new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
-			                                  new QuestDefinition.Objective("biome_visited", conditions), null,
-			                                  List.of(), List.of(), null, List.of(), "all", List.of());
-			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1));
+			exploration =
+			    new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
+				                    List.of(new QuestDefinition.Goal("Explore", "biome_visited", null, conditions, 1,
+				                                                     List.of(), "amount", "any")),
+				                    "all", List.of(), List.of(), null);
+			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1),
+			                               player);
 			day.assignments.set(0, task);
 			DailyQuestEvents.explore(player);
 			test.assertTrue(task.complete(), "探索目标未完成");
 
 			var data = DailyQuestData.get(server);
-			QuestDay yesterday = new QuestDay(day.date - 1, 0, 0, Set.of(), service.config, new Random(1));
+			QuestDay yesterday = new QuestDay(day.date - 1, 0, 0, Set.of(), service.config, new Random(1), player);
 			yesterday.assignments.clear();
 			yesterday.assignments.add(task);
 			Smp3AccountStore.commitReward(player.getUUID(), "questsAndPacks",
@@ -263,7 +269,8 @@ public final class DailyQuestGameTest {
 			                              new JsonObject(), Map.of());
 			data.players.put(player.getUUID(), yesterday);
 			day = service.state(player);
-			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1));
+			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1),
+			                               player);
 			task.progress = task.target;
 			day.assignments.set(0, task);
 			long stampsBefore = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP);
@@ -289,14 +296,17 @@ public final class DailyQuestGameTest {
 			                "Automatic reward recovery duplicated or lost old/new day payments");
 			task.claimed = false;
 			task.progress = 0;
-			test.assertTrue(service.state(player).assignments.getFirst().claimed, "账本回执未恢复领取状态");
+			data.players.put(player.getUUID(), QuestConfig.JSON.fromJson(QuestConfig.JSON.toJson(day), QuestDay.class));
+			day = service.state(player);
+			task = day.assignments.getFirst();
+			test.assertTrue(task.claimed, "账本回执未恢复领取状态");
 			day.assignments.get(1).progress = day.assignments.get(1).target;
 			var completed = day.assignments.get(1);
 			day.rerollsUsed = service.config.dailyRerollLimit();
 			var commands = server.getCommands().getDispatcher();
 			String playerName = player.getGameProfile().name();
 			var console = server.createCommandSourceStack();
-			for (String root : List.of("smp3 dailyquest", "smp3 dailyquests", "smp3 dailyrequest")) {
+			for (String root : List.of("smp3 dailyquest", "smp3 dailyquests")) {
 				for (String prefix : List.of("", playerName.substring(0, 2))) {
 					var parsed = commands.parse(root + " " + prefix, console);
 					var suggestions = commands.getCompletionSuggestions(parsed).join().getList();
@@ -320,7 +330,7 @@ public final class DailyQuestGameTest {
 				} catch (CommandSyntaxException expected) {
 				}
 			}
-			for (String root : List.of("smp3 dailyquest", "smp3 dailyquests", "smp3 dailyrequest")) {
+			for (String root : List.of("smp3 dailyquest", "smp3 dailyquests")) {
 				try {
 					commands.execute(root + " " + playerName + " reset", player.createCommandSourceStack());
 					throw new AssertionError("未授权玩家能执行管理命令");
@@ -381,7 +391,7 @@ public final class DailyQuestGameTest {
 			} finally {
 				Files.delete(blockedWrite);
 			}
-			test.assertTrue(commands.execute("smp3 dailyrequest " + playerName + " reset 1", console) == 1,
+			test.assertTrue(commands.execute("smp3 dailyquest " + playerName + " reset 1", console) == 1,
 			                "Completed task reset failed");
 			day = service.state(player);
 			test.assertTrue(
@@ -410,6 +420,8 @@ public final class DailyQuestGameTest {
 			                "Reset did not include all slots");
 			QuestUpdateChecks.rewards(test, player);
 			FeatureChecks.run(test, player);
+			QuestExpansionChecks.run(test, player);
+			QuestItemChecks.run(test, player);
 			data = DailyQuestData.get(server);
 			var savedDay = data.players.get(player.getUUID());
 			data.setDirty(player.getUUID());
@@ -439,7 +451,7 @@ public final class DailyQuestGameTest {
 		QuestDefinition definition =
 		    service.config.tasks().stream().filter(t -> t.id().equals(id)).findFirst().orElseThrow();
 		QuestDay.Assignment assignment = new QuestDay.Assignment(
-		    definition, 1, service.config.rewards().get(definition.difficulty()), Set.of(), new Random(1));
+		    definition, 1, service.config.rewards().get(definition.difficulty()), Set.of(), new Random(1), player);
 		day.assignments.set(0, assignment);
 		return assignment;
 	}

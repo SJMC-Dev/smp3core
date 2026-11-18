@@ -1,15 +1,18 @@
 package club.sjmc.smp3.daily.ui;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 
 import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.item.PackItem;
+import club.sjmc.smp3.item.RewardBundle;
 import club.sjmc.smp3.item.ui.PackGui;
 import club.sjmc.smp3.ui.GuiStyle;
 import club.sjmc.smp3.ui.ReturningGui;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
@@ -26,7 +29,13 @@ public final class QuestRewardsGui extends ReturningGui {
 	}
 	public static void pending(ServerPlayer player) {
 		ItemDelivery.deliver(player);
-		new QuestRewardsGui(player, ItemDelivery.pending(player), true).open();
+		var items = new ArrayList<>(ItemDelivery.pending(player));
+		for (var effect : ItemDelivery.pendingEffects(player)) {
+			var icon = new ItemStack(Items.PAPER);
+			icon.set(DataComponents.CUSTOM_NAME, RewardBundle.description(effect, player.registryAccess()));
+			items.add(icon);
+		}
+		new QuestRewardsGui(player, items, true).open();
 	}
 	public static void preview(ServerPlayer player, List<ItemStack> items) {
 		new QuestRewardsGui(player, items, false).open();

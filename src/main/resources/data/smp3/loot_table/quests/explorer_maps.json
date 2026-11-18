@@ -1,0 +1,146 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "condition": {
+        "type": "minecraft:location_check",
+        "predicate": {
+          "dimension": "minecraft:overworld"
+        }
+      },
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:buried_treasure_map",
+          "weight": 4,
+          "modifier": [
+            {
+              "type": "minecraft:exploration_map",
+              "destination": "#minecraft:on_treasure_maps",
+              "decoration": "minecraft:red_x",
+              "zoom": 1,
+              "search_radius": 32,
+              "skip_existing_chunks": false
+            },
+            {
+              "type": "minecraft:filtered",
+              "item_filter": {
+                "predicates": {
+                  "minecraft:map_id": {}
+                }
+              },
+              "on_fail": {
+                "type": "minecraft:discard"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:ocean_monument_map",
+          "weight": 2,
+          "modifier": [
+            {
+              "type": "minecraft:exploration_map",
+              "destination": "#minecraft:on_ocean_monument_maps",
+              "decoration": "minecraft:monument",
+              "zoom": 1,
+              "search_radius": 32,
+              "skip_existing_chunks": false
+            },
+            {
+              "type": "minecraft:filtered",
+              "item_filter": {
+                "predicates": {
+                  "minecraft:map_id": {}
+                }
+              },
+              "on_fail": {
+                "type": "minecraft:discard"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:woodland_mansion_map",
+          "weight": 1,
+          "modifier": [
+            {
+              "type": "minecraft:exploration_map",
+              "destination": "#minecraft:on_woodland_mansion_maps",
+              "decoration": "minecraft:mansion",
+              "zoom": 1,
+              "search_radius": 32,
+              "skip_existing_chunks": false
+            },
+            {
+              "type": "minecraft:filtered",
+              "item_filter": {
+                "predicates": {
+                  "minecraft:map_id": {}
+                }
+              },
+              "on_fail": {
+                "type": "minecraft:discard"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:buried_trial_chambers_map",
+          "weight": 3,
+          "modifier": [
+            {
+              "type": "minecraft:exploration_map",
+              "destination": "#minecraft:on_buried_trial_chambers_maps",
+              "decoration": "minecraft:trial_chambers",
+              "zoom": 1,
+              "search_radius": 32,
+              "skip_existing_chunks": false
+            },
+            {
+              "type": "minecraft:filtered",
+              "item_filter": {
+                "predicates": {
+                  "minecraft:map_id": {}
+                }
+              },
+              "on_fail": {
+                "type": "minecraft:discard"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:buried_ancient_city_map",
+          "weight": 1,
+          "modifier": [
+            {
+              "type": "minecraft:exploration_map",
+              "destination": "#minecraft:on_ancient_city_maps",
+              "decoration": "minecraft:ancient_city",
+              "zoom": 1,
+              "search_radius": 32,
+              "skip_existing_chunks": false
+            },
+            {
+              "type": "minecraft:filtered",
+              "item_filter": {
+                "predicates": {
+                  "minecraft:map_id": {}
+                }
+              },
+              "on_fail": {
+                "type": "minecraft:discard"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

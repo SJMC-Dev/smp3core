@@ -1,7 +1,5 @@
 package club.sjmc.smp3.item.ui;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
@@ -9,6 +7,7 @@ import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.PackItem;
+import club.sjmc.smp3.item.RewardBundle;
 import club.sjmc.smp3.ui.GuiStyle;
 import club.sjmc.smp3.ui.ReturningGui;
 
@@ -45,9 +44,7 @@ public final class PackGui extends ReturningGui {
 	private static void show(ServerPlayer player, ItemStack pack, InteractionHand hand, Runnable parent) {
 		try {
 			ItemDefinitions.validate(ItemDefinitions.json(pack, player.registryAccess()), player.registryAccess());
-			int count = pack.get(ItemDefinitions.PACK)
-			                .getAsJsonArray(((PackItem)pack.getItem()).choice() ? "options" : "entries")
-			                .size();
+			int count = pack.get(ItemDefinitions.PACK).getAsJsonArray("options").size();
 			PackGui gui = new PackGui(player, pack, hand, Math.min(6, Math.max(3, (count + 8) / 9 + 2)), parent);
 			gui.refresh();
 			gui.open();
@@ -59,7 +56,7 @@ public final class PackGui extends ReturningGui {
 	private void refresh() {
 		GuiStyle.fill(this, size);
 		var definition = pack.get(ItemDefinitions.PACK);
-		var entries = definition.getAsJsonArray(choice ? "options" : "entries");
+		var entries = definition.getAsJsonArray("options");
 		setSlot(4, new GuiElementBuilder(pack.copyWithCount(1))
 		               .addLoreLine(GuiStyle.text(
 		                   choice ? "选择一份补给"
@@ -71,27 +68,19 @@ public final class PackGui extends ReturningGui {
 		for (int slot = 0; slot < capacity && page * capacity + slot < entries.size(); slot++) {
 			int index = page * capacity + slot;
 			var entry = entries.get(index).getAsJsonObject();
-			List<ItemStack> items = new ArrayList<>();
-			if (choice)
-				for (var item : entry.getAsJsonArray("items"))
-					items.add(ItemDefinitions.stack(item.getAsJsonObject(), player.registryAccess()));
-			else
-				items.add(ItemDefinitions.stack(entry.getAsJsonObject("item"), player.registryAccess()));
-			var icon = new GuiElementBuilder(items.getFirst().copyWithCount(
-			    Math.min(items.getFirst().getCount(), items.getFirst().getMaxStackSize())));
-			if (choice) {
-				icon.setName(GuiStyle.text(entry.get("name").getAsString(), GuiStyle.TITLE));
-				for (var item : items)
-					icon.addLoreLine(
-					    GuiStyle.text(item.getHoverName().getString() + " x " + item.getCount(), GuiStyle.MUTED));
-				if (hand != null)
-					icon.addLoreLine(GuiStyle.text("点击选择，消耗 1 个礼包", GuiStyle.ACTIVE));
-			} else {
-				long total =
-				    entries.asList().stream().mapToLong(v -> v.getAsJsonObject().get("weight").getAsLong()).sum();
-				icon.addLoreLine(GuiStyle.text(
-				    "数量 " + entry.get("min").getAsInt() + "–" + entry.get("max").getAsInt(), GuiStyle.MUTED));
-				icon.addLoreLine(GuiStyle.text("权重 " + entry.get("weight").getAsInt() + "/" + total, GuiStyle.MUTED));
+			var icon = GuiStyle.item(Items.BUNDLE, entry.get("name").getAsString(), GuiStyle.TITLE);
+			for (var grant : RewardBundle.objects(entry.getAsJsonArray("grants")))
+				icon.addLoreLine(
+				    RewardBundle.description(grant, player.registryAccess()).copy().withStyle(GuiStyle.MUTED));
+			if (choice && hand != null)
+				icon.addLoreLine(GuiStyle.text("点击选择，消耗 1 个礼包", GuiStyle.ACTIVE));
+			if (!choice) {
+				long total = entries.asList()
+				                 .stream()
+				                 .mapToLong(v -> RewardBundle.number(v.getAsJsonObject(), "weight", 1))
+				                 .sum();
+				icon.addLoreLine(
+				    GuiStyle.text("权重 " + RewardBundle.number(entry, "weight", 1) + "/" + total, GuiStyle.MUTED));
 			}
 			setSlot(9 + offset + slot, GuiStyle
 			                               .onLeftClick(icon,
@@ -123,11 +112,15 @@ public final class PackGui extends ReturningGui {
 		if (redeemed)
 			return;
 		try {
-			redeemed = PackItem.open(player, hand, pack, option, new Random());
+			var result = PackItem.open(player, hand, pack, option, new Random());
+			redeemed = result == PackItem.OpenResult.OPENED;
 			close();
-			player.sendSystemMessage(GuiStyle.text(redeemed ? "礼包已开启，背包不足的物品保留在待领取奖励中"
-			                                                : "手中的礼包已改变，请重新打开",
-			                                       redeemed ? GuiStyle.READY : GuiStyle.ERROR));
+			String message = switch (result) {
+				case OPENED -> "礼包已开启，背包不足的物品保留在待领取奖励中";
+				case CHANGED -> "手中的礼包已改变，请重新打开";
+				case EMPTY -> "未找到可领取的奖励，礼包已保留；地图礼包请在主世界换个位置重试";
+			};
+			player.sendSystemMessage(GuiStyle.text(message, redeemed ? GuiStyle.READY : GuiStyle.ERROR));
 		} catch (RuntimeException e) {
 			close();
 			player.sendSystemMessage(GuiStyle.text("礼包暂未开启，请稍后重试", GuiStyle.ERROR));

@@ -3,10 +3,12 @@ package club.sjmc.smp3.daily.ui;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.gson.JsonPrimitive;
 import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.daily.QuestDay;
+import club.sjmc.smp3.daily.QuestDefinition;
 import club.sjmc.smp3.daily.QuestField;
 import club.sjmc.smp3.ui.GuiStyle;
 
@@ -25,13 +27,32 @@ final class QuestDetailsGui extends SimpleGui {
 		title = task.definition.name();
 		add("任务说明", "目标：" + (task.definition.completion().equals("any") ? "任选一项" : "全部完成"),
 		    QuestText.lore(task));
-		for (var goal : task.definition.goals()) {
+		for (int i = 0; i < task.definition.objectives().size(); i++) {
+			var goal = task.definition.objectives().get(i);
+			String progress = goal.name() + " (" + task.goalProgress(i) + "/" + goal.count() + ")";
+			if (goal.countBy().equals("distinct")) {
+				for (String target : QuestDefinition.values(goal.target().values())) {
+					boolean done = task.completedTargets(i).contains(target);
+					add(progress, done ? "已完成" : "未完成",
+					    QuestText.condition(goal.target().field(), new JsonPrimitive(target)));
+				}
+			}
+			if (goal.event().equals("entity_converted")) {
+				var bound = task.binding(i);
+				var entity = bound == null ? null : player.level().getEntity(bound);
+				add(progress,
+				    bound == null    ? "尚未指定生物"
+				    : entity == null ? "已指定生物"
+				                     : "已指定：" + entity.getDisplayName().getString(),
+				    List.of(GuiStyle.text("空手潜行右键选择或更换目标", GuiStyle.ACTION)));
+			}
 			goal.objective().conditions().entrySet().forEach(condition -> {
+				if (goal.countBy().equals("distinct") && condition.getKey().equals(goal.target().field()))
+					return;
 				String label = QuestField.find(condition.getKey()).label();
 				if (condition.getValue().isJsonArray() && condition.getValue().getAsJsonArray().size() > 1)
 					label += "（任选其一）";
-				add(goal.name() + " x " + goal.count(), label,
-				    QuestText.condition(condition.getKey(), condition.getValue()));
+				add(progress, label, QuestText.condition(condition.getKey(), condition.getValue()));
 			});
 		}
 		refresh();
