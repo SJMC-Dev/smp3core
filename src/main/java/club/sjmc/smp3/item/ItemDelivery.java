@@ -72,12 +72,17 @@ public final class ItemDelivery {
 			apply(player, state);
 		return new Stored(json, state);
 	}
+	private static State pendingState(ServerPlayer player) {
+		JsonObject json = Smp3AccountStore.rewardState(player.getUUID(), LEDGER_KEY, "sequence", "pending");
+		State state = json == null ? new State() : JSON.fromJson(json, State.class);
+		return player.getAttachedOrElse(APPLIED, 0L) < state.sequence ? read(player).state : state;
+	}
+
 	private static void commit(ServerPlayer player, Stored stored) {
 		JsonObject next = stored.expected == null ? new JsonObject() : stored.expected.deepCopy();
 		JSON.toJsonTree(stored.state).getAsJsonObject().entrySet().forEach(e -> next.add(e.getKey(), e.getValue()));
 		Smp3AccountStore.commitReward(player.getUUID(), LEDGER_KEY, stored.expected, next, Map.of());
 	}
-	public static JsonObject ledgerState(ServerPlayer player) { return read(player).expected; }
 
 	// Quest settlement appends items in the same ledger commit as its currency and receipt.
 	public static void queue(JsonObject state, List<JsonObject> items) {
@@ -94,8 +99,8 @@ public final class ItemDelivery {
 	}
 
 	public static List<ItemStack> pending(ServerPlayer player) {
-		return read(player)
-		    .state.pending.stream()
+		return pendingState(player)
+		    .pending.stream()
 		    .map(item -> ItemDefinitions.stack(item, player.registryAccess()))
 		    .toList();
 	}
@@ -120,9 +125,9 @@ public final class ItemDelivery {
 		return true;
 	}
 	public static void deliver(ServerPlayer player) {
-		Stored stored = read(player);
-		if (stored.state.pending.isEmpty())
+		if (pendingState(player).pending.isEmpty())
 			return;
+		Stored stored = read(player);
 		List<ItemStack> inventory = inventory(player);
 		if (insert(player, stored.state, inventory))
 			checkpoint(player, stored, inventory);

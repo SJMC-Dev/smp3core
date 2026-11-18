@@ -23,13 +23,16 @@ public final class QuestRewards {
 	}
 	private record Stored(JsonObject expected, State state) {}
 	private static Stored read(ServerPlayer player) {
-		JsonObject json = ItemDelivery.ledgerState(player);
+		JsonObject json = Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY);
 		return new Stored(json, json == null ? new State() : JSON.fromJson(json, State.class));
 	}
 	private static void commit(ServerPlayer player, Stored stored, Map<Smp3Currency, Integer> credits,
 	                           List<JsonObject> items) {
 		JsonObject next = stored.expected == null ? new JsonObject() : stored.expected.deepCopy();
 		JSON.toJsonTree(stored.state).getAsJsonObject().entrySet().forEach(e -> next.add(e.getKey(), e.getValue()));
+		var day = DailyQuestData.get(player.level().getServer()).players.get(player.getUUID());
+		if (day != null)
+			next.add("questDay", DailyQuestData.JSON.toJsonTree(day));
 		ItemDelivery.queue(next, items);
 		Smp3AccountStore.commitReward(player.getUUID(), ItemDelivery.LEDGER_KEY, stored.expected, next, credits);
 	}
@@ -42,7 +45,9 @@ public final class QuestRewards {
 		}
 	}
 	public static Progress progress(ServerPlayer player) {
-		State state = read(player).state;
+		JsonObject json = Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY, "completed",
+		                                               "completionDay", "completionSlots", "paidDay", "paidSlots");
+		State state = json == null ? new State() : JSON.fromJson(json, State.class);
 		return new Progress(state.completed, state.completionDay, state.completionSlots, state.paidDay,
 		                    state.paidSlots);
 	}
@@ -60,8 +65,21 @@ public final class QuestRewards {
 		state.ready.add(new DailyReward(day, slot, name, reward));
 		commit(player, stored, Map.of(), List.of());
 	}
+	static void reset(ServerPlayer player, QuestDay day, int slots) {
+		Stored stored = read(player);
+		State state = stored.state;
+		if (state.completionDay == day.date)
+			state.completionSlots &= ~slots;
+		if (state.paidDay == day.date)
+			state.paidSlots &= ~slots;
+		state.ready.removeIf(entry -> entry.day == day.date && (slots & 1 << entry.slot) != 0);
+		commit(player, stored, Map.of(), List.of());
+	}
 	public record DailyReward(long day, int slot, String name, QuestReward reward) {}
-	public static List<DailyReward> ready(ServerPlayer player) { return List.copyOf(read(player).state.ready); }
+	public static List<DailyReward> ready(ServerPlayer player) {
+		JsonObject json = Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY, "ready");
+		return json == null ? List.of() : List.copyOf(JSON.fromJson(json, State.class).ready);
+	}
 	public static void grant(ServerPlayer player, DailyReward entitlement) {
 		long day = entitlement.day;
 		int slot = entitlement.slot;

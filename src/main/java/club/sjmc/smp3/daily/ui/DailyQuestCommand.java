@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.daily.DailyQuestModule;
@@ -25,22 +26,49 @@ public final class DailyQuestCommand {
 	private DailyQuestCommand() {}
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-		var reset =
-		    Commands.literal("reset")
-		        .executes(context -> reset(context.getSource(), EntityArgument.getPlayer(context, "player"), -1))
-		        .then(Commands.argument("slot", IntegerArgumentType.integer(1, 4))
-				          .suggests((context,
-				                     builder) -> SharedSuggestionProvider.suggest(List.of("1", "2", "3", "4"), builder))
-				          .executes(context
-				                    -> reset(context.getSource(), EntityArgument.getPlayer(context, "player"),
-				                             IntegerArgumentType.getInteger(context, "slot") - 1)));
 		var command = dispatcher.register(
 		    Commands.literal("dailyquest")
 		        .executes(context -> DailyQuestGui.show(context.getSource().getPlayerOrException()) ? 1 : 0)
 		        .then(Commands.argument("player", EntityArgument.player())
 				          .requires(DailyQuestCommand::mayReset)
-				          .then(reset)));
-		dispatcher.register(Commands.literal("dailyquests").executes(command.getCommand()).redirect(command));
+				          .then(operation("reset"))
+				          .then(operation("reroll"))));
+		for (String alias : List.of("dailyquests", "dailyrequest"))
+			dispatcher.register(Commands.literal(alias).executes(command.getCommand()).redirect(command));
+	}
+
+	private static LiteralArgumentBuilder<CommandSourceStack> operation(String name) {
+		return Commands.literal(name)
+		    .executes(context -> execute(context.getSource(), EntityArgument.getPlayer(context, "player"), -1, name))
+		    .then(Commands.argument("slot", IntegerArgumentType.integer(1, 4))
+		              .suggests(
+		                  (context, builder) -> SharedSuggestionProvider.suggest(List.of("1", "2", "3", "4"), builder))
+		              .executes(context
+		                        -> execute(context.getSource(), EntityArgument.getPlayer(context, "player"),
+		                                   IntegerArgumentType.getInteger(context, "slot") - 1, name)));
+	}
+
+	private static int execute(CommandSourceStack source, ServerPlayer target, int slot, String operation) {
+		if (operation.equals("reroll"))
+			return reroll(source, target, slot);
+		try {
+			var service = DailyQuestModule.current();
+			if (service == null)
+				throw new IllegalStateException("每日任务不可用");
+			int changed = service.reset(target, slot);
+			source.sendSuccess(
+			    ()
+			        -> Component.literal("已重置 " + target.getName().getString() + " 的 " + changed + " 项每日任务"),
+			    false);
+			target.sendSystemMessage(Component.literal("管理员已重置你的 " + changed + " 项每日任务"));
+			Smp3Core.LOGGER.info("Quest reset operator={} target={} slot={}", source.getTextName(), target.getUUID(),
+			                     slot + 1);
+			return changed;
+		} catch (RuntimeException error) {
+			Smp3Core.LOGGER.error("Quest reset failed", error);
+			source.sendFailure(Component.literal("重置失败：" + error.getMessage()));
+			return 0;
+		}
 	}
 
 	private static boolean mayReset(CommandSourceStack source) {
@@ -52,7 +80,7 @@ public final class DailyQuestCommand {
 		    Permissions.has(player, RESET_PERMISSION, false);
 	}
 
-	private static int reset(CommandSourceStack source, ServerPlayer target, int requested) {
+	private static int reroll(CommandSourceStack source, ServerPlayer target, int requested) {
 		DailyQuestService service = DailyQuestModule.current();
 		QuestDay day = service == null ? null : service.state(target);
 		if (day == null) {

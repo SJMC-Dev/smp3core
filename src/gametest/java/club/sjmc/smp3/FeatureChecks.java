@@ -1,12 +1,10 @@
 package club.sjmc.smp3;
 
-import java.time.YearMonth;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.loader.api.FabricLoader;
+import java.time.YearMonth;
 import java.util.Map;
 
 import com.google.gson.Gson;
@@ -30,6 +28,8 @@ import club.sjmc.smp3.sign.ui.SignGui;
 import club.sjmc.smp3.time.ServerDates;
 import club.sjmc.smp3.time.SignDateChecks;
 
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -48,7 +48,16 @@ public final class FeatureChecks implements ModInitializer {
 		var path = FabricLoader.getInstance().getConfigDir().resolve("smp3/dailyquests.json");
 		try (var input = FeatureChecks.class.getResourceAsStream("/dailyquests-fixture.json")) {
 			Files.createDirectories(path.getParent());
+			var accounts = path.resolveSibling("accounts");
+			if (Files.isDirectory(accounts)) {
+				try (var files = Files.list(accounts)) {
+					for (var file : files.toList())
+						Files.delete(file);
+				}
+			}
 			Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING);
+			Files.writeString(path.resolveSibling("notices.json"), "{\"categories\":[],\"entries\":[]}");
+			Files.writeString(path.resolveSibling("client.json"), "{\"questHudVisible\":false}");
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}

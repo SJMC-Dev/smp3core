@@ -69,7 +69,7 @@ public final class WatchdogGameTest {
 		var dispatcher = test.getLevel().getServer().getCommands().getDispatcher();
 		var player = (ServerPlayer)test.makeMockServerPlayer(GameType.SURVIVAL);
 		try {
-			dispatcher.execute("smp3perf cleanup on", player.createCommandSourceStack());
+			dispatcher.execute("smp3 perf cleanup on", player.createCommandSourceStack());
 			throw new AssertionError("Unauthorized watchdog command accepted");
 		} catch (CommandSyntaxException expected) {
 		}
@@ -111,7 +111,7 @@ public final class WatchdogGameTest {
 			    try {
 				    var active = read(configField, module);
 				    String saved = Files.readString(file);
-				    test.assertTrue(dispatcher.execute("smp3perf cleanup", console) == 1,
+				    test.assertTrue(dispatcher.execute("smp3 perf cleanup", console) == 1,
 					                "Cleanup status command failed");
 				    test.assertTrue(read(configField, module) == active && Files.readString(file).equals(saved),
 					                "Status command changed configuration");

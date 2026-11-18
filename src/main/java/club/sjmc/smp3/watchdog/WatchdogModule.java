@@ -259,7 +259,7 @@ public final class WatchdogModule {
 
 	public int status(CommandSourceStack source) {
 		if (config == null) {
-			source.sendFailure(Component.literal("Cleanup configuration is not loaded. Use /smp3perf reload."));
+			source.sendFailure(Component.literal("Cleanup configuration is not loaded. Use /smp3 perf reload."));
 			return 0;
 		}
 		send(source, Component.literal("Automatic cleanup: ")

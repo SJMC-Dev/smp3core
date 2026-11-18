@@ -11,38 +11,40 @@ public final class EconomyChecks {
 	public static void run() throws Exception {
 		var directory = Files.createTempDirectory("smp3-economy-check-");
 		try {
-			var file = directory.resolve("economy.json");
 			UUID player = UUID.randomUUID();
-			Files.writeString(file, "{\"balances\":{\"" + player + "\":3000}}");
-			var ledger = new Smp3AccountStore.Ledger(file);
+			var file = directory.resolve(player + ".json");
+			Files.writeString(file, "{\"balances\":{\"tongbao\":3000},\"rewardStates\":{}}");
+			UUID other = UUID.randomUUID();
+			Files.writeString(directory.resolve(other + ".json"), "broken unrelated account");
+			var ledger = new Smp3AccountStore.Ledger(directory);
 			assert ledger.balance(player, "tongbao") == 3000;
 			var empty = new JsonObject();
 			empty.addProperty("signed", false);
 			ledger.updateReward(player, "sign", null, empty, Map.of());
 			var signed = empty.deepCopy();
 			signed.addProperty("signed", true);
-			Files.createDirectory(directory.resolve("economy.json.tmp"));
+			Files.createDirectory(directory.resolve(player + ".json.tmp"));
 			try {
 				ledger.updateReward(player, "sign", empty, signed, Map.of("tongbao", 3000L));
 				throw new AssertionError("Reward write failure accepted");
 			} catch (IllegalStateException expected) {
 			}
 			assert ledger.balance(player, "tongbao") == 3000 && ledger.rewardState(player, "sign").equals(empty);
-			Files.delete(directory.resolve("economy.json.tmp"));
+			Files.delete(directory.resolve(player + ".json.tmp"));
 			ledger.updateReward(player, "sign", empty, signed, Map.of("tongbao", 3000L));
 			try {
 				ledger.updateReward(player, "sign", empty, signed, Map.of("tongbao", 3000L));
 				throw new AssertionError("Stale reward committed twice");
 			} catch (IllegalStateException expected) {
 			}
-			var recovered = new Smp3AccountStore.Ledger(file);
+			var recovered = new Smp3AccountStore.Ledger(directory);
 			assert recovered.balance(player, "tongbao") == 6000 && recovered.rewardState(player, "sign").equals(signed);
 			signed.addProperty("signed", false);
 			assert recovered.rewardState(player, "sign").get("signed").getAsBoolean();
 
 			Files.writeString(file, "broken");
 			try {
-				new Smp3AccountStore.Ledger(file).set(player, "tongbao", 0);
+				new Smp3AccountStore.Ledger(directory).set(player, "tongbao", 0);
 				throw new AssertionError("损坏账本被覆盖");
 			} catch (IllegalStateException expected) {
 			}

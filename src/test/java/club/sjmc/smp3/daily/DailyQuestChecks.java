@@ -14,6 +14,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import club.sjmc.smp3.economy.EconomyChecks;
+import club.sjmc.smp3.notice.NoticeChecks;
 import club.sjmc.smp3.time.DateChecks;
 import club.sjmc.smp3.watchdog.hotspot.HotspotChecks;
 
@@ -249,6 +250,7 @@ public final class DailyQuestChecks {
 		EconomyChecks.run();
 		HotspotChecks.run();
 		DateChecks.run();
+		NoticeChecks.run();
 		System.out.println(
 		    "每日任务验证通过：配置、事件匹配与合成数量、成长档位、跨日、刷新、快照、双货币去重及写入故障恢复。");
 	}

@@ -43,7 +43,12 @@ public final class DailyQuestModule {
 				Smp3Core.LOGGER.error("[SMP3] 每日任务停用，检查配置或存档", e);
 			}
 		});
+		ServerLifecycleEvents.BEFORE_SAVE.register((server, flush, force) -> {
+			if (instance != null)
+				DailyQuestData.get(server).save();
+		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			DailyQuestData.clear();
 			instance = null;
 			hudSnapshots.clear();
 			DailyQuestEvents.clearInventories();
@@ -76,7 +81,7 @@ public final class DailyQuestModule {
 				                                              a.tracks(QuestEventType.STRUCTURE_VISITED.id())))) {
 					DailyQuestEvents.explore(player);
 				}
-				instance.settle(player);
+				instance.settle(player, day);
 				syncHud(player, day);
 			}
 		});

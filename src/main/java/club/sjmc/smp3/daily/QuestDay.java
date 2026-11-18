@@ -1,6 +1,7 @@
 package club.sjmc.smp3.daily;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -70,6 +71,12 @@ public final class QuestDay {
 			this.goalProgress = new int[this.definition.objectives().size()];
 			this.reward =
 			    this.definition.rewards() == null ? base : this.definition.rewards().resolve(base, milestones, random);
+		}
+
+		void reset() {
+			progress = 0;
+			claimed = false;
+			Arrays.fill(goalProgress, 0);
 		}
 
 		public int goalProgress(int index) {

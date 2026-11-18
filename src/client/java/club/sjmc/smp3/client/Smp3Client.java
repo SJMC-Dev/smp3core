@@ -5,14 +5,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.daily.QuestHudPayload;
+import club.sjmc.smp3.economy.BalanceSync;
+import club.sjmc.smp3.hud.HudSettingsPayload;
+import club.sjmc.smp3.notice.NoticePayloads;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -22,61 +24,113 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.resources.Identifier;
 
 public final class Smp3Client implements ClientModInitializer {
 	static final QuestHud HUD = new QuestHud();
-	static final HudPreview PREVIEW = new HudPreview();
+	static final ServerBookState BOOK = new ServerBookState();
 	static HudLayout layout = new HudLayout();
+	private static boolean pendingSettings;
+	private static NoticePayloads.Editor pendingEditor;
 	private static final Path SETTINGS = FabricLoader.getInstance().getConfigDir().resolve("smp3/client.json");
 	private static final Gson JSON = new Gson();
-	private record Preferences(boolean questHudVisible, HudLayout layout) {}
+	private record
+	    Preferences(@SerializedName(value = "hudVisible", alternate = {"questHudVisible"}) Boolean hudVisible,
+		            HudLayout layout) {}
 
 	@Override
 	public void onInitializeClient() {
 		loadPreferences();
-		ClientCommandRegistrationCallback.EVENT.register(
-		    (dispatcher, access) -> dispatcher.register(ClientCommands.literal("smpinfo").executes(context -> {
-			    Minecraft.getInstance().schedule(() -> openBook());
-			    return 1;
-		    })));
+		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Editor.TYPE, (payload, context) -> {
+			if (!payload.draft().isEmpty())
+				pendingEditor = payload;
+			else if (context.client().gui.screen() instanceof NoticeEditorScreen screen)
+				screen.result(payload);
+		});
+		ClientPlayNetworking.registerGlobalReceiver(HudSettingsPayload.TYPE,
+		                                            (request, context) -> pendingSettings = true);
+		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Catalog.TYPE,
+		                                            (catalog, context) -> BOOK.accept(catalog));
+		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Body.TYPE, (body, context) -> BOOK.accept(body));
+		ClientPlayNetworking.registerGlobalReceiver(BalanceSync.Payload.TYPE, (balance, context) -> {
+			if (balance.initial()) {
+				BOOK.coins.clear();
+				BOOK.stamps.clear();
+			}
+			if (balance.coins() < 0)
+				BOOK.coins.clear();
+			else
+				BOOK.coins.set(balance.coins());
+			if (balance.stamps() < 0)
+				BOOK.stamps.clear();
+			else
+				BOOK.stamps.set(balance.stamps());
+			if (context.client().gui.screen() instanceof ServerBookScreen screen)
+				screen.contentChanged();
+		});
 		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("smp3", "main"));
-		KeyMapping toggle =
-		    KeyMappingHelper.registerKeyMapping(new KeyMapping("key.smp3.quest_hud", InputConstants.KEY_H, category));
+		KeyMapping toggle = KeyMappingHelper.registerKeyMapping(
+		    new KeyMapping("key.smp3.quest_hud", InputConstants.UNKNOWN.getValue(), category));
 		ClientPlayNetworking.registerGlobalReceiver(QuestHudPayload.TYPE,
 		                                            (snapshot, context) -> HUD.state.accept(snapshot, HUD.visible));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			HUD.state.clear();
-			PREVIEW.clear();
+			BOOK.clear();
+			pendingSettings = false;
+			pendingEditor = null;
 		});
 		HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, QuestHudPayload.TYPE.id(), HUD::render);
 		KeyMapping book = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.server_info", InputConstants.UNKNOWN.getValue(), category));
+		KeyMapping settings = KeyMappingHelper.registerKeyMapping(
+		    new KeyMapping("key.smp3.hud_settings", InputConstants.UNKNOWN.getValue(), category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			if (pendingEditor != null && client.player != null && client.level != null &&
+			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||
+			     client.gui.screen() instanceof ServerBookScreen)) {
+				client.gui.setScreen(new NoticeEditorScreen(pendingEditor));
+				pendingEditor = null;
+			}
+			if (BOOK.pendingOpen != null && client.player != null && client.level != null &&
+			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||
+			     client.gui.screen() instanceof ServerBookScreen)) {
+				boolean required = !BOOK.pendingOpen.equals("*");
+				if (required) {
+					BOOK.category = 0;
+					for (int i = 0; i < BOOK.messages.size(); i++)
+						if (BOOK.messages.get(i).id().equals(BOOK.pendingOpen))
+							BOOK.selected = i;
+				}
+				BOOK.pendingOpen = null;
+				client.gui.setScreen(new ServerBookScreen(required));
+			}
+			if (pendingSettings && client.player != null && client.level != null &&
+			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen)) {
+				pendingSettings = false;
+				client.gui.setScreen(new HudSettingsScreen());
+			}
+			while (toggle.consumeClick())
+				if (client.player != null && client.gui.screen() == null)
+					toggleHud();
 			while (book.consumeClick())
 				if (client.player != null && client.gui.screen() == null)
 					openBook();
-			while (toggle.consumeClick()) {
-				if (client.player != null && client.gui.screen() == null) {
-					toggleQuests();
-				}
-			}
+			while (settings.consumeClick())
+				if (client.player != null && client.gui.screen() == null)
+					client.gui.setScreen(new HudSettingsScreen());
 			if (client.gui.hud.isHidden())
-				HUD.displayedState().finishAnimations();
+				HUD.state.finishAnimations();
 		});
 	}
 
-	static void toggleQuests() {
+	static void toggleHud() {
 		HUD.visible = !HUD.visible;
 		HUD.state.setVisible(HUD.visible);
-		PREVIEW.quests.setVisible(HUD.visible);
 		savePreferences();
 	}
 
-	static void openBook() {
-		PREVIEW.enable();
-		Minecraft.getInstance().gui.setScreen(new ServerBookScreen());
-	}
+	static void openBook() { Minecraft.getInstance().gui.setScreen(new ServerBookScreen()); }
 
 	private static void loadPreferences() {
 		if (!Files.exists(SETTINGS))
@@ -84,7 +138,8 @@ public final class Smp3Client implements ClientModInitializer {
 		try {
 			Preferences preferences = JSON.fromJson(Files.readString(SETTINGS), Preferences.class);
 			if (preferences != null) {
-				HUD.visible = preferences.questHudVisible;
+				if (preferences.hudVisible != null)
+					HUD.visible = preferences.hudVisible;
 				if (preferences.layout != null)
 					layout = preferences.layout;
 			}

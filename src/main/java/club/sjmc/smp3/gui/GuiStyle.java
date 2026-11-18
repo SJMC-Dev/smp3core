@@ -18,6 +18,8 @@ import net.minecraft.world.item.Items;
 public final class GuiStyle {
 	private static final DateTimeFormatter RESET_TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm");
 	public static final ChatFormatting TITLE = ChatFormatting.WHITE;
+	public static final ChatFormatting HEADING = ChatFormatting.GOLD;
+	public static final ChatFormatting ACTION = ChatFormatting.YELLOW;
 	public static final ChatFormatting ACTIVE = ChatFormatting.WHITE;
 	public static final ChatFormatting READY = ChatFormatting.GREEN;
 	public static final ChatFormatting MUTED = ChatFormatting.GRAY;
@@ -27,6 +29,18 @@ public final class GuiStyle {
 
 	public static Component text(String value, ChatFormatting color) {
 		return Component.literal(value).withStyle(color);
+	}
+
+	public static Component windowTitle(String title) {
+		return Component.literal(title).withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.BOLD);
+	}
+
+	public static ChatFormatting difficulty(String category) {
+		return switch (category) {
+			case "B" -> ChatFormatting.GREEN;
+			case "C" -> ChatFormatting.GOLD;
+			default -> ChatFormatting.WHITE;
+		};
 	}
 
 	public static Component resetInfo() {

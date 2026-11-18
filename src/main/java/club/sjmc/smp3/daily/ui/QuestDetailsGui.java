@@ -39,10 +39,10 @@ final class QuestDetailsGui extends SimpleGui {
 
 	private void add(String name, String label, List<Component> lines) {
 		for (int start = 0; start < lines.size(); start += 6) {
-			var icon = GuiStyle.item(Items.PAPER, name, GuiStyle.TITLE)
+			var icon = GuiStyle.item(Items.PAPER, name, GuiStyle.HEADING)
 			               .addLoreLine(GuiStyle.text(
 			                   label + (lines.size() > 6 ? " " + (start / 6 + 1) + "/" + ((lines.size() + 5) / 6) : ""),
-			                   GuiStyle.TITLE))
+			                   GuiStyle.HEADING))
 			               .addLoreLine(Component.empty());
 			lines.subList(start, Math.min(start + 6, lines.size())).forEach(icon::addLoreLine);
 			entries.add(icon.build());
@@ -50,7 +50,7 @@ final class QuestDetailsGui extends SimpleGui {
 	}
 
 	private void refresh() {
-		setTitle(GuiStyle.text(title + " (" + (page + 1) + "/" + ((entries.size() + 17) / 18) + ")", GuiStyle.TITLE));
+		setTitle(GuiStyle.windowTitle(title + " (" + (page + 1) + "/" + ((entries.size() + 17) / 18) + ")"));
 		GuiStyle.fill(this, 27);
 		for (int i = 0; i < 18 && page * 18 + i < entries.size(); i++)
 			setSlot(i, entries.get(page * 18 + i));

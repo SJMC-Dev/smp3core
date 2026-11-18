@@ -150,9 +150,9 @@ final class QuestUpdateChecks {
 		test.assertTrue(QuestRewards.progress(player).completed() == count + 1 &&
 		                    QuestRewards.progress(player).paid(day, 0),
 		                "Item delivery overwrote quest receipts");
-		var checkpoint = ItemDelivery.ledgerState(player);
+		var checkpoint = Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY);
 		QuestRewards.complete(player, day, 2, "preserve delivery", new QuestReward(0, 0));
-		var updated = ItemDelivery.ledgerState(player);
+		var updated = Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY);
 		test.assertTrue(checkpoint.get("inventory").equals(updated.get("inventory")) &&
 		                    checkpoint.get("sequence").equals(updated.get("sequence")),
 		                "Quest completion overwrote the delivery checkpoint");

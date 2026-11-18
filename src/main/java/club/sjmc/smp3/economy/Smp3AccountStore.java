@@ -11,7 +11,6 @@ import java.util.UUID;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -20,7 +19,7 @@ import net.fabricmc.loader.api.FabricLoader;
 public final class Smp3AccountStore {
 	private static final class Holder {
 		private static final Ledger LEDGER =
-		    new Ledger(FabricLoader.getInstance().getConfigDir().resolve("smp3/economy.json"));
+		    new Ledger(FabricLoader.getInstance().getConfigDir().resolve("smp3/accounts"));
 	}
 
 	private Smp3AccountStore() {}
@@ -33,7 +32,9 @@ public final class Smp3AccountStore {
 		Holder.LEDGER.set(owner, currency.id().getPath(), rawValue);
 	}
 
-	public static JsonObject rewardState(UUID owner, String key) { return Holder.LEDGER.rewardState(owner, key); }
+	public static JsonObject rewardState(UUID owner, String key, String... fields) {
+		return Holder.LEDGER.rewardState(owner, key, fields);
+	}
 
 	public static void commitReward(UUID owner, String key, JsonObject expected, JsonObject state,
 	                                Map<Smp3Currency, Integer> credits) {
@@ -42,112 +43,109 @@ public final class Smp3AccountStore {
 		Holder.LEDGER.updateReward(owner, key, expected, state, raw);
 	}
 
+	public static void saveRewardFields(String key, Map<UUID, JsonObject> fields) {
+		Holder.LEDGER.saveRewardFields(key, fields);
+	}
+
 	static final class Ledger {
 		private static final Gson JSON = new GsonBuilder().setPrettyPrinting().create();
-		private final Path file;
-		private Map<UUID, Map<String, Long>> balances = new HashMap<>();
-		private Map<UUID, JsonObject> rewardStates = new HashMap<>();
-		private boolean loaded;
+		private record Account(Map<String, Long> balances, JsonObject rewards) {}
+		private final Path directory;
+		private final Map<UUID, Account> accounts = new HashMap<>();
 
-		Ledger(Path file) { this.file = file; }
+		Ledger(Path directory) { this.directory = directory; }
 
 		synchronized long balance(UUID owner, String currency) {
-			load();
-			return balances.getOrDefault(owner, Map.of()).getOrDefault(currency, 0L);
+			return load(owner).balances.getOrDefault(currency, 0L);
 		}
 
 		synchronized void set(UUID owner, String currency, long value) {
-			load();
 			if (value < 0)
 				throw new IllegalArgumentException("余额不能为负数");
-			Map<String, Long> next = new HashMap<>(balances.getOrDefault(owner, Map.of()));
+			Account account = load(owner);
+			Map<String, Long> balances = new HashMap<>(account.balances);
 			if (value == 0)
-				next.remove(currency);
+				balances.remove(currency);
 			else
-				next.put(currency, value);
-			commit(owner, next, rewardStates);
+				balances.put(currency, value);
+			commit(owner, new Account(balances, account.rewards));
 		}
 
-		synchronized JsonObject rewardState(UUID owner, String key) {
-			load();
-			JsonObject states = rewardStates.get(owner);
-			return states == null || !states.has(key) ? null : states.getAsJsonObject(key).deepCopy();
+		synchronized JsonObject rewardState(UUID owner, String key, String... fields) {
+			JsonObject rewards = load(owner).rewards;
+			if (!rewards.has(key))
+				return null;
+			JsonObject state = rewards.getAsJsonObject(key);
+			if (fields.length == 0)
+				return state.deepCopy();
+			JsonObject selected = new JsonObject();
+			for (String field : fields)
+				if (state.has(field))
+					selected.add(field, state.get(field).deepCopy());
+			return selected;
 		}
 
-		// A receipt and its money changes become visible together, after the atomic file replacement.
 		synchronized void updateReward(UUID owner, String key, JsonObject expected, JsonObject state,
 		                               Map<String, Long> credits) {
-			if (!Objects.equals(rewardState(owner, key), expected)) {
+			Account account = load(owner);
+			if (!Objects.equals(account.rewards.get(key), expected))
 				throw new IllegalStateException("Reward state changed; reload before retrying");
-			}
-			Map<String, Long> next = new HashMap<>(balances.getOrDefault(owner, Map.of()));
+			Map<String, Long> balances = new HashMap<>(account.balances);
 			credits.forEach((currency, amount) -> {
-				if (amount < 0) {
+				if (amount < 0)
 					throw new IllegalArgumentException("Negative reward");
-				}
-				next.put(currency, Math.addExact(next.getOrDefault(currency, 0L), amount));
+				balances.put(currency, Math.addExact(balances.getOrDefault(currency, 0L), amount));
 			});
-			Map<UUID, JsonObject> nextStates = new HashMap<>(rewardStates);
-			JsonObject player = rewardStates.getOrDefault(owner, new JsonObject()).deepCopy();
-			player.add(key, state.deepCopy());
-			nextStates.put(owner, player);
-			commit(owner, next, nextStates);
+			JsonObject rewards = account.rewards.deepCopy();
+			rewards.add(key, state.deepCopy());
+			commit(owner, new Account(balances, rewards));
 		}
 
-		private void load() {
-			if (loaded)
-				return;
-			if (!Files.exists(file)) {
-				loaded = true;
-				return;
-			}
-			try {
-				JsonObject root = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
-				Map<UUID, Map<String, Long>> loadedBalances = new HashMap<>();
-				for (var entry : root.getAsJsonObject("balances").entrySet()) {
-					Map<String, Long> currencies = new HashMap<>();
-					JsonElement value = entry.getValue();
-					if (value.isJsonPrimitive())
-						currencies.put("tongbao", value.getAsLong());
-					else
-						value.getAsJsonObject().entrySet().forEach(
-						    c -> currencies.put(c.getKey(), c.getValue().getAsLong()));
-					loadedBalances.put(UUID.fromString(entry.getKey()), currencies);
-				}
-				Map<UUID, JsonObject> loadedStates = new HashMap<>();
-				if (root.has("rewardStates")) {
-					root.getAsJsonObject("rewardStates")
+		synchronized void saveRewardFields(String key, Map<UUID, JsonObject> fields) {
+			fields.forEach((owner, update) -> {
+				Account account = load(owner);
+				JsonObject rewards = account.rewards.deepCopy();
+				JsonObject state = rewards.has(key) ? rewards.getAsJsonObject(key) : new JsonObject();
+				update.entrySet().forEach(entry -> state.add(entry.getKey(), entry.getValue().deepCopy()));
+				rewards.add(key, state);
+				if (!rewards.equals(account.rewards))
+					commit(owner, new Account(account.balances, rewards));
+			});
+		}
+
+		private Account load(UUID owner) {
+			return accounts.computeIfAbsent(owner, id -> {
+				Path file = directory.resolve(id + ".json");
+				if (!Files.exists(file))
+					return new Account(Map.of(), new JsonObject());
+				try {
+					JsonObject root = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+					Map<String, Long> balances = new HashMap<>();
+					root.getAsJsonObject("balances")
 					    .entrySet()
-					    .forEach(
-					        entry
-					        -> loadedStates.put(UUID.fromString(entry.getKey()), entry.getValue().getAsJsonObject()));
+					    .forEach(entry -> balances.put(entry.getKey(), entry.getValue().getAsLong()));
+					return new Account(balances,
+					                   Objects.requireNonNull(root.getAsJsonObject("rewardStates"), "rewardStates"));
+				} catch (IOException | RuntimeException error) {
+					throw new IllegalStateException("读取玩家账本失败: " + file, error);
 				}
-				rewardStates = loadedStates;
-				balances = loadedBalances;
-				loaded = true;
-			} catch (IOException | RuntimeException e) {
-				throw new IllegalStateException("读取经济账本失败: " + file, e);
-			}
+			});
 		}
 
-		private void commit(UUID owner, Map<String, Long> currencies, Map<UUID, JsonObject> nextStates) {
-			Map<UUID, Map<String, Long>> nextBalances = new HashMap<>(balances);
-			if (currencies.isEmpty())
-				nextBalances.remove(owner);
-			else
-				nextBalances.put(owner, currencies);
+		// Only the affected account is replaced; currency, quest state and delivery receipts commit together.
+		private void commit(UUID owner, Account account) {
+			Path file = directory.resolve(owner + ".json");
 			JsonObject root = new JsonObject();
-			root.add("balances", JSON.toJsonTree(nextBalances));
-			root.add("rewardStates", JSON.toJsonTree(nextStates));
+			root.add("balances", JSON.toJsonTree(account.balances));
+			root.add("rewardStates", account.rewards);
 			try {
-				Files.createDirectories(file.getParent());
+				Files.createDirectories(directory);
 				Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
 				Files.writeString(temporary, JSON.toJson(root));
 				Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-				balances = nextBalances;
-				rewardStates = nextStates;
-			} catch (IOException e) {
-				throw new IllegalStateException("保存经济账本失败: " + file, e);
+				accounts.put(owner, account);
+			} catch (IOException error) {
+				throw new IllegalStateException("保存玩家账本失败: " + file, error);
 			}
 		}
 	}

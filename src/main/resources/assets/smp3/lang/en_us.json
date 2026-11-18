@@ -1,8 +1,19 @@
 {
   "item.smp3.any_enchanted_book": "Any Enchanted Book",
   "key.category.smp3.main": "SMP3",
-  "key.smp3.quest_hud": "Toggle Quest Checklist",
-  "key.smp3.server_info": "Open Server Handbook (Preview)",
+  "key.smp3.quest_hud": "Toggle SMP3 HUD",
+  "key.smp3.server_info": "Open Server Handbook",
   "item.smp3.choice_pack": "Choice Supply Pack",
-  "item.smp3.random_pack": "Random Supply Pouch"
+  "item.smp3.random_pack": "Random Supply Pouch",
+  "key.smp3.hud_settings": "Adjust SMP3 HUD",
+  "smp3.hud.settings": "HUD Settings",
+  "smp3.hud.hide": "Hide HUD",
+  "smp3.hud.show": "Show HUD",
+  "smp3.hud.detach": "Separate Notifications",
+  "smp3.hud.attach": "Follow Daily Tasks",
+  "smp3.hud.bindings": "Key Binds",
+  "smp3.hud.reset": "Reset Positions",
+  "smp3.hud.drag": "Drag the panels to reposition them.",
+  "smp3.hud.quests": "Daily Tasks",
+  "smp3.hud.notices": "Notifications"
 }

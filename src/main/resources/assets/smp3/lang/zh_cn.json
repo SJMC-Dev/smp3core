@@ -1,8 +1,19 @@
 {
   "item.smp3.any_enchanted_book": "任意附魔书",
   "key.category.smp3.main": "SMP3",
-  "key.smp3.quest_hud": "显示/隐藏任务清单",
-  "key.smp3.server_info": "打开服务器手册（预览）",
+  "key.smp3.quest_hud": "显示/隐藏 SMP3 HUD",
+  "key.smp3.server_info": "打开服务器手册",
   "item.smp3.choice_pack": "自选补给包",
-  "item.smp3.random_pack": "随机补给袋"
+  "item.smp3.random_pack": "随机补给袋",
+  "key.smp3.hud_settings": "调整 SMP3 HUD",
+  "smp3.hud.settings": "HUD 设置",
+  "smp3.hud.hide": "隐藏 HUD",
+  "smp3.hud.show": "显示 HUD",
+  "smp3.hud.detach": "独立放置通知",
+  "smp3.hud.attach": "通知跟随任务",
+  "smp3.hud.bindings": "按键绑定",
+  "smp3.hud.reset": "重置位置",
+  "smp3.hud.drag": "拖动任务与通知区域来调整位置。",
+  "smp3.hud.quests": "每日任务",
+  "smp3.hud.notices": "通知"
 }

@@ -38,7 +38,7 @@ public final class DailyQuestService {
 		if (failed)
 			return null;
 		try {
-			QuestDay previous = data.players.get(player.getUUID());
+			QuestDay previous = data.player(player.getUUID());
 			var progress = QuestRewards.progress(player);
 			if (previous != null && player.level().getGameTime() < previous.retryAt)
 				return previous;
@@ -72,7 +72,7 @@ public final class DailyQuestService {
 			if (day != previous) {
 				data.players.put(player.getUUID(), day);
 				DailyQuestEvents.inventoryChanged(player);
-				data.setDirty();
+				data.setDirty(player.getUUID());
 			}
 			for (int slot = 0; slot < day.assignments.size(); slot++) {
 				QuestDay.Assignment assignment = day.assignments.get(slot);
@@ -80,7 +80,7 @@ public final class DailyQuestService {
 					assignment.progress = assignment.target;
 					assignment.claimed = true;
 					day.revision++;
-					data.setDirty();
+					data.setDirty(player.getUUID());
 				}
 			}
 			return day;
@@ -102,18 +102,42 @@ public final class DailyQuestService {
 	}
 
 	private void changed(ServerPlayer player, QuestDay day) {
-		data.setDirty();
+		data.setDirty(player.getUUID());
 		if (player.level().getGameTime() >= day.retryAt) {
 			try {
+				var progress = QuestRewards.progress(player);
 				for (int slot = 0; slot < day.assignments.size(); slot++) {
 					var task = day.assignments.get(slot);
-					if (task.complete())
+					if (task.complete() && !progress.completed(day.date, slot))
 						QuestRewards.complete(player, day.date, slot, task.definition.name(), task.reward);
 				}
 			} catch (RuntimeException e) {
 				retry(player, day, e);
 			}
 		}
+	}
+
+	public int reset(ServerPlayer player, int requested) {
+		QuestDay previous = state(player);
+		if (previous == null)
+			throw new IllegalStateException("每日任务不可用");
+		QuestDay next = DailyQuestData.JSON.fromJson(DailyQuestData.JSON.toJsonTree(previous), QuestDay.class);
+		int slots = requested < 0 ? 15 : 1 << requested;
+		for (int slot = 0; slot < next.assignments.size(); slot++)
+			if ((slots & 1 << slot) != 0)
+				next.assignments.get(slot).reset();
+		next.revision = previous.revision + 1;
+		data.players.put(player.getUUID(), next);
+		data.setDirty(player.getUUID());
+		try {
+			QuestRewards.reset(player, next, slots);
+		} catch (RuntimeException error) {
+			data.players.put(player.getUUID(), previous);
+			data.setDirty(player.getUUID());
+			throw error;
+		}
+		inventoryChanged(player);
+		return Integer.bitCount(slots);
 	}
 
 	public Outcome reroll(ServerPlayer player, long date, int slot, String token, boolean admin) {
@@ -128,7 +152,7 @@ public final class DailyQuestService {
 			return new Outcome(Status.LIMIT_REACHED);
 		if (!day.reroll(slot, token, admin, config, random))
 			return new Outcome(Status.NO_CANDIDATE);
-		data.setDirty();
+		data.setDirty(player.getUUID());
 		DailyQuestEvents.inventoryChanged(player);
 		Smp3Core.LOGGER.info("[SMP3] 任务刷新 player={} slot={} admin={} {} -> {}", player.getUUID(), slot + 1, admin,
 		                     previous.definition.id(), day.assignments.get(slot).definition.id());
@@ -144,9 +168,10 @@ public final class DailyQuestService {
 			changed(player, day);
 	}
 
-	void settle(ServerPlayer player) {
+	void settle(ServerPlayer player) { settle(player, state(player)); }
+
+	void settle(ServerPlayer player, QuestDay day) {
 		long today = ServerDates.today().toEpochDay();
-		QuestDay day = state(player, today);
 		long now = player.level().getGameTime();
 		if (day == null || day.date > today || now < day.retryAt)
 			return;
@@ -159,7 +184,7 @@ public final class DailyQuestService {
 				if (!assignment.claimed && progress.paid(day.date, slot)) {
 					assignment.claimed = true;
 					day.revision++;
-					data.setDirty();
+					data.setDirty(player.getUUID());
 				}
 			}
 			day.retryAt = 0;

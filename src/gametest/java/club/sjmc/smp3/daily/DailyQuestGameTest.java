@@ -1,8 +1,8 @@
 package club.sjmc.smp3.daily;
 
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,6 +24,7 @@ import club.sjmc.smp3.sign.ui.SignGui;
 
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -296,14 +297,14 @@ public final class DailyQuestGameTest {
 			var commands = server.getCommands().getDispatcher();
 			String playerName = player.getGameProfile().name();
 			var console = server.createCommandSourceStack();
-			for (String root : List.of("dailyquest", "dailyquests")) {
+			for (String root : List.of("dailyquest", "dailyquests", "dailyrequest")) {
 				for (String prefix : List.of("", playerName.substring(0, 2))) {
 					var parsed = commands.parse(root + " " + prefix, console);
 					var suggestions = commands.getCompletionSuggestions(parsed).join().getList();
 					test.assertTrue(suggestions.stream().anyMatch(s -> s.getText().equals(playerName)),
 					                "Online player completion missing: " + root);
 				}
-				var completions = Map.of(root + " " + playerName + " r", List.of("reset"),
+				var completions = Map.of(root + " " + playerName + " r", List.of("reroll", "reset"),
 				                         root + " " + playerName + " reset ", List.of("1", "2", "3", "4"));
 				for (var entry : completions.entrySet()) {
 					var parsed = commands.parse(entry.getKey(), console);
@@ -312,7 +313,7 @@ public final class DailyQuestGameTest {
 					                "Command argument completion missing: " + entry.getKey());
 				}
 			}
-			String reset = "dailyquest " + player.getGameProfile().name() + " reset";
+			String reset = "dailyquest " + player.getGameProfile().name() + " reroll";
 			for (String invalid : List.of(reset + " 0", reset + " 5", "dailyquest nobody-online reset")) {
 				try {
 					commands.execute(invalid, server.createCommandSourceStack());
@@ -320,7 +321,7 @@ public final class DailyQuestGameTest {
 				} catch (CommandSyntaxException expected) {
 				}
 			}
-			for (String root : List.of("dailyquest", "dailyquests")) {
+			for (String root : List.of("dailyquest", "dailyquests", "dailyrequest")) {
 				try {
 					commands.execute(root + " " + playerName + " reset", player.createCommandSourceStack());
 					throw new AssertionError("未授权玩家能执行管理命令");
@@ -334,7 +335,7 @@ public final class DailyQuestGameTest {
 			                "指定刷新修改了其他槽位");
 			test.assertTrue(!service.reroll(player, day.date, 2, old.token, false).success(), "过期任务回调被接受");
 			test.assertTrue(
-			    commands.execute("dailyquests " + playerName + " reset", server.createCommandSourceStack()) == 2,
+			    commands.execute("dailyquests " + playerName + " reroll", server.createCommandSourceStack()) == 2,
 			    "批量刷新未正确跳过已完成任务");
 			test.assertTrue(day.assignments.getFirst() == task && day.assignments.get(1) == completed,
 			                "刷新改动已领取或已完成任务");
@@ -363,26 +364,68 @@ public final class DailyQuestGameTest {
 			player.closeContainer();
 			SignGui.open(player);
 			player.closeContainer();
+			service.settle(player);
+			long totalBeforeReset = QuestRewards.progress(player).completed();
+			long balanceBeforeReset = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO);
+			var resetTask = service.state(player).assignments.getFirst();
+			String definitionBeforeReset = QuestConfig.JSON.toJson(resetTask.definition);
+			String rewardBeforeReset = QuestConfig.JSON.toJson(resetTask.reward);
+			int allowance = service.state(player).rerollsUsed;
+			var blockedWrite =
+			    FabricLoader.getInstance().getConfigDir().resolve("smp3/accounts/" + player.getUUID() + ".json.tmp");
+			Files.createDirectory(blockedWrite);
+			try {
+				service.reset(player, 0);
+				throw new AssertionError("Reset accepted a failed ledger write");
+			} catch (IllegalStateException expected) {
+				test.assertTrue(service.state(player).assignments.getFirst() == resetTask && resetTask.claimed,
+				                "Failed reset changed the active task");
+			} finally {
+				Files.delete(blockedWrite);
+			}
+			test.assertTrue(commands.execute("dailyrequest " + playerName + " reset 1", console) == 1,
+			                "Completed task reset failed");
+			day = service.state(player);
+			test.assertTrue(
+			    !day.assignments.getFirst().complete() && !day.assignments.getFirst().claimed &&
+			        QuestConfig.JSON.toJson(day.assignments.getFirst().definition).equals(definitionBeforeReset) &&
+			        QuestConfig.JSON.toJson(day.assignments.getFirst().reward).equals(rewardBeforeReset) &&
+			        day.rerollsUsed == allowance && QuestRewards.progress(player).completed() == totalBeforeReset &&
+			        Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO) == balanceBeforeReset,
+			    "Reset changed task definition, rewards, totals or allowance");
+			service.settle(player);
+			test.assertTrue(!service.state(player).assignments.getFirst().complete(),
+			                "Old receipt restored reset task");
+			var persistedReset = QuestConfig.JSON.fromJson(
+			    Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY, "questDay").get("questDay"),
+			    QuestDay.class);
+			test.assertTrue(!persistedReset.assignments.getFirst().complete() &&
+			                    !QuestRewards.progress(player).paid(day.date, 0),
+			                "Reset was not persisted with its receipts");
+			day.assignments.getFirst().progress = day.assignments.getFirst().target;
+			service.settle(player);
+			service.settle(player);
+			test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO) ==
+			                    balanceBeforeReset + Smp3Currency.rawUnits(resetTask.reward.tongbao()),
+			                "Replayed completion paid more than once");
+			test.assertTrue(commands.execute("dailyquest " + playerName + " reset", console) == 4,
+			                "Reset did not include all slots");
 			QuestUpdateChecks.rewards(test, player);
 			FeatureChecks.run(test, player);
 			data = DailyQuestData.get(server);
 			var savedDay = data.players.get(player.getUUID());
-			data.setDirty();
-			var storage = server.overworld().getDataStorage();
-			storage.saveAndJoin();
-			var cache = storage.getClass().getDeclaredField("cache");
-			cache.setAccessible(true);
-			((Map<?, ?>) cache.get(storage)).values().remove(Optional.of(data));
+			data.setDirty(player.getUUID());
+			data.save();
+			DailyQuestData.clear();
 			DailyQuestData restored = DailyQuestData.get(server);
-			test.assertTrue(
-			    restored != data &&
-			        QuestConfig.JSON.toJsonTree(restored.players).equals(QuestConfig.JSON.toJsonTree(data.players)),
-			    "世界存档重新加载后状态改变");
+			test.assertTrue(QuestConfig.JSON.toJsonTree(restored.player(player.getUUID()))
+			                    .equals(QuestConfig.JSON.toJsonTree(savedDay)),
+			                "Persisted quest snapshot changed after reload");
 			test.succeed();
 		} finally {
 			DailyQuestData data = DailyQuestData.get(server);
 			data.players.remove(player.getUUID());
-			data.setDirty();
+			data.setDirty(player.getUUID());
 			server.getPlayerList().remove(player);
 			channel.finishAndReleaseAll();
 		}

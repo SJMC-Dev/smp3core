@@ -33,7 +33,7 @@ public final class SignGui extends SimpleGui {
 
 	private SignGui(ServerPlayer player) {
 		super(MenuType.GENERIC_9x6, player, false);
-		setTitle(GuiStyle.text("签到", GuiStyle.TITLE));
+		setTitle(GuiStyle.windowTitle("签到"));
 	}
 
 	public static void open(ServerPlayer player) { new SignGui(player).open(); }
@@ -73,7 +73,7 @@ public final class SignGui extends SimpleGui {
 
 	private GuiElement infoElement() {
 		return new GuiElementBuilder(new ItemStack(Items.CLOCK))
-		    .setName(Component.literal("签到信息").withStyle(GuiStyle.TITLE))
+		    .setName(Component.literal("签到信息").withStyle(GuiStyle.HEADING))
 		    .addLoreLine(GuiStyle.resetInfo())
 		    .addLoreLine(Component.literal("连续 " + state.streak() + " 天").withStyle(GuiStyle.MUTED))
 		    .addLoreLine(Component.literal("本月 " + state.monthTotal() + " 天").withStyle(GuiStyle.MUTED))
@@ -107,14 +107,14 @@ public final class SignGui extends SimpleGui {
 			status = "未到";
 			clickable = false;
 		} else if (signed) {
-			wool = Items.WOOL.pick(DyeColor.GRAY);
-			color = GuiStyle.MUTED;
-			clickable = day == todayDay && state.hasPendingRewards();
-			status = clickable ? "左键重试奖励" : "已签到";
-		} else if (day == todayDay) {
 			wool = Items.WOOL.pick(DyeColor.LIME);
 			color = GuiStyle.READY;
-			status = "通宝 x " + SignRewards.dailyReward(nextStreak);
+			clickable = day == todayDay && state.hasPendingRewards();
+			status = "已签到";
+		} else if (day == todayDay) {
+			wool = Items.WOOL.pick(DyeColor.YELLOW);
+			color = GuiStyle.ACTION;
+			status = "今日待签到";
 			clickable = true;
 		} else {
 			wool = Items.WOOL.pick(DyeColor.GRAY);
@@ -125,11 +125,12 @@ public final class SignGui extends SimpleGui {
 
 		GuiElementBuilder builder = new GuiElementBuilder(new ItemStack(wool))
 		                                .setName(Component.literal(month + "月" + day + "日").withStyle(color))
-		                                .addLoreLine(Component.literal(status).withStyle(GuiStyle.MUTED));
+		                                .addLoreLine(Component.literal(status).withStyle(color));
 
 		if (clickable) {
 			if (!signed)
-				builder.addLoreLine(GuiStyle.text("左键签到", GuiStyle.MUTED));
+				builder.addLoreLine(GuiStyle.text("通宝 x " + SignRewards.dailyReward(nextStreak), GuiStyle.MUTED));
+			builder.addLoreLine(GuiStyle.text(signed ? "左键重试奖励" : "左键签到", GuiStyle.ACTION));
 			GuiStyle.onLeftClick(builder, () -> signDaily(today));
 		}
 		return builder.build();
@@ -154,7 +155,7 @@ public final class SignGui extends SimpleGui {
 			case MILESTONE_GRANTED ->
 				GuiStyle.text((result.month().isEmpty() ? "开服累计 " : "本月累计 ") + result.days() +
 				                  " 天 的累计奖励已发放",
-				              GuiStyle.TITLE);
+				              GuiStyle.HEADING);
 		};
 	}
 }

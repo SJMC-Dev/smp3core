@@ -31,7 +31,7 @@ public final class DailyQuestGui extends SimpleGui {
 	private DailyQuestGui(ServerPlayer player, DailyQuestService service) {
 		super(MenuType.GENERIC_9x4, player, false);
 		this.service = service;
-		setTitle(GuiStyle.text("每日任务", GuiStyle.TITLE));
+		setTitle(GuiStyle.windowTitle("每日任务"));
 	}
 
 	public static boolean show(ServerPlayer player) {
@@ -72,7 +72,7 @@ public final class DailyQuestGui extends SimpleGui {
 		GuiStyle.fill(this, 36);
 		long complete = shown.assignments().stream().filter(QuestDay.Assignment::complete).count();
 		long claimed = shown.assignments().stream().filter(a -> a.claimed()).count();
-		setSlot(4, GuiStyle.item(Items.CLOCK, "每日任务", GuiStyle.TITLE)
+		setSlot(4, GuiStyle.item(Items.CLOCK, "每日任务", GuiStyle.HEADING)
 		               .addLoreLine(GuiStyle.text(LocalDate.ofEpochDay(shown.date).toString(), GuiStyle.MUTED))
 		               .addLoreLine(GuiStyle.text("已完成 " + complete + "/4", GuiStyle.MUTED))
 		               .addLoreLine(GuiStyle.text("奖励已结算 " + claimed + "/4", GuiStyle.MUTED))
@@ -103,14 +103,15 @@ public final class DailyQuestGui extends SimpleGui {
 		Item icon = BuiltInRegistries.ITEM.getValue(Identifier.parse(task.definition.icon()));
 		GuiElementBuilder objective =
 		    GuiStyle
-		        .item(icon, task.definition.name() + (task.tier() == 0 ? "" : " " + task.tier() + "级"), GuiStyle.TITLE)
+		        .item(icon, task.definition.name() + (task.tier() == 0 ? "" : " " + task.tier() + "级"),
+				      GuiStyle.difficulty(task.definition.difficulty()))
 		        .addLoreLine(GuiStyle.text("难度 " + task.definition.difficulty(), GuiStyle.MUTED));
 		objective.addLoreLine(Component.empty());
 		var description = QuestText.lore(task);
 		description.stream().limit(4).forEach(objective::addLoreLine);
 		if (description.size() > 4)
 			objective.addLoreLine(GuiStyle.text("……", GuiStyle.MUTED));
-		objective.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("点击查看详细条件", GuiStyle.MUTED));
+		objective.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("点击查看详细条件", GuiStyle.ACTION));
 		setSlot(9 + column, GuiStyle.onLeftClick(objective, () -> new QuestDetailsGui(player, task).open()).build());
 		var rewardIcon = GuiStyle.item(Items.WOOL.pick(task.claimed()    ? DyeColor.LIME
 		                                               : task.complete() ? DyeColor.ORANGE
@@ -119,7 +120,7 @@ public final class DailyQuestGui extends SimpleGui {
 		if (!task.definition.objectives().isEmpty()) {
 			rewardIcon.addLoreLine(Component.empty());
 			rewardIcon.addLoreLine(GuiStyle.text(
-			    task.definition.completion().equals("any") ? "目标：任选一项" : "目标：全部完成", GuiStyle.TITLE));
+			    task.definition.completion().equals("any") ? "目标：任选一项" : "目标：全部完成", GuiStyle.HEADING));
 			for (int i = 0; i < task.definition.objectives().size(); i++) {
 				var goal = task.definition.objectives().get(i);
 				int progress = task.goalProgress(i);
@@ -128,7 +129,7 @@ public final class DailyQuestGui extends SimpleGui {
 			}
 		}
 		if (task.reward.tongbao() > 0 || task.reward.coffeeStamp() > 0 || !task.reward.items().isEmpty())
-			rewardIcon.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("奖励", GuiStyle.TITLE));
+			rewardIcon.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("奖励", GuiStyle.HEADING));
 		if (task.reward.tongbao() > 0)
 			rewardIcon.addLoreLine(GuiStyle.text("通宝 x " + task.reward.tongbao(), GuiStyle.MUTED));
 		if (task.reward.coffeeStamp() > 0)
@@ -139,7 +140,7 @@ public final class DailyQuestGui extends SimpleGui {
 		                    -> rewardIcon.addLoreLine(GuiStyle.text(
 		                        item.getHoverName().getString() + " x " + item.getCount(), GuiStyle.MUTED)));
 		if (!rewardItems.isEmpty())
-			rewardIcon.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("点击查看物品奖励", GuiStyle.MUTED));
+			rewardIcon.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("点击查看物品奖励", GuiStyle.ACTION));
 		setSlot(18 + column, GuiStyle
 		                         .onLeftClick(rewardIcon,
 		                                      () -> {
@@ -189,9 +190,9 @@ public final class DailyQuestGui extends SimpleGui {
 				}
 			}
 		};
-		confirmation.setTitle(GuiStyle.text("确认更换任务", GuiStyle.TITLE));
+		confirmation.setTitle(GuiStyle.windowTitle("确认更换任务"));
 		GuiStyle.fill(confirmation, 27);
-		confirmation.setSlot(4, GuiStyle.item(Items.PAPER, task.definition.name(), GuiStyle.TITLE)
+		confirmation.setSlot(4, GuiStyle.item(Items.PAPER, task.definition.name(), GuiStyle.HEADING)
 		                            .addLoreLine(GuiStyle.text("更换后进度清零", GuiStyle.MUTED))
 		                            .addLoreLine(GuiStyle.text(
 		                                "消耗 1 次，剩余 " + current.remaining(service.config) + " 次", GuiStyle.MUTED))
