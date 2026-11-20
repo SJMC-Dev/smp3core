@@ -7,37 +7,78 @@ import java.util.regex.Pattern;
 import club.sjmc.smp3.notice.NoticePayloads;
 
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
 
 final class BookText {
+	static final float TEXT_SCALE = .85F;
 	private static final Pattern INLINE = Pattern.compile("\\*\\*(.+?)\\*\\*|`([^`]+)`|\\[([^\\]]+)\\]\\(([^)]+)\\)");
 	private static final Pattern LIST = Pattern.compile("^([ \\t]*)-[ \\t]+");
 	private BookText() {}
 
-	static List<FormattedCharSequence> lines(NoticePayloads.Body body, Font font, int width) {
-		var result = new ArrayList<FormattedCharSequence>();
+	static Layout layout(NoticePayloads.Body body, Font font, int width) {
+		var result = new ArrayList<Line>();
+		int top = 0;
 		for (String line : body.text().split("\n", -1)) {
+			float scale = TEXT_SCALE;
 			MutableComponent text;
 			if (!body.markdown()) {
 				text = Component.literal(line);
 			} else {
-				boolean heading = line.matches("#{1,3} .*");
-				if (heading)
+				boolean heading = line.matches("#{1,4} .*");
+				if (heading) {
+					scale *= switch (line.indexOf(' ')) {
+						case 1 -> 1.75F;
+						case 2 -> 1.5F;
+						case 3 -> 1.25F;
+						default -> 1.125F;
+					};
 					line = line.substring(line.indexOf(' ') + 1);
-				else
+				} else
 					line = LIST.matcher(line).replaceFirst("$1• ");
 				text = inline(line);
 				if (heading)
-					text.withStyle(style -> style.withBold(true));
+					text.withStyle(style -> style.withBold(true).withColor(0x6B4326));
 			}
-			if (line.isEmpty())
-				result.add(FormattedCharSequence.EMPTY);
-			else
-				result.addAll(font.split(text, width));
+			int height = (int)Math.ceil(14 * scale);
+			var wrapped =
+			    line.isEmpty() ? List.of(FormattedCharSequence.EMPTY) : font.split(text, (int)(width / scale));
+			for (var part : wrapped) {
+				result.add(new Line(part, top, scale));
+				top += height;
+			}
 		}
-		return List.copyOf(result);
+		return new Layout(List.copyOf(result), top);
+	}
+
+	record Line(FormattedCharSequence text, int top, float scale) {}
+
+	record Layout(List<Line> lines, int height) {
+		static final Layout EMPTY = new Layout(List.of(), 0);
+
+		void render(GuiGraphicsExtractor graphics, Font font, int left, int top, int bottom, int scroll) {
+			int low = 0, high = lines.size();
+			while (low < high) {
+				int mid = (low + high) >>> 1;
+				if (lines.get(mid).top() < scroll)
+					low = mid + 1;
+				else
+					high = mid;
+			}
+			for (int i = Math.max(0, low - 1); i < lines.size(); i++) {
+				var line = lines.get(i);
+				int y = top + line.top() - scroll;
+				if (y >= bottom)
+					break;
+				graphics.pose().pushMatrix();
+				graphics.pose().translate(left, y);
+				graphics.pose().scale(line.scale(), line.scale());
+				graphics.text(font, line.text(), 0, 0, PaperStyle.INK, false);
+				graphics.pose().popMatrix();
+			}
+		}
 	}
 
 	private static MutableComponent inline(String line) {

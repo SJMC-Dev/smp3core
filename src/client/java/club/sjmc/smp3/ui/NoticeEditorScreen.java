@@ -15,7 +15,6 @@ import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 
 public final class NoticeEditorScreen extends Screen {
 	private static final int INK = PaperStyle.INK;
@@ -28,7 +27,7 @@ public final class NoticeEditorScreen extends Screen {
 	private int tab;
 	private int x, y, panelWidth, panelHeight, contentTop, contentBottom, previewX, previewWidth, scroll;
 	private boolean narrow;
-	private List<FormattedCharSequence> lines = List.of();
+	private BookText.Layout textLayout = BookText.Layout.EMPTY;
 	private String renderedBody;
 	private int renderedWidth;
 	private boolean renderedMarkdown;
@@ -268,18 +267,16 @@ public final class NoticeEditorScreen extends Screen {
 		}
 		if (!narrow || tab == 2) {
 			if (!body.equals(renderedBody) || renderedWidth != previewWidth || renderedMarkdown != markdown) {
-				lines = BookText.lines(new NoticePayloads.Body("", "", body, markdown), font, previewWidth - 12);
+				textLayout = BookText.layout(new NoticePayloads.Body("", "", body, markdown), font, previewWidth - 12);
 				renderedBody = body;
 				renderedWidth = previewWidth;
 				renderedMarkdown = markdown;
 			}
-			int visible = Math.max(1, (contentBottom - contentTop) / 12);
-			scroll = Math.clamp(scroll, 0, Math.max(0, lines.size() - visible));
+			scroll = Math.clamp(scroll, 0, Math.max(0, textLayout.height() - (contentBottom - contentTop)));
 			if (!narrow)
 				graphics.text(font, "预览", previewX, y + 128, INK, false);
 			graphics.enableScissor(previewX, contentTop, previewX + previewWidth, contentBottom);
-			for (int i = scroll; i < Math.min(lines.size(), scroll + visible); i++)
-				graphics.text(font, lines.get(i), previewX + 6, contentTop + (i - scroll) * 12, INK, false);
+			textLayout.render(graphics, font, previewX + 6, contentTop, contentBottom, scroll);
 			graphics.disableScissor();
 		}
 		graphics.text(font, font.plainSubstrByWidth(status, panelWidth - 32), x + 16, y + panelHeight - 42, 0xFF8C4B30,
@@ -291,7 +288,7 @@ public final class NoticeEditorScreen extends Screen {
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
 		if ((!narrow || tab == 2) && mouseX >= previewX && mouseX < previewX + previewWidth && mouseY >= contentTop &&
 		    mouseY < contentBottom) {
-			scroll = Math.max(0, scroll - (int)(vertical * 3));
+			scroll = Math.max(0, scroll - (int)(vertical * 36));
 			return true;
 		}
 		return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);

@@ -12,26 +12,29 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 
 public final class ServerBookScreen extends Screen {
 	private static final int INK = PaperStyle.INK, MUTED = PaperStyle.MUTED;
+	private static final int TWO_COLUMN_WIDTH = 360;
 	private final ServerBookState state = Smp3Client.BOOK;
 	private int x, y, bookWidth, bookHeight, sidebar, bodyTop, bodyBottom, listScroll, textScroll, headerExtra;
 	private boolean narrow, detail, subscribed;
-	private int categoryPage;
+	private int categoryStart;
 	private NoticePayloads.Body renderedBody;
 	private int renderedWidth;
-	private List<FormattedCharSequence> lines = List.of();
+	private BookText.Layout textLayout = BookText.Layout.EMPTY;
 	private List<Integer> entries;
 	private Button acknowledge;
+	private PaperStyle.Scrollbar draggedScrollbar;
+	private boolean draggingList;
+	private double scrollGrab;
 	private long lastFrame = System.nanoTime();
 
 	ServerBookScreen() { this(false); }
 	ServerBookScreen(boolean detail) {
 		super(Component.literal("服务器手册"));
 		this.detail = detail;
-		categoryPage = state.category / 4;
+		categoryStart = state.category;
 	}
 
 	void contentChanged() {
@@ -47,20 +50,21 @@ public final class ServerBookScreen extends Screen {
 
 	@Override
 	protected void init() {
+		draggedScrollbar = null;
 		if (!subscribed) {
 			Smp3Client.BALANCES.clear();
 			state.request(NoticePayloads.Action.OPEN, "", "");
 			subscribed = true;
 		}
-		int horizontalMargin = Math.clamp((width - 400) / 2, 8, 16);
+		int horizontalMargin = Math.clamp((width - TWO_COLUMN_WIDTH) / 2, 8, 16);
 		int verticalMargin = Math.clamp((height - 240) / 2, 8, 16);
 		bookWidth = Math.min(600, width - 2 * horizontalMargin);
 		bookHeight = Math.min(354, height - 2 * verticalMargin);
 		x = (width - bookWidth) / 2;
 		y = (height - bookHeight) / 2;
-		narrow = bookWidth < 400;
+		narrow = bookWidth < TWO_COLUMN_WIDTH;
 		sidebar = narrow ? bookWidth - 28 : Math.min(174, bookWidth / 3);
-		headerExtra = bookWidth - 44 < font.width(state.title) + 24 + Smp3Client.BALANCES.width() ? 22 : 0;
+		headerExtra = bookWidth - 64 < font.width(state.title) + 24 + Smp3Client.BALANCES.width() ? 22 : 0;
 		bodyTop = y + 73 + headerExtra;
 		bodyBottom = y + bookHeight - 24;
 		entries = IntStream.range(0, state.messages.size())
@@ -74,15 +78,20 @@ public final class ServerBookScreen extends Screen {
 			textScroll = 0;
 		}
 		listScroll = Math.clamp(listScroll, 0, Math.max(0, entries.size() * 40 - (bodyBottom - bodyTop)));
-		int pages = (state.categories.size() + 3) / 4;
-		categoryPage = Math.min(categoryPage, pages - 1);
-		int tabWidth = (sidebar - 16 - (pages > 1 ? 20 : 0)) / Math.min(4, state.categories.size());
+		int minTabWidth = font.width("分类") + 12;
+		int tabs = Math.clamp((sidebar - 16) / minTabWidth, 1, 4);
+		if (state.categories.size() > tabs)
+			tabs = Math.clamp((sidebar - 36) / minTabWidth, 1, 4);
+		int tabsPerPage = Math.min(tabs, state.categories.size());
+		int pages = (state.categories.size() + tabsPerPage - 1) / tabsPerPage;
+		categoryStart = Math.min(categoryStart / tabsPerPage, pages - 1) * tabsPerPage;
+		int tabWidth = (sidebar - 16 - (pages > 1 ? 20 : 0)) / tabsPerPage;
 		if (!narrow || !detail) {
-			for (int i = categoryPage * 4; i < Math.min(state.categories.size(), categoryPage * 4 + 4); i++) {
+			for (int i = categoryStart; i < Math.min(state.categories.size(), categoryStart + tabsPerPage); i++) {
 				int category = i;
-				String label = font.plainSubstrByWidth(state.categories.get(i).name(), tabWidth - 6);
-				var button = new PaperButton(x + 22 + (i % 4) * tabWidth, y + 46 + headerExtra, tabWidth - 2, label,
-				                             true, () -> {
+				String label = state.categories.get(i).name();
+				var button = new PaperButton(x + 22 + (i - categoryStart) * tabWidth, y + 46 + headerExtra,
+				                             tabWidth - 2, label, true, () -> {
 					                             state.category = category;
 					                             listScroll = 0;
 					                             textScroll = 0;
@@ -93,7 +102,7 @@ public final class ServerBookScreen extends Screen {
 			}
 			if (pages > 1)
 				addRenderableWidget(new PaperButton(x + sidebar - 14, y + 46 + headerExtra, 18, "›", true, () -> {
-					categoryPage = (categoryPage + 1) % pages;
+					categoryStart = (categoryStart / tabsPerPage + 1) % pages * tabsPerPage;
 					rebuildWidgets();
 				}));
 		}
@@ -135,8 +144,8 @@ public final class ServerBookScreen extends Screen {
 		graphics.fill(0, 0, width, height, 0x66000000);
 		PaperStyle.frame(graphics, x, y, bookWidth, bookHeight);
 		graphics.text(font, font.plainSubstrByWidth(state.title, bookWidth - 44), x + 22, y + 28, INK, false);
-		Smp3Client.BALANCES.render(graphics, x + bookWidth - 22, y + (headerExtra == 0 ? 22 : 44),
-		                           bookWidth - 44 - (headerExtra == 0 ? font.width(state.title) + 24 : 0), seconds);
+		Smp3Client.BALANCES.render(graphics, x + bookWidth - 42, y + (headerExtra == 0 ? 22 : 44),
+		                           bookWidth - 64 - (headerExtra == 0 ? font.width(state.title) + 24 : 0), seconds);
 		graphics.horizontalLine(x + 20, x + bookWidth - 20, y + 41 + headerExtra, 0xFFB7A17D);
 		if (!narrow) {
 			graphics.fill(x + sidebar + 14, y + 47 + headerExtra, x + sidebar + 16, bodyBottom, 0x66836B48);
@@ -188,9 +197,14 @@ public final class ServerBookScreen extends Screen {
 		int left = contentLeft();
 		int top = contentTop(), bottom = bodyBottom - (message.acknowledgement() ? 30 : 0);
 		int dateWidth = font.width(message.date());
-		int titleWidth = contentWidth() - (dateWidth == 0 ? 0 : dateWidth + 12);
-		graphics.text(font, font.plainSubstrByWidth(message.title(), titleWidth), left, top - 18, INK, false);
-		graphics.text(font, message.date(), left + contentWidth() - dateWidth, top - 18, MUTED, false);
+		int headerWidth = (int)(contentWidth() / BookText.TEXT_SCALE);
+		int titleWidth = headerWidth - (dateWidth == 0 ? 0 : dateWidth + 12);
+		graphics.pose().pushMatrix();
+		graphics.pose().translate(left, top - 18);
+		graphics.pose().scale(BookText.TEXT_SCALE, BookText.TEXT_SCALE);
+		graphics.text(font, font.plainSubstrByWidth(message.title(), titleWidth), 0, 0, INK, false);
+		graphics.text(font, message.date(), headerWidth - dateWidth, 0, MUTED, false);
+		graphics.pose().popMatrix();
 		var body = state.bodies.get(message.id());
 		if (body == null) {
 			graphics.text(font, "正在加载…", left, top, MUTED, false);
@@ -199,22 +213,36 @@ public final class ServerBookScreen extends Screen {
 		if (!body.equals(renderedBody) || renderedWidth != contentWidth()) {
 			renderedBody = body;
 			renderedWidth = contentWidth();
-			lines = BookText.lines(body, font, contentWidth() - 10);
+			textLayout = BookText.layout(body, font, contentWidth() - 10);
 			textScroll = 0;
 		}
 		state.displayed(state.selected, false);
-		textScroll = Math.clamp(textScroll, 0, Math.max(0, lines.size() * 14 - (bottom - top)));
+		textScroll = Math.clamp(textScroll, 0, Math.max(0, textLayout.height() - (bottom - top)));
 		graphics.enableScissor(left, top, left + contentWidth(), bottom);
-		for (int i = textScroll / 14; i < Math.min(lines.size(), (textScroll + bottom - top) / 14 + 1); i++)
-			graphics.text(font, lines.get(i), left, top + i * 14 - textScroll, INK, false);
+		textLayout.render(graphics, font, left, top, bottom, textScroll);
 		graphics.disableScissor();
-		PaperStyle.scrollbar(graphics, left + contentWidth() - 3, top, bottom, lines.size() * 14, textScroll);
+		PaperStyle.scrollbar(graphics, left + contentWidth() - 3, top, bottom, textLayout.height(), textScroll);
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		if (super.mouseClicked(event, doubleClick))
 			return true;
+		if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
+			var listBar = new PaperStyle.Scrollbar(x + sidebar + 5, bodyTop, bodyBottom, entries.size() * 40);
+			int bottom = bodyBottom - (acknowledge.visible ? 30 : 0);
+			var textBar =
+			    new PaperStyle.Scrollbar(contentLeft() + contentWidth() - 3, contentTop(), bottom, textLayout.height());
+			draggingList = (!narrow || !detail) && listBar.contains(event.x(), event.y());
+			if (draggingList || (!narrow || detail) && !entries.isEmpty() && textBar.contains(event.x(), event.y())) {
+				draggedScrollbar = draggingList ? listBar : textBar;
+				int thumb = draggedScrollbar.thumbTop(draggingList ? listScroll : textScroll);
+				scrollGrab = event.y() >= thumb && event.y() < thumb + draggedScrollbar.thumbHeight()
+				                 ? event.y() - thumb
+				                 : draggedScrollbar.thumbHeight() / 2.0;
+				return mouseDragged(event, 0, 0);
+			}
+		}
 		if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && (!narrow || !detail) && event.x() >= x + 22 &&
 		    event.x() < x + sidebar + 7 && event.y() >= bodyTop && event.y() < bodyBottom) {
 			int row = ((int)event.y() - bodyTop + listScroll) / 40;
@@ -228,6 +256,26 @@ public final class ServerBookScreen extends Screen {
 			}
 		}
 		return false;
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT || draggedScrollbar == null)
+			return super.mouseDragged(event, dx, dy);
+		int scroll = draggedScrollbar.position(event.y(), scrollGrab);
+		if (draggingList)
+			listScroll = scroll;
+		else
+			textScroll = scroll;
+		return true;
+	}
+
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT || draggedScrollbar == null)
+			return super.mouseReleased(event);
+		draggedScrollbar = null;
+		return true;
 	}
 
 	@Override

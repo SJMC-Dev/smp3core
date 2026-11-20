@@ -131,7 +131,7 @@ final class ShopScreen extends Screen {
 	}
 
 	private int headerExtra() {
-		return Smp3Client.BALANCES.width() + font.width("商店") + 26 > panelWidth - 36 ? 20 : 0;
+		return Smp3Client.BALANCES.width() + font.width("商店") + 26 > panelWidth - 60 ? 20 : 0;
 	}
 	void balancesChanged() {
 		if (headerExtra != headerExtra())
@@ -249,8 +249,8 @@ final class ShopScreen extends Screen {
 		PaperStyle.frame(graphics, x, y, panelWidth, panelHeight);
 
 		graphics.text(font, "商店", x + 18, y + 15, PaperStyle.INK, false);
-		Smp3Client.BALANCES.render(graphics, x + panelWidth - 18, y + 9 + headerExtra,
-		                           panelWidth - 36 - (headerExtra == 0 ? font.width("商店") + 18 : 0), seconds);
+		Smp3Client.BALANCES.render(graphics, x + panelWidth - 42, y + 9 + headerExtra,
+		                           panelWidth - 60 - (headerExtra == 0 ? font.width("商店") + 18 : 0), seconds);
 		graphics.horizontalLine(contentLeft, x + panelWidth - 18, bodyTop - 3, PaperStyle.LINE);
 		for (int i = 0; i + 1 < breadcrumbs.size(); i++)
 			graphics.text(font, ">", breadcrumbs.get(i).getRight() + 2, bodyTop - 18, PaperStyle.MUTED, false);

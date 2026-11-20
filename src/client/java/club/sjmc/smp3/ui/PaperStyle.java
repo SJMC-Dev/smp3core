@@ -16,12 +16,26 @@ final class PaperStyle {
 		              height - 16, 128, 140, 256, 256);
 	}
 	static void scrollbar(GuiGraphicsExtractor graphics, int x, int top, int bottom, int content, int scroll) {
-		int height = bottom - top;
-		if (content <= height || height <= 0)
+		var bar = new Scrollbar(x, top, bottom, content);
+		if (bar.range() == 0)
 			return;
-		int thumb = Math.max(12, height * height / content);
-		int y = top + (height - thumb) * scroll / (content - height);
+		int y = bar.thumbTop(scroll);
 		graphics.fill(x, top, x + 2, bottom, 0x44765A37);
-		graphics.fill(x, y, x + 2, y + thumb, 0xFF9B7B51);
+		graphics.fill(x, y, x + 2, y + bar.thumbHeight(), 0xFF9B7B51);
+	}
+	static record Scrollbar(int x, int top, int bottom, int content) {
+		int range() { return bottom > top ? Math.max(0, content - (bottom - top)) : 0; }
+		int thumbHeight() { return Math.min(bottom - top, Math.max(12, (bottom - top) * (bottom - top) / content)); }
+		int thumbTop(int scroll) {
+			return top + (bottom - top - thumbHeight()) * Math.clamp(scroll, 0, range()) / range();
+		}
+		boolean contains(double mouseX, double mouseY) {
+			return range() > 0 && mouseX >= x - 4 && mouseX < x + 6 && mouseY >= top && mouseY < bottom;
+		}
+		int position(double mouseY, double grab) {
+			return Math.clamp(
+			    (int)Math.round((mouseY - top - grab) * range() / Math.max(1, bottom - top - thumbHeight())), 0,
+			    range());
+		}
 	}
 }

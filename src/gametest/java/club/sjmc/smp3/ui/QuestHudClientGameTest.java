@@ -223,11 +223,11 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				field.seekCursorToPoint(0, client.font.lineHeight);
 				if (field.cursor() <= 3 || !field.value().equals(rule))
 					throw new AssertionError("Chinese wrapping stranded the list marker or changed the source");
-				var preview = BookText.lines(new NoticePayloads.Body("", "", rule, true), client.font, 120);
-				if (client.font.width(preview.getFirst()) <= client.font.width("1."))
+				var preview = BookText.layout(new NoticePayloads.Body("", "", rule, true), client.font, 120);
+				if (client.font.width(preview.lines().getFirst().text()) <= client.font.width("1."))
 					throw new AssertionError("Chinese preview stranded the list marker");
-				for (var line : preview)
-					if (client.font.width(line) > 120)
+				for (var line : preview.lines())
+					if (client.font.width(line.text()) * line.scale() > 120)
 						throw new AssertionError("Chinese preview line overflowed");
 				var inputs = client.gui.screen()
 				                 .children()
@@ -422,9 +422,9 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			});
 			context.waitTicks(2);
 			context.takeScreenshot("server-book-rules");
-			context.getInput().resizeWindow(2560, 1600);
+			context.getInput().resizeWindow(1920, 1200);
 			context.runOnClient(client -> {
-				client.options.guiScale().set(6);
+				client.options.guiScale().set(0);
 				client.resizeGui();
 				client.gui.setScreen(new ServerBookScreen());
 			});

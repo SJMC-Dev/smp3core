@@ -14,10 +14,20 @@ public final class NoticeFixture {
 		try {
 			Path root = INDEX.getParent().resolve("notices");
 			Files.createDirectories(root);
-			Files.writeString(
-			    root.resolve("event.md"),
-			    "# 周末活动\n\n一起建设**公共花园**。\n\n- 带上花卉和木材。\n- 与其他玩家商量分工。\n\n使用 "
-			        + "`/smp3 dailyquest` 查看今日任务。\n[活动指南](https://example.com/event)");
+			Files.writeString(root.resolve("event.md"), """
+                # 周末活动
+
+                一起建设**公共花园**。
+
+                ## 活动安排
+                ### 准备材料
+                #### 分工说明
+                - 带上花卉和木材。
+                - 与其他玩家商量分工。
+
+                使用 `/smp3 dailyquest` 查看今日任务。
+                [活动指南](https://example.com/event)
+                """);
 			Files.writeString(root.resolve("rules.txt"), "尊重其他玩家及其劳动成果。\n\n离开前关闭高频红石设备。");
 			Files.writeString(INDEX, """
                 {"title":"社区公告与指南","categories":[{"id":"news","name":"公告"},{"id":"rules","name":"服规"},{"id":"help","name":"帮助"}],"entries":[
