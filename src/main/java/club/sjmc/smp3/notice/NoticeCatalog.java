@@ -17,6 +17,8 @@ import java.util.List;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import club.sjmc.smp3.config.JsonConfig;
+
 public record NoticeCatalog(String title, List<Category> categories, List<Document> documents) {
 	private static final int ACKNOWLEDGEMENT = 1, NOTIFY = 2, PINNED = 4, READ = 8;
 
@@ -42,9 +44,7 @@ public record NoticeCatalog(String title, List<Category> categories, List<Docume
 		Path root = index.getParent().resolve("notices");
 		Files.createDirectories(root);
 		root = root.toRealPath();
-		if (!Files.exists(index))
-			Files.writeString(index,
-			                  "{\n  \"title\": \"SMP3 服务器手册\",\n  \"categories\": [],\n  \"entries\": []\n}\n");
+		JsonConfig.copyDefault(index, "/notices.json");
 		JsonObject json = JsonParser.parseString(read(index, 256 * 1024)).getAsJsonObject();
 		if (!json.has("categories") || !json.get("categories").isJsonArray() || !json.has("entries") ||
 		    !json.get("entries").isJsonArray())

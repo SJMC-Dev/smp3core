@@ -1,5 +1,8 @@
 package club.sjmc.smp3.watchdog;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -18,18 +21,14 @@ import net.minecraft.world.item.Item;
 
 public record
     WatchdogConfig(boolean enabled, Mode mode, List<String> blacklist, List<String> whitelist, List<Rule> rules) {
-	public static final String DEFAULTS = """
-		{
-		  "enabled": false,
-		  "mode": "whitelist-first",
-		  "blacklist": [],
-		  "whitelist": [],
-		  "rules": [
-		    { "entitiesPerChunk": 128, "minimumAgeSeconds": 240 },
-		    { "entitiesPerChunk": 256, "minimumAgeSeconds": 120 }
-		  ]
+	public static final String DEFAULTS;
+	static {
+		try (var input = WatchdogConfig.class.getResourceAsStream("/watchdog.json")) {
+			DEFAULTS = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+		} catch (IOException error) {
+			throw new UncheckedIOException(error);
 		}
-		""";
+	}
 	public enum Mode { WHITELIST_FIRST, BLACKLIST_FIRST }
 	public record Rule(int entitiesPerChunk, int minimumAgeSeconds) {}
 	public record Policy(boolean enabled, Mode mode, Set<Item> blacklist, Set<Item> whitelist, List<Rule> rules) {

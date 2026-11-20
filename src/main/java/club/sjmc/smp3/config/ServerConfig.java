@@ -12,10 +12,7 @@ import com.google.gson.JsonParser;
 
 public record ServerConfig(ZoneId timezone, LocalTime resetTime) {
 	public static ServerConfig load(Path file) throws IOException {
-		if (!Files.exists(file)) {
-			Files.createDirectories(file.getParent());
-			Files.writeString(file, "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"resetTime\": \"00:00\"\n}\n");
-		}
+		JsonConfig.copyDefault(file, "/server.json");
 		try {
 			return parse(Files.readString(file));
 		} catch (RuntimeException e) {

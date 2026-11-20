@@ -1,0 +1,16 @@
+{
+  "enabled": false,
+  "mode": "whitelist-first",
+  "blacklist": [],
+  "whitelist": [],
+  "rules": [
+    {
+      "entitiesPerChunk": 128,
+      "minimumAgeSeconds": 240
+    },
+    {
+      "entitiesPerChunk": 256,
+      "minimumAgeSeconds": 120
+    }
+  ]
+}

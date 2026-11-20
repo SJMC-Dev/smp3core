@@ -17,14 +17,18 @@ public final class JsonConfig {
 	private JsonConfig() {}
 
 	public static JsonObject read(Path path, String resource) throws IOException {
+		copyDefault(path, resource);
+		try (var reader = Files.newBufferedReader(path)) {
+			return JsonParser.parseReader(reader).getAsJsonObject();
+		}
+	}
+
+	public static void copyDefault(Path path, String resource) throws IOException {
 		if (!Files.exists(path)) {
 			Files.createDirectories(path.getParent());
 			try (var input = JsonConfig.class.getResourceAsStream(resource)) {
 				Files.copy(input, path);
 			}
-		}
-		try (var reader = Files.newBufferedReader(path)) {
-			return JsonParser.parseReader(reader).getAsJsonObject();
 		}
 	}
 
