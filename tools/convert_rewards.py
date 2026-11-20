@@ -5,7 +5,9 @@ import argparse
 import gzip
 import hashlib
 import json
+import os
 import struct
+import tempfile
 import zipfile
 from collections import Counter
 from datetime import date, timedelta
@@ -331,12 +333,21 @@ def convert(snapshot, configs, output, minecraft_jar, titles_only=False, migrate
 
 def write_result(output, artifacts, report):
     artifacts["report.json"] = report
-    # No output is written until every source and conversion has passed validation.
-    for relative, value in artifacts.items():
-        path = output / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        data = (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode()
-        path.write_bytes(gzip.compress(data, mtime=0) if relative.endswith(".gz") else data)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    # Stage beside the destination so publishing the complete directory is one rename.
+    with tempfile.TemporaryDirectory(prefix=f".{output.name}.staging-", dir=output.parent) as temporary:
+        staging = Path(temporary)
+        for relative, value in artifacts.items():
+            path = staging / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            data = (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode()
+            with path.open("wb") as stream:
+                stream.write(gzip.compress(data, mtime=0) if relative.endswith(".gz") else data)
+                stream.flush()
+                os.fsync(stream.fileno())
+        if output.exists() or output.is_symlink():
+            raise FileExistsError(f"Output already exists: {output}")
+        staging.rename(output)
 
 
 def main():

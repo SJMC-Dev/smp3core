@@ -1,16 +1,46 @@
 import copy
+import gzip
 import json
 import runpy
 import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 
-convert = runpy.run_path(str(Path(__file__).resolve().parents[3] / "tools/convert_rewards.py"))["convert"]
+converter = runpy.run_path(str(Path(__file__).resolve().parents[3] / "tools/convert_rewards.py"))
+convert = converter["convert"]
 
 
 class ShopQuotaMigrationTests(unittest.TestCase):
+    def test_output_publication_is_complete_or_absent(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output = root / "output"
+            artifacts = {"overlay/account.json": {"balances": {"tongbao": 12345}},
+                         "luckperms.json.gz": {"users": {}, "groups": {}}}
+            report = {"mode": "test"}
+            failures = [patch.object(converter["os"], "fsync", side_effect=[None, OSError("disk full")]),
+                        patch.object(Path, "rename", side_effect=OSError("rename failed"))]
+            for failure in failures:
+                with failure, self.assertRaises(OSError):
+                    converter["write_result"](output, artifacts.copy(), report)
+                self.assertFalse(output.exists())
+                self.assertEqual(list(root.iterdir()), [])
+            converter["write_result"](output, artifacts.copy(), report)
+            expected = {**artifacts, "report.json": report}
+            files = {p.relative_to(output).as_posix(): p.read_bytes()
+                     for p in output.rglob("*") if p.is_file()}
+            self.assertEqual(set(files), set(expected))
+            for name, data in files.items():
+                self.assertEqual(json.loads(gzip.decompress(data) if name.endswith(".gz") else data), expected[name])
+            with self.assertRaises(FileExistsError):
+                converter["write_result"](output, {"replacement.json": {}}, report)
+            self.assertEqual(files, {p.relative_to(output).as_posix(): p.read_bytes()
+                                     for p in output.rglob("*") if p.is_file()})
+            self.assertEqual(list(root.iterdir()), [output])
+
     def test_expiry_preservation_and_repeat_run(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
