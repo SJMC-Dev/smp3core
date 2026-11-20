@@ -8,6 +8,7 @@ import json
 import struct
 import zipfile
 from collections import Counter
+from datetime import date, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -153,7 +154,38 @@ def advancement_requirements(rules, minecraft_jar):
     return result
 
 
-def convert(snapshot, configs, output, minecraft_jar, titles_only=False):
+def shop_quotas(snapshot, read, artifacts, as_of):
+    directory = snapshot / "config/smp3/accounts"
+    if not directory.is_dir():
+        raise ValueError("Shop quota migration requires config/smp3/accounts in the snapshot")
+    report = {"asOf": as_of.isoformat(), "accountsScanned": 0, "cleared": [], "converted": []}
+    for path in sorted(directory.glob("*.json")):
+        relative = path.relative_to(snapshot).as_posix()
+        account = read(relative)
+        report["accountsScanned"] += 1
+        state = account["rewardStates"].get("questsAndPacks", {})
+        quota = state.get("shop", {})
+        if "date" not in quota or isinstance(quota["date"], dict):
+            continue
+        try:
+            if set(quota) != {"date", "used"} or not isinstance(quota["used"], dict):
+                raise ValueError("expected legacy date/used quota")
+            day = date.fromisoformat(quota["date"])
+            if any(type(count) is not int or not 0 <= count <= 2**63 - 1 for count in quota["used"].values()):
+                raise ValueError("used counts must be nonnegative integers")
+            expired = day < as_of
+            state["shop"] = {} if expired else {
+                item: {"end": (day + timedelta(days=1)).isoformat(), "weekly": False, "count": count}
+                for item, count in quota["used"].items()
+            }
+        except (ValueError, TypeError, OverflowError) as error:
+            raise ValueError(f"{relative}: {error}") from error
+        artifacts["overlay/" + relative] = account
+        report["cleared" if expired else "converted"].append(path.stem)
+    return report
+
+
+def convert(snapshot, configs, output, minecraft_jar, titles_only=False, migrate_shop_quotas=False, as_of=None):
     sources = [snapshot / "config", snapshot / "world"]
     if configs is not None:
         sources.append(configs)
@@ -165,6 +197,17 @@ def convert(snapshot, configs, output, minecraft_jar, titles_only=False):
         data = (snapshot / relative).read_bytes()
         hashes[relative] = hashlib.sha256(data).hexdigest()
         return json.loads(gzip.decompress(data) if relative.endswith(".gz") else data)
+
+    if migrate_shop_quotas:
+        if as_of is None:
+            raise ValueError("Shop quota migration requires --as-of (server business date)")
+        quotas = shop_quotas(snapshot, read, artifacts, as_of)
+        if not titles_only:
+            report = {"mode": "shop-quotas", "shopQuotas": quotas, "sourceSHA256": hashes,
+                      "notes": ["Only accounts with legacy shop quotas are included in the overlay.",
+                                "Balances and all other reward state remain unchanged. Deploy while stopped."]}
+            write_result(output, artifacts, report)
+            return report
 
     definitions = read("config/fuji/modules/title/config.json")
     definitions["default_active_title_id"] = title_id(definitions["default_active_title_id"])
@@ -199,6 +242,11 @@ def convert(snapshot, configs, output, minecraft_jar, titles_only=False):
                   "notes": ["Only Fuji title definitions, equipped titles and LuckPerms title nodes are converted.",
                             "SMP3 accounts, balances, reward receipts and configurations remain unchanged.",
                             "Import the fresh complete LuckPerms export using replace semantics during maintenance."]}
+        if migrate_shop_quotas:
+            report["mode"] = "titles-and-shop-quotas"
+            report["shopQuotas"] = quotas
+            report["notes"][0] = "Fuji title definitions, equipped titles and LuckPerms title nodes are converted."
+            report["notes"][1] = "Only legacy shop quotas change in SMP3 accounts; balances and other reward state are preserved."
         write_result(output, artifacts, report)
         return report
 
@@ -295,19 +343,26 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", type=Path, required=True)
     parser.add_argument("--titles-only", action="store_true", help="Convert Fuji titles and LuckPerms only; preserve upgraded accounts")
+    parser.add_argument("--shop-quotas", action="store_true", help="Migrate legacy shop quotas; may be combined with --titles-only")
+    parser.add_argument("--as-of", type=date.fromisoformat, help="Server business date YYYY-MM-DD for --shop-quotas (before daily reset, use the previous date)")
     parser.add_argument("--configs", type=Path, help="Reviewed JSON configuration directory (full migration)")
     parser.add_argument("--output", type=Path, required=True, help="New directory; never an existing server directory")
     parser.add_argument("--minecraft-jar", type=Path, help="26.3 common/server JAR with vanilla advancements (full migration)")
     args = parser.parse_args()
-    if args.titles_only:
+    if args.shop_quotas != (args.as_of is not None):
+        parser.error("--shop-quotas and --as-of must be supplied together")
+    if args.titles_only or args.shop_quotas:
         if args.configs or args.minecraft_jar:
-            parser.error("--titles-only does not use --configs or --minecraft-jar")
+            parser.error("partial migration does not use --configs or --minecraft-jar")
     elif not args.configs or not args.minecraft_jar:
         parser.error("full migration requires --configs and --minecraft-jar")
-    report = convert(args.snapshot, args.configs, args.output, args.minecraft_jar, args.titles_only)
+    report = convert(args.snapshot, args.configs, args.output, args.minecraft_jar,
+                     args.titles_only, args.shop_quotas, args.as_of)
     keys = (("mode", "titleDefinitions", "titlePreferences", "permissionUsers", "permissionGroups")
             if args.titles_only else ("players", "accounts", "signRecords", "balanceRawTotals",
                                      "playersWithAdvancementCredits", "advancementCredits"))
+    if args.shop_quotas:
+        keys = (keys if args.titles_only else ("mode",)) + ("shopQuotas",)
     print(json.dumps({key: report[key] for key in keys}, indent=2))
 
 
