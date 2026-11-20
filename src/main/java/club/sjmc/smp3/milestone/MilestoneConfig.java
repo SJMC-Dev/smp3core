@@ -64,11 +64,17 @@ record MilestoneConfig(boolean enabled, Map<String, Rule> rules, Map<Identifier,
 					requirements.add(target);
 				}
 				case "advancement_tree" -> {
-					fields(trigger, "type root", "exclude");
-					var target = Identifier.parse(text(trigger, "root"));
-					var node = server.getAdvancements().tree().get(target);
-					require(node != null, "unknown root: " + target);
-					descendants(node, requirements);
+					fields(trigger, "type root", "exclude namespace");
+					var roots = trigger.get("root");
+					String namespace = trigger.has("namespace") ? text(trigger, "namespace") : null;
+					for (var value : roots.isJsonArray() ? roots.getAsJsonArray().asList() : List.of(roots)) {
+						require(value.isJsonPrimitive() && value.getAsJsonPrimitive().isString(),
+						        "root: expected advancement IDs");
+						var target = Identifier.parse(value.getAsString());
+						var node = server.getAdvancements().tree().get(target);
+						require(node != null, "unknown root: " + target);
+						descendants(node, namespace, requirements);
+					}
 					if (trigger.has("exclude")) {
 						for (var excluded : array(trigger, "exclude")) {
 							require(excluded.isJsonPrimitive() && excluded.getAsJsonPrimitive().isString(),
@@ -78,7 +84,7 @@ record MilestoneConfig(boolean enabled, Map<String, Rule> rules, Map<Identifier,
 							        "exclude: duplicate or not in tree: " + excludedId);
 						}
 					}
-					require(!requirements.isEmpty(), "exclude cannot remove the entire tree");
+					require(!requirements.isEmpty(), "tree requirements must not be empty");
 				}
 				case "balance" -> {
 					fields(trigger, "type currency minimum", "");
@@ -122,8 +128,9 @@ record MilestoneConfig(boolean enabled, Map<String, Rule> rules, Map<Identifier,
 		                           Map.copyOf(balances));
 	}
 
-	private static void descendants(AdvancementNode node, Set<Identifier> result) {
-		result.add(node.holder().id());
-		node.children().forEach(child -> descendants(child, result));
+	private static void descendants(AdvancementNode node, String namespace, Set<Identifier> result) {
+		if (namespace == null || node.holder().id().getNamespace().equals(namespace))
+			result.add(node.holder().id());
+		node.children().forEach(child -> descendants(child, namespace, result));
 	}
 }

@@ -125,7 +125,7 @@ public final class GachaChecks {
 				GachaModule.current().edit(config -> config.pools.clear(), reply::set);
 			});
 			context.waitFor(client -> reply.get() != null);
-			world.getServer().waitFor(server -> Smp3AccountStore.balance(owner, Smp3Currency.COFFEE_STAMP) == 6000);
+			world.getServer().waitFor(server -> Smp3AccountStore.balance(owner, Smp3Currency.COFFEE_STAMP) == 6200);
 			world.getServer().runOnServer(server -> {
 				var player = world.getConnection().getServerPlayer();
 				var state = GachaLedger.read(owner).data().pool("check");
@@ -165,7 +165,7 @@ public final class GachaChecks {
 			world.getServer().waitFor(server -> GachaLedger.read(owner).data().pending.isEmpty());
 			world.getServer().runOnServer(server -> {
 				world.getConnection().getServerPlayer().removeTag("smp3_gacha_test");
-				if (Smp3AccountStore.balance(owner, Smp3Currency.COFFEE_STAMP) != 6000)
+				if (Smp3AccountStore.balance(owner, Smp3Currency.COFFEE_STAMP) != 6200)
 					throw new AssertionError("External command recovery repeated native rewards");
 			});
 			world.getServer().runOnServer(server -> {

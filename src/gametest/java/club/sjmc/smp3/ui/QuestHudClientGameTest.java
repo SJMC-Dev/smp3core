@@ -422,6 +422,23 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			});
 			context.waitTicks(2);
 			context.takeScreenshot("server-book-rules");
+			context.getInput().resizeWindow(2560, 1600);
+			context.runOnClient(client -> {
+				client.options.guiScale().set(6);
+				client.resizeGui();
+				client.gui.setScreen(new ServerBookScreen());
+			});
+			context.waitTicks(3);
+			context.takeScreenshot("server-book-laptop");
+			context.runOnClient(client -> {
+				if (client.gui.screen().children().stream().noneMatch(
+				        child
+				        -> child instanceof Button button && button.visible &&
+				               button.getMessage().getString().equals("我已阅读并确认")))
+					throw new AssertionError("Laptop margins hid the announcement detail pane");
+				client.options.guiScale().set(2);
+				client.resizeGui();
+			});
 			context.getInput().resizeWindow(640, 480);
 			context.runOnClient(client -> client.gui.setScreen(new ServerBookScreen()));
 			context.waitTicks(3);

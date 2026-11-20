@@ -1,6 +1,7 @@
 package club.sjmc.smp3.milestone;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -128,8 +129,7 @@ public final class MilestoneModule {
 			var rules = queued.remove(owner);
 			var player = server.getPlayerList().getPlayer(owner);
 			try {
-				for (var rule : rules.values())
-					award(owner, rule);
+				award(owner, rules.values());
 				if (player != null)
 					startTitles(player);
 			} catch (RuntimeException error) {
@@ -157,15 +157,20 @@ public final class MilestoneModule {
 		}
 	}
 
-	private static void award(UUID owner, MilestoneConfig.Rule rule) {
+	private static void award(UUID owner, Collection<MilestoneConfig.Rule> rules) {
 		var before = Smp3AccountStore.rewardState(owner, LEDGER_KEY);
-		if (before != null && before.has(rule.id()))
-			return;
 		var after = before == null ? new JsonObject() : before.deepCopy();
-		var pending = new JsonArray();
-		rule.titles().forEach(pending::add);
-		after.add(rule.id(), pending);
-		Smp3AccountStore.commitReward(owner, LEDGER_KEY, before, after, rule.credits());
+		var credits = new HashMap<Smp3Currency, Integer>();
+		for (var rule : rules) {
+			if (after.has(rule.id()))
+				continue;
+			var pending = new JsonArray();
+			rule.titles().forEach(pending::add);
+			after.add(rule.id(), pending);
+			rule.credits().forEach((currency, amount) -> credits.merge(currency, amount, Math::addExact));
+		}
+		if (!after.equals(before))
+			Smp3AccountStore.commitReward(owner, LEDGER_KEY, before, after, credits);
 	}
 
 	private static void startTitles(ServerPlayer player) {

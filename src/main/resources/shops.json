@@ -1553,7 +1553,7 @@
             "稀有度：普通级"
           ],
           "icon": "minecraft:wooden_pickaxe",
-          "title": "wealth_t1",
+          "title": "021_Wealth_1",
           "currency": "smp3:tongbao",
           "price": 500
         },
@@ -1565,7 +1565,7 @@
             "稀有度：稀有级"
           ],
           "icon": "minecraft:iron_pickaxe",
-          "title": "wealth_t2",
+          "title": "022_Wealth_2",
           "currency": "smp3:tongbao",
           "price": 2000
         },
@@ -1577,7 +1577,7 @@
             "稀有度：史诗级"
           ],
           "icon": "minecraft:golden_pickaxe",
-          "title": "wealth_t3",
+          "title": "023_Wealth_3",
           "currency": "smp3:tongbao",
           "price": 10000
         },
@@ -1589,7 +1589,7 @@
             "稀有度：传说级"
           ],
           "icon": "minecraft:diamond_pickaxe",
-          "title": "wealth_t4",
+          "title": "024_Wealth_4",
           "currency": "smp3:tongbao",
           "price": 100000
         }

@@ -13,6 +13,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import club.sjmc.smp3.shop.ShopPayloads;
 import club.sjmc.smp3.economy.Smp3Currency;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -330,9 +331,12 @@ final class ShopScreen extends Screen {
 			              top + (rowHeight - 8) / 2, PaperStyle.INK, false);
 			if (hovered) {
 				var lines = new ArrayList<>(Screen.getTooltipFromItem(minecraft, icon));
-				entry.description().forEach(line -> lines.add(Component.literal(line)));
-				lines.add(Component.literal(entry.title() ? "解锁称号" : entry.buy() ? "购买物品" : "出售物品"));
-				lines.add(Component.literal(entry.availability()));
+				entry.description().forEach(line -> lines.add(Component.literal(line).withStyle(ChatFormatting.GRAY)));
+				lines.add(Component.literal(entry.title() ? "解锁称号"
+				                            : entry.buy() ? "购买物品"
+				                                          : "出售物品")
+				              .withStyle(ChatFormatting.GRAY));
+				lines.add(Component.literal(entry.availability()).withStyle(ChatFormatting.GRAY));
 				graphics.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
 			}
 		}

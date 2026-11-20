@@ -83,7 +83,19 @@
           ]
         }
       ],
-      "A": [],
+      "A": [
+        {
+          "id": "stamps",
+          "label": "咖啡印章 x 2",
+          "grants": [
+            {
+              "type": "currency",
+              "id": "smp3:coffee_stamp",
+              "count": 2
+            }
+          ]
+        }
+      ],
       "B": [
         {
           "id": "tongbao",

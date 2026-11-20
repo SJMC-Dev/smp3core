@@ -13,6 +13,7 @@ import net.minecraft.util.FormattedCharSequence;
 
 final class BookText {
 	private static final Pattern INLINE = Pattern.compile("\\*\\*(.+?)\\*\\*|`([^`]+)`|\\[([^\\]]+)\\]\\(([^)]+)\\)");
+	private static final Pattern LIST = Pattern.compile("^([ \\t]*)-[ \\t]+");
 	private BookText() {}
 
 	static List<FormattedCharSequence> lines(NoticePayloads.Body body, Font font, int width) {
@@ -25,6 +26,8 @@ final class BookText {
 				boolean heading = line.matches("#{1,3} .*");
 				if (heading)
 					line = line.substring(line.indexOf(' ') + 1);
+				else
+					line = LIST.matcher(line).replaceFirst("$1• ");
 				text = inline(line);
 				if (heading)
 					text.withStyle(style -> style.withBold(true));

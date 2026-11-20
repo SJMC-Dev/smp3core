@@ -2,7 +2,6 @@ package club.sjmc.smp3.sign;
 
 import static club.sjmc.smp3.config.JsonConfig.array;
 import static club.sjmc.smp3.config.JsonConfig.fields;
-import static club.sjmc.smp3.config.JsonConfig.object;
 import static club.sjmc.smp3.config.JsonConfig.positive;
 import static club.sjmc.smp3.config.JsonConfig.require;
 import static club.sjmc.smp3.config.JsonConfig.text;
@@ -11,7 +10,9 @@ import static club.sjmc.smp3.config.JsonConfig.title;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -22,21 +23,34 @@ import club.sjmc.smp3.economy.Smp3Currency;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 
-public record
-    SignConfig(Smp3Currency currency, List<Integer> amounts, List<Milestone> monthly, List<Milestone> lifetime) {
+public record SignConfig(List<Daily> daily, List<Milestone> monthly, List<Milestone> lifetime) {
+	public record Daily(Smp3Currency currency, List<Integer> amounts) {
+		int amount(int streak) { return amounts.get(Math.clamp(streak - 1, 0, amounts.size() - 1)); }
+	}
 	public record Milestone(int days, List<SignReward> rewards) {}
 
-	public int dailyReward(int streak) { return amounts.get(Math.clamp(streak - 1, 0, amounts.size() - 1)); }
+	public Map<Smp3Currency, Integer> dailyRewards(int streak) {
+		var rewards = new LinkedHashMap<Smp3Currency, Integer>();
+		daily.forEach(reward -> rewards.put(reward.currency(), reward.amount(streak)));
+		return rewards;
+	}
 
 	public static SignConfig parse(JsonObject root) {
-		fields(root, "daily monthly lifetime", "");
-		var daily = object(root, "daily");
 		try {
-			fields(daily, "currency amounts", "");
-			var amounts = array(daily, "amounts").asList().stream().map(JsonConfig::positive).toList();
-			require(!amounts.isEmpty(), "amounts must not be empty");
-			return new SignConfig(JsonConfig.currency(text(daily, "currency")), amounts,
-			                      milestones(array(root, "monthly"), "monthly"),
+			fields(root, "daily monthly lifetime", "");
+			var daily = new ArrayList<Daily>();
+			var currencies = new HashSet<Smp3Currency>();
+			for (var value : array(root, "daily")) {
+				var entry = value.getAsJsonObject();
+				fields(entry, "currency amounts", "");
+				var currency = JsonConfig.currency(text(entry, "currency"));
+				require(currencies.add(currency), "duplicate daily currency: " + currency.id());
+				var amounts = array(entry, "amounts").asList().stream().map(JsonConfig::positive).toList();
+				require(!amounts.isEmpty(), "amounts must not be empty");
+				daily.add(new Daily(currency, amounts));
+			}
+			require(!daily.isEmpty(), "daily must not be empty");
+			return new SignConfig(List.copyOf(daily), milestones(array(root, "monthly"), "monthly"),
 			                      milestones(array(root, "lifetime"), "lifetime"));
 		} catch (RuntimeException error) {
 			throw new IllegalArgumentException("sign.json: " + error.getMessage(), error);

@@ -19,8 +19,8 @@ import net.minecraft.server.level.ServerPlayer;
 public final class SignService {
 	public enum Status { DATE_CHANGED, SIGNED, ALREADY_SIGNED, SAVE_FAILED, REVIEW, RETRY, MILESTONE_GRANTED }
 
-	public record Outcome(Status status, int days, int coins, String month) {
-		Outcome(Status status) { this(status, 0, 0, ""); }
+	public record Outcome(Status status, int days, Map<Smp3Currency, Integer> rewards, String month) {
+		Outcome(Status status) { this(status, 0, Map.of(), ""); }
 	}
 
 	private SignService() {}
@@ -47,7 +47,10 @@ public final class SignService {
 	public static void reconcile(ServerPlayer player) {
 		try {
 			var next = SignData.copy(state(player));
-			if (next.queueMilestones(SignModule.config()))
+			boolean changed = next.queueMilestones(SignModule.config());
+			changed |= next.queueMissingTitles(SignModule.config(),
+			                                   title -> Permissions.has(player, "fuji.title.obtain." + title, true));
+			if (changed)
 				commit(player, next, Map.of());
 			deliverPending(player, ServerDates.today(), new ArrayList<>());
 		} catch (RuntimeException error) {
@@ -82,12 +85,14 @@ public final class SignService {
 				PlayerSignData next = SignData.copy(state);
 				next.sign(today);
 				var config = SignModule.config();
-				int reward = config.dailyReward(next.streak());
-				commit(player, next, Map.of(config.currency(), reward));
+				var reward = config.dailyRewards(next.streak());
+				commit(player, next, reward);
 				outcomes.add(new Outcome(Status.SIGNED, next.streak(), reward, ""));
-				Smp3Core.LOGGER.info("[SMP3] 签到：player={}({}) streak={} reward={} monthTotal={} serverTotal={}",
-				                     player.getName().getString(), player.getUUID(), next.streak(), reward,
-				                     next.monthTotal(), next.serverTotal());
+				Smp3Core.LOGGER.info(
+				    "[SMP3] 签到：player={}({}) streak={} reward={} monthTotal={} serverTotal={}",
+				    player.getName().getString(), player.getUUID(), next.streak(),
+				    reward.entrySet().stream().map(entry -> entry.getKey().id() + "=" + entry.getValue()).toList(),
+				    next.monthTotal(), next.serverTotal());
 			} else if (!state.hasPendingRewards()) {
 				return List.of(new Outcome(Status.ALREADY_SIGNED));
 			}
@@ -133,7 +138,7 @@ public final class SignService {
 						delivery.status = PlayerSignData.Status.DONE;
 					} catch (RuntimeException error) {
 						delivery.status = PlayerSignData.Status.READY;
-						outcomes.add(new Outcome(Status.RETRY, claim.days, 0, claim.month));
+						outcomes.add(new Outcome(Status.RETRY, claim.days, Map.of(), claim.month));
 						Smp3Core.LOGGER.error("Check-in title pending for {}", player.getUUID(), error);
 					}
 					titles.remove(key);
@@ -141,7 +146,7 @@ public final class SignService {
 					continue;
 				}
 				if (delivery.status == PlayerSignData.Status.IN_FLIGHT) {
-					outcomes.add(new Outcome(Status.REVIEW, claim.days, 0, claim.month));
+					outcomes.add(new Outcome(Status.REVIEW, claim.days, Map.of(), claim.month));
 					continue;
 				}
 				// Persist intent before external effects; interrupted deliveries must not be repeated blindly.
@@ -156,13 +161,13 @@ public final class SignService {
 				commit(player, state, Map.of());
 				if (result != SignRewardGranter.Result.SUCCESS) {
 					outcomes.add(new Outcome(result == SignRewardGranter.Result.RETRY ? Status.RETRY : Status.REVIEW,
-					                         claim.days, 0, claim.month));
+					                         claim.days, Map.of(), claim.month));
 				}
 			}
 			if (claim.deliveries.stream().allMatch(d -> d.status == PlayerSignData.Status.DONE)) {
 				state.finish(claim);
 				commit(player, state, Map.of());
-				outcomes.add(new Outcome(Status.MILESTONE_GRANTED, claim.days, 0, claim.month));
+				outcomes.add(new Outcome(Status.MILESTONE_GRANTED, claim.days, Map.of(), claim.month));
 			}
 		}
 	}

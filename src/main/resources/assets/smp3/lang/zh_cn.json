@@ -1,5 +1,7 @@
 {
   "item.smp3.any_enchanted_book": "任意附魔书",
+  "tooltip.smp3.any_enchanted_book.usage": "手持右键，自选一种满级附魔书",
+  "tooltip.smp3.any_enchanted_book.cost": "兑换时消耗此书",
   "key.category.smp3.main": "SMP3",
   "key.smp3.quest_hud": "显示/隐藏 SMP3 HUD",
   "key.smp3.server_info": "打开服务器手册",

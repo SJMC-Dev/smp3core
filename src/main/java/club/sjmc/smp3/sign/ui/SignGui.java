@@ -1,6 +1,7 @@
 package club.sjmc.smp3.sign.ui;
 
 import java.time.LocalDate;
+import java.util.stream.Collectors;
 
 import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
@@ -133,9 +134,10 @@ public final class SignGui extends SimpleGui {
 
 		if (clickable) {
 			if (!signed)
-				builder.addLoreLine(GuiStyle.text(shownConfig.currency().name().getString() + " x " +
-				                                      shownConfig.dailyReward(nextStreak),
-				                                  GuiStyle.MUTED));
+				shownConfig.dailyRewards(nextStreak)
+				    .forEach((currency, amount)
+					             -> builder.addLoreLine(
+				                     GuiStyle.text(currency.name().getString() + " x " + amount, GuiStyle.MUTED)));
 			builder.addLoreLine(GuiStyle.text(signed ? "左键重试奖励" : "左键签到", GuiStyle.ACTION));
 			GuiStyle.onLeftClick(builder, () -> signDaily(today));
 		}
@@ -148,19 +150,24 @@ public final class SignGui extends SimpleGui {
 	}
 
 	private static Component message(SignService.Outcome result) {
-		String label = (result.month().isEmpty() ? "开服累计 " : result.month() + " 月累计 ") + result.days() + " 天";
+		String label = (result.month().isEmpty() ? "累计 " : result.month() + " 月累计 ") + result.days() + " 天";
 		return switch (result.status()) {
 			case DATE_CHANGED -> GuiStyle.text("签到日期已更新，请重新操作", GuiStyle.ACTIVE);
 			case SIGNED ->
-				GuiStyle.text("签到成功，获得 " + result.coins() + " " +
-				                  SignModule.config().currency().name().getString() + "，连续 " + result.days() + " 天",
+				GuiStyle.text("签到成功，获得 " +
+				                  result.rewards()
+				                      .entrySet()
+				                      .stream()
+				                      .map(entry -> entry.getKey().name().getString() + " x " + entry.getValue())
+				                      .collect(Collectors.joining("、")) +
+				                  "，连续 " + result.days() + " 天",
 				              GuiStyle.READY);
 			case ALREADY_SIGNED -> Component.literal("今天已经签到过了");
 			case SAVE_FAILED -> GuiStyle.text("签到或奖励保存失败，请稍后重试", GuiStyle.ERROR);
 			case REVIEW -> GuiStyle.text(label + " 奖励待管理员核对", GuiStyle.ERROR);
 			case RETRY -> GuiStyle.text(label + " 奖励未发放，可点击今日签到重试", GuiStyle.ERROR);
 			case MILESTONE_GRANTED ->
-				GuiStyle.text((result.month().isEmpty() ? "开服累计 " : "本月累计 ") + result.days() +
+				GuiStyle.text((result.month().isEmpty() ? "累计 " : "本月累计 ") + result.days() +
 				                  " 天 的累计奖励已发放",
 				              GuiStyle.HEADING);
 		};

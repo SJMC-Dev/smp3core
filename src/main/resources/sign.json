@@ -1,5 +1,8 @@
 {
-  "daily": {"currency": "smp3:tongbao", "amounts": [30, 35, 40, 45, 50]},
+  "daily": [
+    {"currency": "smp3:tongbao", "amounts": [30, 35, 40, 45, 50]},
+    {"currency": "smp3:coffee_stamp", "amounts": [1]}
+  ],
   "monthly": [
     {"days": 3, "grants": [
       {"type": "currency", "id": "smp3:tongbao", "count": 50},
@@ -23,7 +26,8 @@
       {"type": "currency", "id": "smp3:tongbao", "count": 200}
     ]},
     {"days": 2, "grants": [
-      {"type": "currency", "id": "smp3:tongbao", "count": 200}
+      {"type": "currency", "id": "smp3:tongbao", "count": 200},
+      {"type": "title", "id": "007_SignIn_1"}
     ]},
     {"days": 3, "grants": [
       {"type": "currency", "id": "smp3:tongbao", "count": 100},
@@ -41,7 +45,19 @@
     ]},
     {"days": 7, "grants": [
       {"type": "currency", "id": "smp3:tongbao", "count": 200},
-      {"type": "title", "id": "founding_player"}
+      {"type": "title", "id": "027_Sign_In_1"}
+    ]},
+    {"days": 30, "grants": [
+      {"type": "title", "id": "008_SignIn_2"}
+    ]},
+    {"days": 120, "grants": [
+      {"type": "title", "id": "009_SignIn_3"}
+    ]},
+    {"days": 365, "grants": [
+      {"type": "title", "id": "010_SignIn_4"}
+    ]},
+    {"days": 1000, "grants": [
+      {"type": "title", "id": "011_SignIn_5"}
     ]}
   ]
 }

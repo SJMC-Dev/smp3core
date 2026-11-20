@@ -18,7 +18,7 @@
 		]
 	},
 	"mixins": ["smp3.mixins.json"],
-	"breaks": {"dailyquests": "*"},
+	"breaks": {"dailyquests": "*", "gacha": "*"},
 	"depends": {
 		"fabricloader": ">=0.19.5",
 		"fabric-api": "*",

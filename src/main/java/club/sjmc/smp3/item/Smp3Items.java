@@ -23,9 +23,17 @@ public final class Smp3Items {
 	private static final ResourceKey<Item> ANY_ENCHANTED_BOOK_KEY =
 	    ResourceKey.create(Registries.ITEM, ANY_ENCHANTED_BOOK_ID);
 
-	public static final Item ANY_ENCHANTED_BOOK =
-	    Registry.register(BuiltInRegistries.ITEM, ANY_ENCHANTED_BOOK_ID,
-		                  new AnyEnchantedBookItem(new Item.Properties().setId(ANY_ENCHANTED_BOOK_KEY)));
+	public static final Item ANY_ENCHANTED_BOOK = Registry.register(
+	    BuiltInRegistries.ITEM, ANY_ENCHANTED_BOOK_ID,
+	    new AnyEnchantedBookItem(
+	        new Item.Properties()
+	            .setId(ANY_ENCHANTED_BOOK_KEY)
+	            .component(
+	                DataComponents.LORE,
+	                new ItemLore(List.of(
+	                    Component.translatable("tooltip.smp3.any_enchanted_book.usage").withStyle(ChatFormatting.GRAY),
+	                    Component.translatable("tooltip.smp3.any_enchanted_book.cost")
+	                        .withStyle(ChatFormatting.GRAY))))));
 
 	public static final Item CHOICE_PACK = pack("choice_pack", true);
 	public static final Item RANDOM_PACK = pack("random_pack", false);

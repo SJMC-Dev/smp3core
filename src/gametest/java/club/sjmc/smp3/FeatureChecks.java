@@ -54,9 +54,12 @@ public final class FeatureChecks implements ModInitializer {
 			}
 			Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING);
 			ShopChecks.install(path.resolveSibling("shops.json"));
-			try (var gacha = FeatureChecks.class.getResourceAsStream("/gacha.json")) {
-				Files.copy(gacha, path.resolveSibling("gacha.json"), StandardCopyOption.REPLACE_EXISTING);
+			for (String name : new String[] {"gacha.json", "sign.json"}) {
+				try (var inputConfig = FeatureChecks.class.getResourceAsStream("/" + name)) {
+					Files.copy(inputConfig, path.resolveSibling(name), StandardCopyOption.REPLACE_EXISTING);
+				}
 			}
+			Files.writeString(path.resolveSibling("milestone-rewards.json"), "{\"enabled\":true,\"rules\":[]}");
 			Files.writeString(path.resolveSibling("notices.json"), "{\"categories\":[],\"entries\":[]}");
 			Files.writeString(path.resolveSibling("client.json"), "{\"questHudVisible\":false}");
 		} catch (IOException e) {
@@ -90,7 +93,7 @@ public final class FeatureChecks implements ModInitializer {
 		test.assertTrue(balance(player) == 19000 && state.streak() == 3 && state.monthTotal() == 3 &&
 		                    state.serverTotal() == 3,
 		                "Sign-in reward/count changed");
-		test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == 300 &&
+		test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == 400 &&
 		                    count(player, Smp3Items.ANY_ENCHANTED_BOOK) == 1,
 		                "Milestone reward changed");
 		var restored = PlayerSignData.load(state.save());

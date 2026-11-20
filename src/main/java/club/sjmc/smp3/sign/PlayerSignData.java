@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
@@ -85,6 +86,21 @@ public final class PlayerSignData {
 			if (serverTotal >= milestone.days() && !serverClaimed.contains(milestone.days())) {
 				queue("", milestone);
 			}
+		}
+		return pending.size() != previous;
+	}
+
+	boolean queueMissingTitles(SignConfig config, Predicate<String> owned) {
+		int previous = pending.size();
+		for (var milestone : config.lifetime()) {
+			if (serverTotal < milestone.days() || !serverClaimed.contains(milestone.days()))
+				continue;
+			var missing = milestone.rewards()
+			                  .stream()
+			                  .filter(reward -> reward.kind() == SignReward.Kind.TITLE && !owned.test(reward.value()))
+			                  .toList();
+			if (!missing.isEmpty())
+				queue("", new SignConfig.Milestone(milestone.days(), missing));
 		}
 		return pending.size() != previous;
 	}

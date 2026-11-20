@@ -52,15 +52,17 @@ public final class ServerBookScreen extends Screen {
 			state.request(NoticePayloads.Action.OPEN, "", "");
 			subscribed = true;
 		}
-		x = Math.max(8, (width - 600) / 2);
-		y = Math.max(8, (height - 354) / 2);
-		bookWidth = width - 2 * x;
-		bookHeight = height - 2 * y;
+		int horizontalMargin = Math.clamp((width - 400) / 2, 8, 16);
+		int verticalMargin = Math.clamp((height - 240) / 2, 8, 16);
+		bookWidth = Math.min(600, width - 2 * horizontalMargin);
+		bookHeight = Math.min(354, height - 2 * verticalMargin);
+		x = (width - bookWidth) / 2;
+		y = (height - bookHeight) / 2;
 		narrow = bookWidth < 400;
 		sidebar = narrow ? bookWidth - 28 : Math.min(174, bookWidth / 3);
 		headerExtra = bookWidth - 44 < font.width(state.title) + 24 + Smp3Client.BALANCES.width() ? 22 : 0;
 		bodyTop = y + 73 + headerExtra;
-		bodyBottom = y + bookHeight - 20;
+		bodyBottom = y + bookHeight - 24;
 		entries = IntStream.range(0, state.messages.size())
 		              .filter(i
 		                      -> state.category == 0 ||
@@ -74,12 +76,12 @@ public final class ServerBookScreen extends Screen {
 		listScroll = Math.clamp(listScroll, 0, Math.max(0, entries.size() * 40 - (bodyBottom - bodyTop)));
 		int pages = (state.categories.size() + 3) / 4;
 		categoryPage = Math.min(categoryPage, pages - 1);
-		int tabWidth = (sidebar - 8 - (pages > 1 ? 20 : 0)) / Math.min(4, state.categories.size());
+		int tabWidth = (sidebar - 16 - (pages > 1 ? 20 : 0)) / Math.min(4, state.categories.size());
 		if (!narrow || !detail) {
 			for (int i = categoryPage * 4; i < Math.min(state.categories.size(), categoryPage * 4 + 4); i++) {
 				int category = i;
 				String label = font.plainSubstrByWidth(state.categories.get(i).name(), tabWidth - 6);
-				var button = new PaperButton(x + 14 + (i % 4) * tabWidth, y + 46 + headerExtra, tabWidth - 2, label,
+				var button = new PaperButton(x + 22 + (i % 4) * tabWidth, y + 46 + headerExtra, tabWidth - 2, label,
 				                             true, () -> {
 					                             state.category = category;
 					                             listScroll = 0;
@@ -97,7 +99,7 @@ public final class ServerBookScreen extends Screen {
 		}
 
 		if (narrow && detail)
-			addRenderableWidget(new PaperButton(x + 14, y + 46 + headerExtra, 78, "返回目录", false, () -> {
+			addRenderableWidget(new PaperButton(x + 22, y + 46 + headerExtra, 78, "返回目录", false, () -> {
 				detail = false;
 				rebuildWidgets();
 			}));
@@ -112,9 +114,9 @@ public final class ServerBookScreen extends Screen {
 		updateAcknowledgement();
 	}
 
-	private int contentLeft() { return narrow ? x + 22 : x + sidebar + 30; }
-	private int contentWidth() { return x + bookWidth - 24 - contentLeft(); }
-	private int contentTop() { return (narrow ? bodyTop : y + 50 + headerExtra) + 18; }
+	private int contentLeft() { return narrow ? x + 26 : x + sidebar + 34; }
+	private int contentWidth() { return x + bookWidth - 28 - contentLeft(); }
+	private int contentTop() { return (narrow ? bodyTop : y + 50 + headerExtra) + 22; }
 
 	private void updateAcknowledgement() {
 		acknowledge.visible =
@@ -148,7 +150,7 @@ public final class ServerBookScreen extends Screen {
 	}
 
 	private void drawList(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-		int left = x + 16, right = x + sidebar + 7;
+		int left = x + 22, right = x + sidebar + 7;
 		if (entries.isEmpty()) {
 			graphics.text(font, "暂无内容", left + 7, bodyTop + 7, MUTED, false);
 			return;
@@ -213,7 +215,7 @@ public final class ServerBookScreen extends Screen {
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		if (super.mouseClicked(event, doubleClick))
 			return true;
-		if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && (!narrow || !detail) && event.x() >= x + 16 &&
+		if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && (!narrow || !detail) && event.x() >= x + 22 &&
 		    event.x() < x + sidebar + 7 && event.y() >= bodyTop && event.y() < bodyBottom) {
 			int row = ((int)event.y() - bodyTop + listScroll) / 40;
 			if (row < entries.size()) {
@@ -232,7 +234,7 @@ public final class ServerBookScreen extends Screen {
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
 		if (mouseY > bodyBottom)
 			return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
-		if ((!narrow || !detail) && mouseY >= bodyTop && mouseX >= x + 16 && mouseX < x + sidebar + 7)
+		if ((!narrow || !detail) && mouseY >= bodyTop && mouseX >= x + 22 && mouseX < x + sidebar + 7)
 			listScroll = Math.clamp(listScroll - (int)(vertical * 28), 0,
 			                        Math.max(0, entries.size() * 40 - (bodyBottom - bodyTop)));
 		else if ((!narrow || detail) && mouseY >= contentTop() && mouseX >= contentLeft() &&

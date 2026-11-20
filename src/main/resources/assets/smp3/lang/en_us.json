@@ -1,5 +1,7 @@
 {
   "item.smp3.any_enchanted_book": "Any Enchanted Book",
+  "tooltip.smp3.any_enchanted_book.usage": "Right-click to choose a max-level enchantment.",
+  "tooltip.smp3.any_enchanted_book.cost": "Consumes this book when redeemed.",
   "key.category.smp3.main": "SMP3",
   "key.smp3.quest_hud": "Toggle SMP3 HUD",
   "key.smp3.server_info": "Open Server Handbook",

@@ -17,6 +17,25 @@ import net.minecraft.server.level.ServerPlayer;
 public final class SignFailureChecks {
 	public static void run(GameTestHelper test, ServerPlayer player) throws Exception {
 		configuration(test, player);
+		var file = FabricLoader.getInstance().getConfigDir().resolve("smp3/sign.json");
+		String original = Files.readString(file);
+		try {
+			Files.writeString(file, """
+			    {"daily":[{"currency":"smp3:tongbao","amounts":[50]},
+			              {"currency":"smp3:coffee_stamp","amounts":[1]}],"monthly":[],"lifetime":[
+			      {"days":5,"grants":[{"type":"currency","id":"smp3:tongbao","count":100},
+			        {"type":"command","command":"gacha give <player> ten"}]}]}
+			    """);
+			SignModule.reload(player.level().getServer());
+			failures(test, player);
+		} finally {
+			Files.writeString(file, original);
+			SignModule.reload(player.level().getServer());
+		}
+	}
+
+	private static void failures(GameTestHelper test, ServerPlayer player) {
+		var stamps = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP);
 		var today = ServerDates.today();
 		var data = SignData.get(player.level().getServer());
 		var legacy = new CompoundTag();
@@ -30,11 +49,15 @@ public final class SignFailureChecks {
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, Long.MAX_VALUE);
 		SignService.sign(player, today);
 		test.assertTrue(data.of(player.getUUID()).serverTotal() == 4, "Failed currency commit advanced sign-in");
+		test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == stamps,
+		                "Failed sign-in credited the other currency");
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
 		SignService.sign(player, today);
 		SignService.sign(player, today);
 		test.assertTrue(balance(player) == 15000 && !data.of(player.getUUID()).isServerClaimed(5),
 		                "Missing command lost pending reward or repeated money");
+		test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == stamps + 100,
+		                "Retry duplicated the daily stamp");
 		int[] calls = {0};
 		boolean[] succeeds = {false};
 		player.level().getServer().getCommands().getDispatcher().register(
@@ -79,13 +102,37 @@ public final class SignFailureChecks {
 		var server = player.level().getServer();
 		try {
 			Files.writeString(file, """
-			    {"daily":{"currency":"smp3:coffee_stamp","amounts":[2,4]},"monthly":[],"lifetime":[
+			    {"daily":[{"currency":"smp3:coffee_stamp","amounts":[2,4]}],"monthly":[],"lifetime":[
 			      {"days":1,"grants":[{"type":"currency","id":"smp3:tongbao","count":9},
 			                           {"type":"title","id":"test_sign_title"}]}]}
 			    """);
 			SignModule.reload(server);
 			var config = SignModule.config();
-			test.assertTrue(config.dailyReward(99) == 4, "Final daily amount did not repeat");
+			test.assertTrue(config.dailyRewards(99).get(Smp3Currency.COFFEE_STAMP) == 4,
+			                "Final daily amount did not repeat");
+			var legacy = new CompoundTag();
+			legacy.putInt("serverTotal", 1);
+			legacy.putIntArray("serverClaimed", new int[] {1});
+			var previous = PlayerSignData.load(legacy);
+			test.assertTrue(previous.queueMissingTitles(config, title -> false) && previous.pending.size() == 1 &&
+			                    previous.pending.getFirst().deliveries.size() == 1 &&
+			                    previous.pending.getFirst().deliveries.getFirst().reward.kind() ==
+			                        SignReward.Kind.TITLE &&
+			                    !previous.queueMissingTitles(config, title -> false),
+			                "Title backfill replayed a claimed reward");
+			previous.finish(previous.pending.getFirst());
+			test.assertTrue(!previous.queueMissingTitles(config, title -> true), "Owned title queued again");
+			legacy.putLong("lastSignEpochDay", ServerDates.today().toEpochDay());
+			SignData.get(server).commit(player.getUUID(), Smp3AccountStore.rewardState(player.getUUID(), "sign"),
+			                            PlayerSignData.load(legacy), Map.of());
+			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
+			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.COFFEE_STAMP, 0);
+			SignService.reconcile(player);
+			SignService.sign(player, ServerDates.today());
+			test.assertTrue(balance(player) == 0 &&
+			                    Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == 0 &&
+			                    SignService.state(player).pending.size() == 1,
+			                "Legacy signed day replayed daily or milestone currency");
 			SignData.get(server).commit(player.getUUID(), Smp3AccountStore.rewardState(player.getUUID(), "sign"),
 			                            new PlayerSignData(), Map.of());
 			Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
@@ -104,7 +151,7 @@ public final class SignFailureChecks {
 				test.assertTrue(SignModule.config() == config, "Invalid reload replaced sign configuration");
 			}
 			Files.writeString(
-			    file, "{\"daily\":{\"currency\":\"smp3:tongbao\",\"amounts\":[1]},\"monthly\":[],\"lifetime\":[]}");
+			    file, "{\"daily\":[{\"currency\":\"smp3:tongbao\",\"amounts\":[1]}],\"monthly\":[],\"lifetime\":[]}");
 			SignModule.reload(server);
 			test.assertTrue(SignService.state(player).hasPendingRewards() && balance(player) == 900,
 			                "Removing a threshold lost its pending reward or repeated currency");
