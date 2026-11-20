@@ -153,32 +153,18 @@ def advancement_requirements(rules, minecraft_jar):
     return result
 
 
-def convert(snapshot, configs, output, minecraft_jar):
-    if output.exists() or any(output.resolve().is_relative_to(path.resolve()) for path in
-                              (configs, snapshot / "config", snapshot / "world")):
+def convert(snapshot, configs, output, minecraft_jar, titles_only=False):
+    sources = [snapshot / "config", snapshot / "world"]
+    if configs is not None:
+        sources.append(configs)
+    if output.exists() or any(output.resolve().is_relative_to(path.resolve()) for path in sources):
         raise ValueError("Choose a new output directory outside the source configurations and world")
-    if list((snapshot / "config/smp3/accounts").glob("*.json")):
-        raise ValueError("Snapshot contains new account ledgers; reconcile those instead of replaying legacy balances")
-    if any((snapshot / "config/gacha/players").glob("**/*")):
-        raise ValueError("Legacy gacha player data needs review before conversion")
     artifacts, hashes = {}, {}
 
     def read(relative):
         data = (snapshot / relative).read_bytes()
         hashes[relative] = hashlib.sha256(data).hexdigest()
         return json.loads(gzip.decompress(data) if relative.endswith(".gz") else data)
-
-    legacy_gacha = read("config/gacha/config.json")
-    if legacy_gacha.get("pools"):
-        raise ValueError("Legacy gacha pools need review before conversion")
-    for name in ("config.json", "economy-data.json"):
-        if read("config/fuji/modules/economy/" + name).get("currencies"):
-            raise ValueError("Nonempty Fuji economy requires a separate balance review")
-
-    for name in CONFIGS:
-        value = json.loads((configs / name).read_text())
-        title_grants(value)
-        artifacts["overlay/config/smp3/" + name] = value
 
     definitions = read("config/fuji/modules/title/config.json")
     definitions["default_active_title_id"] = title_id(definitions["default_active_title_id"])
@@ -195,8 +181,6 @@ def convert(snapshot, configs, output, minecraft_jar):
     for preference in preferences["preferences"]:
         preference["active_title_id"] = title_id(preference.get("active_title_id"))
     artifacts["overlay/config/fuji/modules/title/data.json"] = preferences
-    menus = read("config/fuji/modules/command_menu/menus.json")
-    artifacts["overlay/config/fuji/modules/command_menu/menus.json"] = menu_commands(menus)
 
     permissions = read("smp3-rewards.json.gz")
     for section in ("users", "groups"):
@@ -206,6 +190,36 @@ def convert(snapshot, configs, output, minecraft_jar):
             except ValueError as error:
                 raise ValueError(f"{section}/{owner}: {error}") from error
     artifacts["luckperms.json.gz"] = permissions
+
+    if titles_only:
+        report = {"mode": "titles-only", "titleMapping": TITLE_IDS,
+                  "titleDefinitions": len(unique), "titlePreferences": len(preferences["preferences"]),
+                  "permissionUsers": len(permissions["users"]), "permissionGroups": len(permissions["groups"]),
+                  "sourceSHA256": hashes,
+                  "notes": ["Only Fuji title definitions, equipped titles and LuckPerms title nodes are converted.",
+                            "SMP3 accounts, balances, reward receipts and configurations remain unchanged.",
+                            "Import the fresh complete LuckPerms export using replace semantics during maintenance."]}
+        write_result(output, artifacts, report)
+        return report
+
+    if list((snapshot / "config/smp3/accounts").glob("*.json")):
+        raise ValueError("Snapshot contains new account ledgers; reconcile those instead of replaying legacy balances")
+    if any((snapshot / "config/gacha/players").glob("**/*")):
+        raise ValueError("Legacy gacha player data needs review before conversion")
+    legacy_gacha = read("config/gacha/config.json")
+    if legacy_gacha.get("pools"):
+        raise ValueError("Legacy gacha pools need review before conversion")
+    for name in ("config.json", "economy-data.json"):
+        if read("config/fuji/modules/economy/" + name).get("currencies"):
+            raise ValueError("Nonempty Fuji economy requires a separate balance review")
+
+    for name in CONFIGS:
+        value = json.loads((configs / name).read_text())
+        title_grants(value)
+        artifacts["overlay/config/smp3/" + name] = value
+
+    menus = read("config/fuji/modules/command_menu/menus.json")
+    artifacts["overlay/config/fuji/modules/command_menu/menus.json"] = menu_commands(menus)
 
     balances = read("config/smp3/economy.json")["balances"]
     totals = Counter()
@@ -263,6 +277,11 @@ def convert(snapshot, configs, output, minecraft_jar):
                         "Credits are a forecast only. The overlay preserves balances and leaves reward ledgers unclaimed.",
                         "Historical daily coffee stamps are not backfilled. Existing title ownership is preserved.",
                         "Gacha pools remain empty until their actual locations and rewards are configured."]}
+    write_result(output, artifacts, report)
+    return report
+
+
+def write_result(output, artifacts, report):
     artifacts["report.json"] = report
     # No output is written until every source and conversion has passed validation.
     for relative, value in artifacts.items():
@@ -270,19 +289,26 @@ def convert(snapshot, configs, output, minecraft_jar):
         path.parent.mkdir(parents=True, exist_ok=True)
         data = (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode()
         path.write_bytes(gzip.compress(data, mtime=0) if relative.endswith(".gz") else data)
-    return report
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", type=Path, required=True)
-    parser.add_argument("--configs", type=Path, required=True, help="Reviewed JSON configuration directory")
+    parser.add_argument("--titles-only", action="store_true", help="Convert Fuji titles and LuckPerms only; preserve upgraded accounts")
+    parser.add_argument("--configs", type=Path, help="Reviewed JSON configuration directory (full migration)")
     parser.add_argument("--output", type=Path, required=True, help="New directory; never an existing server directory")
-    parser.add_argument("--minecraft-jar", type=Path, required=True, help="26.3 common/server JAR with vanilla advancements")
+    parser.add_argument("--minecraft-jar", type=Path, help="26.3 common/server JAR with vanilla advancements (full migration)")
     args = parser.parse_args()
-    report = convert(args.snapshot, args.configs, args.output, args.minecraft_jar)
-    print(json.dumps({key: report[key] for key in ("players", "accounts", "signRecords", "balanceRawTotals",
-                                                  "playersWithAdvancementCredits", "advancementCredits")}, indent=2))
+    if args.titles_only:
+        if args.configs or args.minecraft_jar:
+            parser.error("--titles-only does not use --configs or --minecraft-jar")
+    elif not args.configs or not args.minecraft_jar:
+        parser.error("full migration requires --configs and --minecraft-jar")
+    report = convert(args.snapshot, args.configs, args.output, args.minecraft_jar, args.titles_only)
+    keys = (("mode", "titleDefinitions", "titlePreferences", "permissionUsers", "permissionGroups")
+            if args.titles_only else ("players", "accounts", "signRecords", "balanceRawTotals",
+                                     "playersWithAdvancementCredits", "advancementCredits"))
+    print(json.dumps({key: report[key] for key in keys}, indent=2))
 
 
 if __name__ == "__main__":
