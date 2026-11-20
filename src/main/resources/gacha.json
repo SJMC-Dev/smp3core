@@ -1,0 +1,103 @@
+{
+  "animationTicks": 100,
+  "resultTicks": 60,
+  "actionbarTicks": 100,
+  "poolDefaults": {
+    "sProbability": 0.02,
+    "aProbability": 0.1,
+    "pity": 80,
+    "displayOffsetX": 0,
+    "displayOffsetY": 0,
+    "displayOffsetZ": 0,
+    "fireworkDistance": 3.2,
+    "rewards": {
+      "S": [
+        {
+          "id": "mace",
+          "label": "重锤",
+          "grants": [
+            {
+              "type": "item",
+              "id": "minecraft:mace",
+              "count": 1
+            }
+          ],
+          "weight": 1,
+          "limit": -1
+        }
+      ],
+      "A": [
+        {
+          "id": "diamond",
+          "label": "钻石",
+          "grants": [
+            {
+              "type": "item",
+              "id": "minecraft:diamond",
+              "count": 1
+            }
+          ],
+          "weight": 1,
+          "limit": -1
+        },
+        {
+          "id": "gold_ingot",
+          "label": "金锭",
+          "grants": [
+            {
+              "type": "item",
+              "id": "minecraft:gold_ingot",
+              "count": 1
+            }
+          ],
+          "weight": 1,
+          "limit": -1
+        },
+        {
+          "id": "iron_ingot",
+          "label": "铁锭",
+          "grants": [
+            {
+              "type": "item",
+              "id": "minecraft:iron_ingot",
+              "count": 1
+            }
+          ],
+          "weight": 1,
+          "limit": -1
+        }
+      ],
+      "B": []
+    },
+    "fixedRewards": {
+      "S": [
+        {
+          "id": "stamps",
+          "label": "咖啡印章 x 20",
+          "grants": [
+            {
+              "type": "currency",
+              "id": "smp3:coffee_stamp",
+              "count": 20
+            }
+          ]
+        }
+      ],
+      "A": [],
+      "B": [
+        {
+          "id": "tongbao",
+          "label": "铁镐通宝 x 20",
+          "grants": [
+            {
+              "type": "currency",
+              "id": "smp3:tongbao",
+              "count": 20
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "pools": {}
+}

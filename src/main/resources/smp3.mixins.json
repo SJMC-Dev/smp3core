@@ -4,6 +4,8 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "AdvancementRewardMixin",
+    "BlockDisplayAccess",
+    "GachaCommandCallbackMixin",
     "CraftingQuestMixin",
     "InventoryQuestMixin",
     "FurnaceQuestMixin",
@@ -15,7 +17,7 @@
     "FishingQuestMixin",
     "TradeQuestMixin",
     "PiglinQuestMixin",
-    "GoldOwnershipMixin",
+    "DroppedItemOwnershipMixin",
     "WatchdogEntityCallbacksMixin",
     "WatchdogLevelMixin",
     "WatchdogNeighborMixin",
@@ -36,6 +38,9 @@
     "ArmadilloQuestMixin",
     "LightningQuestMixin",
     "MovementQuestMixin"
+  ],
+  "client": [
+    "NoticeLineBreakMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -1,5 +1,7 @@
 package club.sjmc.smp3.shop;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -8,6 +10,7 @@ import java.util.UUID;
 
 import club.sjmc.smp3.economy.BalanceSync;
 import club.sjmc.smp3.item.ItemDefinitions;
+import club.sjmc.smp3.time.ServerDates;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.RegistryAccess;
@@ -19,7 +22,7 @@ import net.minecraft.world.item.ItemStack;
 
 // A screen keeps one current quote. Replacing it invalidates repeated or outdated trade requests.
 final class ShopSessions {
-	private static final ShopService.Quote UNAVAILABLE = new ShopService.Quote(-1, 0, 0, 0, 0);
+	private static final ShopService.Quote UNAVAILABLE = new ShopService.Quote(-1, 0, 0, 0, 0, false, false);
 	private static final class Session {
 		final long id;
 		String selected = "";
@@ -33,7 +36,7 @@ final class ShopSessions {
 
 	static List<String> encode(ShopCatalog catalog, RegistryAccess registries) {
 		var nodes = new ArrayList<ShopPayloads.Node>();
-		catalog.shops().forEach(node -> append(nodes, node, "", registries));
+		catalog.shops().forEach(node -> append(nodes, node, "", catalog.refreshes(), registries));
 		String json = ShopPayloads.JSON.toJson(new ShopPayloads.View(nodes));
 		var parts = new ArrayList<String>();
 		for (int start = 0; start < json.length();) {
@@ -48,7 +51,7 @@ final class ShopSessions {
 		return List.copyOf(parts);
 	}
 	private static void append(List<ShopPayloads.Node> result, ShopNode node, String parent,
-	                           RegistryAccess registries) {
+	                           Map<String, LocalDate> refreshes, RegistryAccess registries) {
 		var entries = new ArrayList<ShopPayloads.Entry>();
 		for (ShopEntry entry : node.entries()) {
 			ItemStack icon = entry.icon() == entry.template().getItem() ? entry.template().copyWithCount(1)
@@ -56,11 +59,16 @@ final class ShopSessions {
 			icon.set(DataComponents.CUSTOM_NAME, entry.name());
 			entries.add(new ShopPayloads.Entry(entry.id(), ItemDefinitions.json(icon, registries), entry.description(),
 			                                   entry.direction() == TradeDirection.BUY, entry.amount(), entry.price(),
-			                                   entry.currency().id().toString()));
+			                                   entry.currency().id().toString(), !entry.title().isEmpty(),
+			                                   refreshes.containsKey(entry.id())
+			                                       ? "轮换商品，下次刷新 " +
+			                                             ServerDates.resetAt(refreshes.get(entry.id()))
+			                                                 .format(DateTimeFormatter.ofPattern("MM-dd HH:mm z"))
+												   : "常驻商品"));
 		}
 		result.add(new ShopPayloads.Node(node.id(), parent, node.name(),
 		                                 BuiltInRegistries.ITEM.getKey(node.icon()).toString(), entries));
-		node.children().forEach(child -> append(result, child, node.id(), registries));
+		node.children().forEach(child -> append(result, child, node.id(), refreshes, registries));
 	}
 	void catalog(MinecraftServer server, List<String> parts) {
 		this.parts = parts;
@@ -78,6 +86,7 @@ final class ShopSessions {
 	boolean open(ServerPlayer player) {
 		if (!ServerPlayNetworking.canSend(player, ShopPayloads.Catalog.TYPE))
 			return false;
+		ShopTitles.deliver(player);
 		Session session = new Session(++serial);
 		viewers.put(player.getUUID(), session);
 		sendCatalog(player, session);
@@ -98,6 +107,10 @@ final class ShopSessions {
 			return;
 		if (request.action() == ShopPayloads.Action.CLOSE) {
 			close(player);
+			return;
+		}
+		if (!ShopModule.refresh()) {
+			send(player, session, "商店刷新中，请稍后重试");
 			return;
 		}
 		ShopEntry entry = ShopModule.catalog().entries().get(request.entry());
@@ -123,7 +136,9 @@ final class ShopSessions {
 			case BOUGHT -> "购买成功";
 			case SOLD -> "出售成功";
 			case NO_MONEY -> "余额不足";
-			case QUOTA, LOCKED -> "今日额度不足";
+			case QUOTA, LOCKED -> next.weekly() ? "本周额度不足" : "今日额度不足";
+			case OWNED -> "已拥有该称号";
+			case PENDING -> "称号发放中";
 			case NOT_ENOUGH_ITEMS -> "符合要求的物品不足";
 			case INVALID_QUANTITY -> "请输入有效批数";
 			case STALE -> "商品已更新，请重新选择";
@@ -134,8 +149,6 @@ final class ShopSessions {
 		BalanceSync.refresh(player);
 	}
 	void tick(MinecraftServer server) {
-		if (server.getTickCount() % 20 != 0)
-			return;
 		for (var viewer : viewers.entrySet()) {
 			Session session = viewer.getValue();
 			if (session.selected.isEmpty())

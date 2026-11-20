@@ -1,0 +1,146 @@
+package club.sjmc.smp3.gacha;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.random.RandomGenerator;
+
+import com.mojang.math.Transformation;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+
+import club.sjmc.smp3.mixin.BlockDisplayAccess;
+
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Brightness;
+import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.FireworkExplosion;
+import net.minecraft.world.item.component.Fireworks;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+
+import static club.sjmc.smp3.gacha.GachaConfig.*;
+
+final class GachaAnimation {
+	static final String FX_TAG = "gacha_temporary_fx";
+	private static final Block[] COLORS = {Blocks.CONCRETE.blue(), Blocks.CONCRETE.yellow(), Blocks.CONCRETE.red()};
+	private static final int[] NOTES = {0, 4, 7, 12, 7, 4, 2, 5, 9, 14, 9, 5, 4, 7, 11, 16};
+	final ServerLevel level;
+	final List<Display.BlockDisplay> displays = new ArrayList<>();
+	private final List<FireworkRocketEntity> rockets = new ArrayList<>();
+	private final double x, y, z;
+	private final Facing facing;
+	private final double fireworkDistance;
+	private int rocketTicks;
+
+	/** Uses the vanilla entity type and packets, but cannot execute server-side flight/collision damage. */
+	private static final class CosmeticFirework extends FireworkRocketEntity {
+		CosmeticFirework(ServerLevel level, ItemStack stack, double x, double y, double z) {
+			super(level, stack, x, y, z, true);
+		}
+		@Override
+		public void tick() {}
+	}
+
+	GachaAnimation(ServerLevel level, Pool pool, int draws) {
+		this.level = level;
+		this.x = pool.displayX();
+		this.z = pool.displayZ();
+		this.y = pool.displayY(draws);
+		this.facing = pool.facing();
+		this.fireworkDistance = pool.fireworkDistance;
+		try {
+			for (int i = 0; i < draws; i++) {
+				double offset = draws == 1 ? 0 : (i % 5 - 2) * 0.9;
+				double rowY = y + (draws == 10 && i < 5 ? 0.9 : 0);
+				Display.BlockDisplay display = new Display.BlockDisplay(EntityTypes.BLOCK_DISPLAY, level);
+				display.setPos(x + facing.rightX * offset, rowY, z + facing.rightZ * offset);
+				display.setTransformation(new Transformation(new Vector3f(-0.3f, -0.3f, -0.3f), new Quaternionf(),
+				                                             new Vector3f(0.6f), new Quaternionf()));
+				display.setBrightnessOverride(new Brightness(15, 15));
+				((BlockDisplayAccess)display).gacha$block(Blocks.CONCRETE.blue().defaultBlockState());
+				if (!level.hasChunkAt(display.blockPosition()) || !level.addFreshEntity(display))
+					throw new IllegalStateException("无法生成抽奖展示实体。");
+				display.addTag(FX_TAG);
+				displays.add(display);
+			}
+		} catch (RuntimeException e) {
+			clear();
+			throw e;
+		}
+	}
+	void tick(int elapsed, RandomGenerator random) {
+		if (elapsed % 4 == 0) {
+			for (var display : displays)
+				((BlockDisplayAccess)display).gacha$block(COLORS[animationColor(random)].defaultBlockState());
+			int note = NOTES[(elapsed / 4) % NOTES.length];
+			level.playSound(null, x, y, z, SoundEvents.NOTE_BLOCK_HARP, SoundSource.BLOCKS, 0.8f,
+			                (float)Math.pow(2, (note - 12) / 12.0));
+			if (elapsed % 8 == 0)
+				level.playSound(null, x, y, z, SoundEvents.NOTE_BLOCK_BELL, SoundSource.BLOCKS, 0.45f,
+				                (float)Math.pow(2, (note - 12) / 12.0));
+		}
+	}
+	static int animationColor(RandomGenerator random) {
+		int roll = random.nextInt(100);
+		return roll < 50 ? 0 : roll < 80 ? 1 : 2;
+	}
+	void reveal(List<GachaLedger.Draw> draws) {
+		for (int i = 0; i < displays.size(); i++) {
+			Block block = switch (draws.get(i).tier()) {
+				case S -> Blocks.CONCRETE.red();
+				case A -> Blocks.CONCRETE.yellow();
+				case B -> Blocks.CONCRETE.blue();
+			};
+			((BlockDisplayAccess)displays.get(i)).gacha$block(block.defaultBlockState());
+		}
+		Tier highest = draws.stream().map(d -> d.tier()).min(Comparator.naturalOrder()).orElse(Tier.B);
+		int color = switch (highest) {
+			case S -> 0xFF3333;
+			case A -> 0xFFD43B;
+			case B -> 0x3388FF;
+		};
+		ItemStack firework = new ItemStack(Items.FIREWORK_ROCKET);
+		firework.set(
+		    DataComponents.FIREWORKS,
+		    new Fireworks(0, List.of(new FireworkExplosion(FireworkExplosion.Shape.LARGE_BALL, IntArrayList.of(color),
+			                                               IntArrayList.of(color), true, true))));
+		for (int side : new int[] {-1, 1}) {
+			FireworkRocketEntity rocket =
+			    new CosmeticFirework(level, firework.copy(), x + facing.rightX * side * fireworkDistance, y,
+				                     z + facing.rightZ * side * fireworkDistance);
+			if (level.hasChunkAt(rocket.blockPosition()) && level.addFreshEntity(rocket)) {
+				rocket.addTag(FX_TAG);
+				rockets.add(rocket);
+			}
+		}
+		level.playSound(null, x, y, z, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.BLOCKS, 1f, 0.9f);
+		rocketTicks = 0;
+	}
+	void tickRevealed() {
+		if (++rocketTicks == 2) {
+			// Broadcast vanilla cosmetic explosion metadata, then remove without invoking damage/explosion logic.
+			for (var rocket : rockets) {
+				if (!rocket.isRemoved()) {
+					level.broadcastEntityEvent(rocket, (byte)17);
+					rocket.discard();
+				}
+			}
+			rockets.clear();
+		}
+	}
+	void clear() {
+		displays.forEach(Display.BlockDisplay::discard);
+		displays.clear();
+		rockets.forEach(FireworkRocketEntity::discard);
+		rockets.clear();
+	}
+}

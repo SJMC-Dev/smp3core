@@ -1,13 +1,19 @@
 package club.sjmc.smp3.item;
 
+import java.util.List;
+
 import club.sjmc.smp3.Smp3Core;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.component.ItemLore;
 
 public final class Smp3Items {
 
@@ -28,6 +34,24 @@ public final class Smp3Items {
 	    BuiltInRegistries.ITEM, CORAL_TOOL_ID,
 	    new CoralToolItem(
 	        new Item.Properties().setId(ResourceKey.create(Registries.ITEM, CORAL_TOOL_ID)).durability(250)));
+	public static final Item TICKET_SINGLE = ticket("ticket_single", false);
+	public static final Item TICKET_TEN = ticket("ticket_ten", true);
+	private static Item ticket(String name, boolean ten) {
+		var id = Identifier.fromNamespaceAndPath("smp3", name);
+		var usage = Component.translatable("tooltip.smp3.ticket.usage").withStyle(ChatFormatting.GRAY);
+		return Registry.register(
+		    BuiltInRegistries.ITEM, id,
+		    new Item(new Item.Properties()
+			             .setId(ResourceKey.create(Registries.ITEM, id))
+			             .component(DataComponents.ITEM_NAME,
+			                        Component.translatable("item.smp3." + name).withStyle(ChatFormatting.GOLD))
+			             .component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true)
+			             .component(DataComponents.LORE,
+			                        new ItemLore(
+		                                ten ? List.of(usage, Component.translatable("tooltip.smp3.ticket.ten_guarantee")
+										                         .withStyle(ChatFormatting.YELLOW))
+										    : List.of(usage)))));
+	}
 	private static Item pack(String name, boolean choice) {
 		var id = Identifier.fromNamespaceAndPath("smp3", name);
 		return Registry.register(

@@ -4,502 +4,1594 @@
       "id": "recycle",
       "name": "回收商店",
       "icon": "minecraft:coal_ore",
+      "rotation": {
+        "enabled": true,
+        "period": "daily",
+        "pools": [
+          {
+            "id": "ore",
+            "count": 2,
+            "entries": [
+              {
+                "id": "recycle.ore.coal_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:coal_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.ore.deepslate_coal_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:deepslate_coal_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.ore.iron_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:iron_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.ore.deepslate_iron_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:deepslate_iron_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.ore.copper_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:copper_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.ore.deepslate_copper_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:deepslate_copper_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.ore.gold_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:gold_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.ore.deepslate_gold_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:deepslate_gold_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.ore.redstone_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:redstone_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 4,
+                "limit": {
+                  "period": "daily",
+                  "normal": 16
+                }
+              },
+              {
+                "id": "recycle.ore.deepslate_redstone_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:deepslate_redstone_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.ore.lapis_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:lapis_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 4,
+                "limit": {
+                  "period": "daily",
+                  "normal": 16
+                }
+              },
+              {
+                "id": "recycle.ore.deepslate_lapis_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:deepslate_lapis_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 4,
+                "limit": {
+                  "period": "daily",
+                  "normal": 16
+                }
+              },
+              {
+                "id": "recycle.ore.emerald_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:emerald_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.ore.deepslate_emerald_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:deepslate_emerald_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 1000,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.ore.diamond",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:diamond",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 4,
+                "limit": {
+                  "period": "daily",
+                  "normal": 16
+                }
+              },
+              {
+                "id": "recycle.ore.diamond_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:diamond_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.ore.deepslate_diamond_ore",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:deepslate_diamond_ore",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 10,
+                "limit": {
+                  "period": "daily",
+                  "normal": 16
+                }
+              },
+              {
+                "id": "recycle.ore.ancient_debris",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:ancient_debris",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 50,
+                "limit": {
+                  "period": "daily",
+                  "normal": 4
+                }
+              },
+              {
+                "id": "recycle.ore.netherite_scrap",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:netherite_scrap",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 50,
+                "limit": {
+                  "period": "daily",
+                  "normal": 4
+                }
+              },
+              {
+                "id": "recycle.ore.netherite_ingot",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:netherite_ingot",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 200,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              }
+            ]
+          },
+          {
+            "id": "block",
+            "count": 2,
+            "entries": [
+              {
+                "id": "recycle.block.deepslate",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:deepslate",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.cobbled_deepslate",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:cobbled_deepslate",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.granite",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:granite",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.andesite",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:andesite",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.diorite",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:diorite",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.tuff",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:tuff",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.calcite",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:calcite",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 4,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.netherrack",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:netherrack",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.soul_soil",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:soul_soil",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 1,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.end_stone",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:end_stone",
+                  "count": 64
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 640
+                }
+              },
+              {
+                "id": "recycle.block.spore_blossom",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:spore_blossom",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.block.dead_bush",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:dead_bush",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "recycle.block.cobweb",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:cobweb",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 2,
+                "limit": {
+                  "period": "daily",
+                  "normal": 64
+                }
+              }
+            ]
+          },
+          {
+            "id": "explore",
+            "count": 1,
+            "entries": [
+              {
+                "id": "recycle.explore.echo_shard",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:echo_shard",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.explore.disc_fragment_5",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:disc_fragment_5",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.explore.enchanted_golden_apple",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:enchanted_golden_apple",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 500,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.explore.heart_of_the_sea",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:heart_of_the_sea",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.explore.sponge",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:sponge",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 5,
+                "limit": {
+                  "period": "daily",
+                  "normal": 16
+                }
+              },
+              {
+                "id": "recycle.explore.sherds",
+                "name": "任意陶片",
+                "icon": "minecraft:prize_pottery_sherd",
+                "direction": "sell",
+                "accept": {
+                  "item": "#minecraft:decorated_pot_sherds",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 25,
+                "limit": {
+                  "period": "daily",
+                  "normal": 4
+                }
+              },
+              {
+                "id": "recycle.explore.iron_horse_armor",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:iron_horse_armor",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.explore.copper_horse_armor",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:copper_horse_armor",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.explore.golden_horse_armor",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:golden_horse_armor",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "recycle.explore.diamond_horse_armor",
+                "direction": "sell",
+                "accept": {
+                  "item": "minecraft:diamond_horse_armor",
+                  "count": 1
+                },
+                "currency": "smp3:tongbao",
+                "price": 100,
+                "limit": {
+                  "period": "daily",
+                  "normal": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "building",
+      "name": "建筑材料商店",
+      "icon": "minecraft:bricks",
       "children": [
         {
-          "id": "ore",
-          "name": "矿石",
-          "icon": "minecraft:coal_ore",
+          "id": "building.stone",
+          "name": "石类",
+          "icon": "minecraft:granite",
           "entries": [
             {
-              "id": "recycle.ore.coal_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:coal_ore",
-                "count": 1
+              "id": "building.granite",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:granite",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 1,
-              "dailyLimit": 64
-            },
-            {
-              "id": "recycle.ore.deepslate_coal_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:deepslate_coal_ore",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
-            },
-            {
-              "id": "recycle.ore.iron_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:iron_ore",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 1,
-              "dailyLimit": 64
-            },
-            {
-              "id": "recycle.ore.deepslate_iron_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:deepslate_iron_ore",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 1,
-              "dailyLimit": 64
-            },
-            {
-              "id": "recycle.ore.copper_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:copper_ore",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 1,
-              "dailyLimit": 64
-            },
-            {
-              "id": "recycle.ore.deepslate_copper_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:deepslate_copper_ore",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
               "price": 2,
-              "dailyLimit": 64
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.ore.gold_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:gold_ore",
-                "count": 1
+              "id": "building.diorite",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:diorite",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
               "price": 2,
-              "dailyLimit": 64
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.ore.deepslate_gold_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:deepslate_gold_ore",
-                "count": 1
+              "id": "building.andesite",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:andesite",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
               "price": 2,
-              "dailyLimit": 64
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.ore.redstone_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:redstone_ore",
-                "count": 1
+              "id": "building.tuff",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:tuff",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 4,
-              "dailyLimit": 16
-            },
-            {
-              "id": "recycle.ore.deepslate_redstone_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:deepslate_redstone_ore",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
               "price": 2,
-              "dailyLimit": 64
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.ore.lapis_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:lapis_ore",
-                "count": 1
+              "id": "building.deepslate",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:deepslate",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
               "price": 4,
-              "dailyLimit": 16
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.ore.deepslate_lapis_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:deepslate_lapis_ore",
-                "count": 1
+              "id": "building.packed_mud",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:packed_mud",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 64,
+                "advanced": 256
+              }
+            },
+            {
+              "id": "building.dripstone_block",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:dripstone_block",
+                "count": 64
+              },
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 64,
+                "advanced": 256
+              }
+            },
+            {
+              "id": "building.calcite",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:calcite",
+                "count": 64
+              },
+              "price": 16,
+              "limit": {
+                "period": "daily",
+                "normal": 64,
+                "advanced": 256
+              }
+            },
+            {
+              "id": "building.cinnabar",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:cinnabar",
+                "count": 64
+              },
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 64,
+                "advanced": 256
+              }
+            },
+            {
+              "id": "building.sulfur",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:sulfur",
+                "count": 64
+              },
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 64,
+                "advanced": 256
+              }
+            },
+            {
+              "id": "building.netherrack",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:netherrack",
+                "count": 64
+              },
+              "price": 2,
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
+            },
+            {
+              "id": "building.blackstone",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:blackstone",
+                "count": 64
+              },
               "price": 4,
-              "dailyLimit": 16
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.ore.emerald_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:emerald_ore",
-                "count": 1
+              "id": "building.end_stone",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:end_stone",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.ore.deepslate_emerald_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:deepslate_emerald_ore",
-                "count": 1
+              "id": "building.quartz_block",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:quartz_block",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 1000,
-              "dailyLimit": 1
-            },
-            {
-              "id": "recycle.ore.diamond",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:diamond",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 4,
-              "dailyLimit": 16
-            },
-            {
-              "id": "recycle.ore.diamond_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:diamond_ore",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
-            },
-            {
-              "id": "recycle.ore.deepslate_diamond_ore",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:deepslate_diamond_ore",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 10,
-              "dailyLimit": 16
-            },
-            {
-              "id": "recycle.ore.ancient_debris",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:ancient_debris",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 50,
-              "dailyLimit": 4
-            },
-            {
-              "id": "recycle.ore.netherite_scrap",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:netherite_scrap",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 50,
-              "dailyLimit": 4
-            },
-            {
-              "id": "recycle.ore.netherite_ingot",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:netherite_ingot",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 200,
-              "dailyLimit": 1
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 64,
+                "advanced": -1
+              }
             }
           ]
         },
         {
-          "id": "block",
-          "name": "自然方块",
-          "icon": "minecraft:deepslate",
+          "id": "building.nature",
+          "name": "自然",
+          "icon": "minecraft:grass_block",
           "entries": [
             {
-              "id": "recycle.block.deepslate",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:deepslate",
+              "id": "building.grass_block",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:grass_block",
                 "count": 64
               },
-              "currency": "smp3:tongbao",
               "price": 2,
-              "dailyLimit": -1
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.block.cobbled_deepslate",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:cobbled_deepslate",
+              "id": "building.podzol",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:podzol",
                 "count": 64
               },
-              "currency": "smp3:tongbao",
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
+            },
+            {
+              "id": "building.mycelium",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:mycelium",
+                "count": 64
+              },
+              "price": 16,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
+            },
+            {
+              "id": "building.crimson_nylium",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:crimson_nylium",
+                "count": 64
+              },
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
+            },
+            {
+              "id": "building.warped_nylium",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:warped_nylium",
+                "count": 64
+              },
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
+            },
+            {
+              "id": "building.soul_soil",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:soul_soil",
+                "count": 64
+              },
               "price": 2,
-              "dailyLimit": -1
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.block.granite",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:granite",
+              "id": "building.ice",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:ice",
                 "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 1,
-              "dailyLimit": -1
-            },
-            {
-              "id": "recycle.block.andesite",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:andesite",
-                "count": 64
-              },
-              "currency": "smp3:tongbao",
-              "price": 1,
-              "dailyLimit": -1
-            },
-            {
-              "id": "recycle.block.diorite",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:diorite",
-                "count": 64
-              },
-              "currency": "smp3:tongbao",
-              "price": 1,
-              "dailyLimit": -1
-            },
-            {
-              "id": "recycle.block.tuff",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:tuff",
-                "count": 64
-              },
-              "currency": "smp3:tongbao",
-              "price": 1,
-              "dailyLimit": -1
-            },
-            {
-              "id": "recycle.block.calcite",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:calcite",
-                "count": 64
-              },
-              "currency": "smp3:tongbao",
               "price": 4,
-              "dailyLimit": -1
+              "limit": {
+                "period": "daily",
+                "normal": 256,
+                "advanced": -1
+              }
             },
             {
-              "id": "recycle.block.netherrack",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:netherrack",
+              "id": "building.amethyst_block",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:amethyst_block",
                 "count": 64
               },
-              "currency": "smp3:tongbao",
+              "price": 16,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
+            },
+            {
+              "id": "building.clay_ball",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:clay_ball",
+                "count": 64
+              },
               "price": 1,
-              "dailyLimit": -1
-            },
-            {
-              "id": "recycle.block.soul_soil",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:soul_soil",
-                "count": 64
-              },
-              "currency": "smp3:tongbao",
-              "price": 1,
-              "dailyLimit": -1
-            },
-            {
-              "id": "recycle.block.end_stone",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:end_stone",
-                "count": 64
-              },
-              "currency": "smp3:tongbao",
-              "price": 2,
-              "dailyLimit": -1
-            },
-            {
-              "id": "recycle.block.spore_blossom",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:spore_blossom",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 2,
-              "dailyLimit": 64
-            },
-            {
-              "id": "recycle.block.dead_bush",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:dead_bush",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 2,
-              "dailyLimit": 64
-            },
-            {
-              "id": "recycle.block.cobweb",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:cobweb",
-                "count": 1
-              },
-              "currency": "smp3:tongbao",
-              "price": 2,
-              "dailyLimit": 64
+              "limit": {
+                "period": "daily",
+                "normal": 1024,
+                "advanced": -1
+              }
             }
           ]
         },
         {
-          "id": "explore",
-          "name": "探索资源",
-          "icon": "minecraft:echo_shard",
+          "id": "building.light",
+          "name": "发光",
+          "icon": "minecraft:glowstone",
           "entries": [
             {
-              "id": "recycle.explore.echo_shard",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:echo_shard",
-                "count": 1
+              "id": "building.glowstone",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:glowstone",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 64,
+                "advanced": 128
+              }
             },
             {
-              "id": "recycle.explore.disc_fragment_5",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:disc_fragment_5",
-                "count": 1
+              "id": "building.sea_lantern",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:sea_lantern",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
+              "price": 8,
+              "limit": {
+                "period": "daily",
+                "normal": 64,
+                "advanced": 128
+              }
             },
             {
-              "id": "recycle.explore.enchanted_golden_apple",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:enchanted_golden_apple",
-                "count": 1
+              "id": "building.shroomlight",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:shroomlight",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 500,
-              "dailyLimit": 1
+              "price": 16,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
             },
             {
-              "id": "recycle.explore.heart_of_the_sea",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:heart_of_the_sea",
-                "count": 1
+              "id": "building.end_rod",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:end_rod",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
+              "price": 32,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
             },
             {
-              "id": "recycle.explore.sponge",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:sponge",
-                "count": 1
+              "id": "building.pearlescent_froglight",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:pearlescent_froglight",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 5,
-              "dailyLimit": 16
+              "price": 16,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
             },
             {
-              "id": "recycle.explore.sherds",
-              "name": "任意陶片",
-              "icon": "minecraft:prize_pottery_sherd",
-              "direction": "sell",
-              "accept": {
-                "item": "#minecraft:decorated_pot_sherds",
-                "count": 1
+              "id": "building.ochre_froglight",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:ochre_froglight",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 25,
-              "dailyLimit": 4
+              "price": 16,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
             },
             {
-              "id": "recycle.explore.iron_horse_armor",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:iron_horse_armor",
-                "count": 1
+              "id": "building.verdant_froglight",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:verdant_froglight",
+                "count": 64
               },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
+              "price": 16,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 64
+              }
             },
             {
-              "id": "recycle.explore.copper_horse_armor",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:copper_horse_armor",
+              "id": "building.waxed_copper_bulb",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:waxed_copper_bulb",
                 "count": 1
               },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
+              "price": 1,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 32
+              }
             },
             {
-              "id": "recycle.explore.golden_horse_armor",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:golden_horse_armor",
+              "id": "building.waxed_exposed_copper_bulb",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:waxed_exposed_copper_bulb",
                 "count": 1
               },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
+              "price": 1,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 32
+              }
             },
             {
-              "id": "recycle.explore.diamond_horse_armor",
-              "direction": "sell",
-              "accept": {
-                "item": "minecraft:diamond_horse_armor",
+              "id": "building.waxed_weathered_copper_bulb",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:waxed_weathered_copper_bulb",
                 "count": 1
               },
-              "currency": "smp3:tongbao",
-              "price": 100,
-              "dailyLimit": 1
+              "price": 1,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 32
+              }
+            },
+            {
+              "id": "building.waxed_oxidized_copper_bulb",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:waxed_oxidized_copper_bulb",
+                "count": 1
+              },
+              "price": 1,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 32
+              }
             }
           ]
+        },
+        {
+          "id": "building.dye",
+          "name": "染料",
+          "icon": "minecraft:white_dye",
+          "entries": [
+            {
+              "id": "building.white_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:white_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.light_gray_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:light_gray_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.gray_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:gray_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.black_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:black_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.brown_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:brown_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.red_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:red_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.orange_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:orange_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.yellow_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:yellow_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.lime_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:lime_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.green_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:green_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.cyan_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:cyan_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.light_blue_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:light_blue_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.blue_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:blue_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.purple_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:purple_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            },
+            {
+              "id": "building.magenta_dye",
+              "direction": "buy",
+              "item": {
+                "id": "minecraft:magenta_dye",
+                "count": 64
+              },
+              "price": 4,
+              "limit": {
+                "period": "daily",
+                "normal": 0,
+                "advanced": 128
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "special",
+      "name": "特殊资源商店",
+      "icon": "minecraft:diamond",
+      "rotation": {
+        "enabled": true,
+        "period": "weekly",
+        "weekStartsOn": "monday",
+        "pools": [
+          {
+            "id": "resources",
+            "count": 2,
+            "entries": [
+              {
+                "id": "special.diamond",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:diamond",
+                  "count": 1
+                },
+                "price": 10,
+                "weight": 5,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "special.ancient_debris",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:ancient_debris",
+                  "count": 1
+                },
+                "price": 120,
+                "weight": 4,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 4
+                }
+              },
+              {
+                "id": "special.netherite_ingot",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:netherite_ingot",
+                  "count": 1
+                },
+                "price": 500,
+                "weight": 4,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "special.enchanted_golden_apple",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:enchanted_golden_apple",
+                  "count": 1
+                },
+                "price": 1000,
+                "weight": 2,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "special.heart_of_the_sea",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:heart_of_the_sea",
+                  "count": 1
+                },
+                "price": 200,
+                "weight": 4,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 4
+                }
+              },
+              {
+                "id": "special.sponge",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:sponge",
+                  "count": 1
+                },
+                "price": 10,
+                "weight": 5,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 64
+                }
+              },
+              {
+                "id": "special.netherite_horse_armor",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:netherite_horse_armor",
+                  "count": 1
+                },
+                "price": 500,
+                "weight": 2,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "special.elytra",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:elytra",
+                  "count": 1
+                },
+                "price": 2000,
+                "weight": 1,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "special.trident",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:trident",
+                  "count": 1
+                },
+                "price": 4000,
+                "weight": 1,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "special.heavy_core",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:heavy_core",
+                  "count": 1
+                },
+                "price": 4000,
+                "weight": 1,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "special.beacon",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:beacon",
+                  "count": 1
+                },
+                "price": 500,
+                "weight": 4,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 1
+                }
+              },
+              {
+                "id": "special.allay_spawn_egg",
+                "direction": "buy",
+                "item": {
+                  "id": "minecraft:allay_spawn_egg",
+                  "count": 1
+                },
+                "price": 2000,
+                "weight": 1,
+                "limit": {
+                  "period": "weekly",
+                  "normal": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "titles",
+      "name": "铁镐通宝称号商店",
+      "icon": "minecraft:name_tag",
+      "entries": [
+        {
+          "id": "titles.wealth_t1",
+          "direction": "buy",
+          "name": "白手起家",
+          "description": [
+            "稀有度：普通级"
+          ],
+          "icon": "minecraft:wooden_pickaxe",
+          "title": "wealth_t1",
+          "currency": "smp3:tongbao",
+          "price": 500
+        },
+        {
+          "id": "titles.wealth_t2",
+          "direction": "buy",
+          "name": "小有积蓄",
+          "description": [
+            "稀有度：稀有级"
+          ],
+          "icon": "minecraft:iron_pickaxe",
+          "title": "wealth_t2",
+          "currency": "smp3:tongbao",
+          "price": 2000
+        },
+        {
+          "id": "titles.wealth_t3",
+          "direction": "buy",
+          "name": "腰缠万贯",
+          "description": [
+            "稀有度：史诗级"
+          ],
+          "icon": "minecraft:golden_pickaxe",
+          "title": "wealth_t3",
+          "currency": "smp3:tongbao",
+          "price": 10000
+        },
+        {
+          "id": "titles.wealth_t4",
+          "direction": "buy",
+          "name": "富可敌国",
+          "description": [
+            "稀有度：传说级"
+          ],
+          "icon": "minecraft:diamond_pickaxe",
+          "title": "wealth_t4",
+          "currency": "smp3:tongbao",
+          "price": 100000
         }
       ]
     }

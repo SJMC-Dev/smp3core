@@ -5,6 +5,7 @@ import java.util.Optional;
 import com.google.gson.JsonParser;
 
 import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
+
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -25,6 +26,8 @@ public final class Smp3CreativeTab {
 		                      .displayItems((parameters, output) -> {
 			                      output.accept(Smp3Items.ANY_ENCHANTED_BOOK);
 			                      output.accept(Smp3Items.CORAL_TOOL);
+			                      output.accept(Smp3Items.TICKET_SINGLE);
+			                      output.accept(Smp3Items.TICKET_TEN);
 			                      String supplies = """
 			                          {"options":[
 			                            {"name":"Iron x 16","grants":[{"type":"item","id":"minecraft:iron_ingot","count":16}]},

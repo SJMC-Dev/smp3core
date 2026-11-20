@@ -7,6 +7,8 @@ import club.sjmc.smp3.config.ServerConfig;
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.ui.DailyQuestCommand;
 import club.sjmc.smp3.economy.Smp3EconomyProvider;
+import club.sjmc.smp3.gacha.GachaModule;
+import club.sjmc.smp3.gacha.ui.GachaCommand;
 import club.sjmc.smp3.item.Smp3Items;
 import club.sjmc.smp3.milestone.MilestoneModule;
 import club.sjmc.smp3.milestone.ui.RewardCommand;
@@ -27,6 +29,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
@@ -52,12 +55,14 @@ public final class Smp3Core implements ModInitializer {
 		DailyQuestModule.register();
 		WatchdogModule.register();
 		NoticeModule.register();
+		GachaModule.register();
 		PayloadTypeRegistry.clientboundPlay().register(HudSettingsPayload.TYPE, HudSettingsPayload.CODEC);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			var root =
 			    Commands.literal("smp3")
 			        .then(ShopCommand.command())
+			        .then(GachaCommand.command())
 			        .then(SignCommand.command())
 			        .then(RewardCommand.command())
 			        .then(SmpPerfCommand.command())

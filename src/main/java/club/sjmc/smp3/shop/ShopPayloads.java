@@ -17,7 +17,7 @@ public final class ShopPayloads {
 	private static final StreamCodec<ByteBuf, String> ID = ByteBufCodecs.stringUtf8(128);
 	private ShopPayloads() {}
 	public record Entry(String id, JsonObject icon, List<String> description, boolean buy, int amount, int price,
-	                    String currency) {}
+	                    String currency, boolean title, String availability) {}
 	public record Node(String id, String parent, String name, String icon, List<Entry> entries) {}
 	public record View(List<Node> nodes) {}
 
@@ -47,7 +47,8 @@ public final class ShopPayloads {
 	private static final StreamCodec<ByteBuf, ShopService.Quote> QUOTE = StreamCodec.composite(
 	    ByteBufCodecs.VAR_LONG, ShopService.Quote::owned, ByteBufCodecs.VAR_LONG, ShopService.Quote::used,
 	    ByteBufCodecs.VAR_INT, ShopService.Quote::limit, ByteBufCodecs.VAR_INT, ShopService.Quote::maximum,
-	    ByteBufCodecs.VAR_LONG, ShopService.Quote::balance, ShopService.Quote::new);
+	    ByteBufCodecs.VAR_LONG, ShopService.Quote::balance, ByteBufCodecs.BOOL, ShopService.Quote::weekly,
+	    ByteBufCodecs.BOOL, ShopService.Quote::pendingTitle, ShopService.Quote::new);
 	public record State(long session, String entry, long version, ShopService.Quote quote, String message)
 	    implements CustomPacketPayload {
 		public static final Type<State> TYPE = new Type<>(Identifier.fromNamespaceAndPath("smp3", "shop_state"));

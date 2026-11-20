@@ -107,7 +107,7 @@ final class ShopClientChecks {
 			                  .getAsJsonArray("entries");
 			var entry = entries.get(0).getAsJsonObject();
 			entry.addProperty("price", 3);
-			entry.addProperty("dailyLimit", 32);
+			entry.getAsJsonObject("limit").addProperty("normal", 32);
 			while (entries.size() > 1)
 				entries.remove(entries.size() - 1);
 			Files.writeString(path, updated.toString());
@@ -122,6 +122,22 @@ final class ShopClientChecks {
 			});
 			Files.writeString(path, original);
 			reload(context, world, true);
+			context.waitFor(
+			    client -> Smp3Client.SHOP.entries.containsKey("test.title") && !Smp3Client.SHOP.pendingOpen);
+			context.runOnClient(client -> ((ShopScreen)client.gui.screen()).selectEntry("test.title"));
+			context.waitFor(client -> Smp3Client.SHOP.quote != null && !Smp3Client.SHOP.pending);
+			context.runOnClient(client -> {
+				if (!Smp3Client.SHOP.entries.get("test.title").title() || Smp3Client.SHOP.quote.maximum() != 1)
+					throw new AssertionError("Title offer did not synchronize single-purchase state");
+			});
+			context.clickScreenButton("花费 1 通宝");
+			context.waitFor(client -> {
+				if (!Smp3Client.SHOP.pending && !Smp3Client.SHOP.quote.pendingTitle() &&
+				    !Smp3Client.SHOP.message.isEmpty())
+					throw new AssertionError("Title trade rejected: " + Smp3Client.SHOP.message);
+				return Smp3Client.SHOP.quote.pendingTitle() && !Smp3Client.SHOP.pending;
+			});
+			context.takeScreenshot("shop-title-pending");
 			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
 			context.waitFor(client -> client.gui.screen() == null);
 			context.getInput().resizeWindow(854, 480);

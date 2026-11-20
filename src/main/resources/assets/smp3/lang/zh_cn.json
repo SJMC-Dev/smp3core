@@ -18,5 +18,9 @@
   "smp3.hud.notices": "通知",
   "item.smp3.coral_tool": "珊瑚调色杖",
   "item.smp3.coral_tool.needs_water": "复活珊瑚需要合适的水域与支撑",
-  "item.smp3.map_pouch": "探险家地图袋"
+  "item.smp3.map_pouch": "探险家地图袋",
+  "item.smp3.ticket_single": "抽奖券",
+  "item.smp3.ticket_ten": "十连抽奖券",
+  "tooltip.smp3.ticket.usage": "投掷到抽奖池内使用",
+  "tooltip.smp3.ticket.ten_guarantee": "末抽必为 A 级及以上"
 }

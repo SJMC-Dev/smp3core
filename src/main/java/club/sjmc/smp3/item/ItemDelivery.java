@@ -24,6 +24,7 @@ import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -74,6 +75,8 @@ public final class ItemDelivery {
 			delivery.after = player.level().getGameTime();
 	}
 	private static void automatic(ServerPlayer player) {
+		if (!player.isAlive())
+			return;
 		var delivery = deliveries.get(player.getUUID());
 		if (delivery == null || player.level().getGameTime() < delivery.after)
 			return;

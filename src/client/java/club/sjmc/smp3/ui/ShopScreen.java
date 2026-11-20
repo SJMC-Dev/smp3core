@@ -210,13 +210,16 @@ final class ShopScreen extends Screen {
 		for (var widget : List.of(minus, plus, maximum, batches, submit))
 			widget.visible = entry != null;
 		boolean ready = entry != null && state.quote != null && !state.pending;
-		minus.active = ready && count > 1;
-		plus.active = ready && count < max;
-		maximum.active = ready && max > 0;
-		batches.setEditable(entry != null && !state.pending);
+		boolean title = entry != null && entry.title();
+		minus.active = ready && !title && count > 1;
+		plus.active = ready && !title && count < max;
+		maximum.active = ready && !title && max > 0;
+		batches.setEditable(entry != null && !title && !state.pending);
 		submit.active = ready && count > 0 && count <= max;
-		String label = entry == null   ? "请选择商品"
-		               : state.pending ? "正在更新…"
+		String label = entry == null                                                ? "请选择商品"
+		               : title && state.quote != null && state.quote.pendingTitle() ? "发放中"
+		               : title && state.quote != null && state.quote.owned() > 0    ? "已拥有"
+		               : state.pending                                              ? "正在更新…"
 		               : count < 1
 		                   ? "输入批数"
 		                   : (entry.buy() ? "花费 " : "获得 ") + (long)count * entry.price() + " " + currency(entry);
@@ -321,14 +324,15 @@ final class ShopScreen extends Screen {
 			graphics.text(font,
 			              font.plainSubstrByWidth(icon.getHoverName().getString(), Math.max(25, contentWidth - 166)),
 			              contentLeft + 25, top + (rowHeight - 8) / 2, PaperStyle.INK, false);
-			graphics.text(font, entry.amount() + " 个", contentLeft + contentWidth - 132, top + (rowHeight - 8) / 2,
-			              PaperStyle.MUTED, false);
+			graphics.text(font, entry.title() ? "称号" : entry.amount() + " 个", contentLeft + contentWidth - 132,
+			              top + (rowHeight - 8) / 2, PaperStyle.MUTED, false);
 			graphics.text(font, entry.price() + " " + currency(entry), contentLeft + contentWidth - 76,
 			              top + (rowHeight - 8) / 2, PaperStyle.INK, false);
 			if (hovered) {
 				var lines = new ArrayList<>(Screen.getTooltipFromItem(minecraft, icon));
 				entry.description().forEach(line -> lines.add(Component.literal(line)));
-				lines.add(Component.literal(entry.buy() ? "购买物品" : "出售物品"));
+				lines.add(Component.literal(entry.title() ? "解锁称号" : entry.buy() ? "购买物品" : "出售物品"));
+				lines.add(Component.literal(entry.availability()));
 				graphics.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
 			}
 		}
@@ -343,7 +347,12 @@ final class ShopScreen extends Screen {
 		var quote = state.quote;
 		String owned = quote == null ? "正在读取…" : quote.owned() < 0 ? "暂不可用" : quote.owned() + " 个";
 		String used = quote == null ? "—" : quote.used() + (quote.limit() < 0 ? " 个" : " / " + quote.limit() + " 个");
-		String stock = "持有 " + owned, traded = "今日交易 " + used;
+		String stock = entry.title() ? quote == null          ? "正在读取…"
+		                               : quote.pendingTitle() ? "发放中"
+		                               : quote.owned() > 0    ? "已拥有"
+		                                                      : "未拥有"
+		                             : "持有 " + owned;
+		String traded = (quote != null && quote.weekly() ? "本周交易 " : "今日交易 ") + used;
 		graphics.text(font, font.plainSubstrByWidth(stock, (panelWidth - 48) / 2), x + 18, footer + 4, PaperStyle.INK,
 		              false);
 		graphics.text(font, font.plainSubstrByWidth(traded, (panelWidth - 48) / 2), x + panelWidth / 2, footer + 4,
@@ -355,8 +364,11 @@ final class ShopScreen extends Screen {
 		if (message.isEmpty()) {
 			if (quote != null && quote.owned() < 0)
 				message = "账户暂不可用";
+			else if (entry.title() && quote != null && (quote.pendingTitle() || quote.owned() > 0))
+				message = quote.pendingTitle() ? "称号发放中，请稍候" : "已拥有该称号";
 			else if (quote != null && quote.maximum() == 0)
-				message = quote.limit() >= 0 && quote.limit() - quote.used() < entry.amount() ? "今日额度不足一批"
+				message = quote.limit() >= 0 && quote.limit() - quote.used() < entry.amount()
+				              ? (quote.weekly() ? "本周" : "今日") + "额度不足一批"
 				          : entry.buy() && quote.balance() < Smp3Currency.rawUnits(entry.price())
 				              ? "余额不足"
 				              : "符合要求的物品不足";
@@ -365,7 +377,7 @@ final class ShopScreen extends Screen {
 			else if (quote != null && count() > quote.maximum())
 				message = "当前最多可交易 " + quote.maximum() + " 批";
 			else
-				message = "共 " + (long)count() * entry.amount() + " 个";
+				message = entry.title() ? "解锁后可在称号菜单中佩戴" : "共 " + (long)count() * entry.amount() + " 个";
 		}
 		graphics.text(font, font.plainSubstrByWidth(message, panelWidth - 36), x + 18, controls + 23, PaperStyle.MUTED,
 		              false);

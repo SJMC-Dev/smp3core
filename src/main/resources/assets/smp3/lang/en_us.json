@@ -18,5 +18,9 @@
   "smp3.hud.notices": "Notifications",
   "item.smp3.coral_tool": "Coral Wand",
   "item.smp3.coral_tool.needs_water": "Coral needs water and suitable support to revive",
-  "item.smp3.map_pouch": "Explorer Map Pouch"
+  "item.smp3.map_pouch": "Explorer Map Pouch",
+  "item.smp3.ticket_single": "Gacha Ticket",
+  "item.smp3.ticket_ten": "Ten-Draw Gacha Ticket",
+  "tooltip.smp3.ticket.usage": "Throw into a gacha pool to use",
+  "tooltip.smp3.ticket.ten_guarantee": "The final draw guarantees A tier or above"
 }

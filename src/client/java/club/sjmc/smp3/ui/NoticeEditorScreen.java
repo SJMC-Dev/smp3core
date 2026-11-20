@@ -17,7 +17,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
-final class NoticeEditorScreen extends Screen {
+public final class NoticeEditorScreen extends Screen {
 	private static final int INK = PaperStyle.INK;
 	private final String session;
 	private final List<NoticeCatalog.Category> categories;

@@ -16,8 +16,8 @@ import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.item.Smp3Items;
-import club.sjmc.smp3.milestone.MilestoneChecks;
 import club.sjmc.smp3.item.ui.EnchantBookGui;
+import club.sjmc.smp3.milestone.MilestoneChecks;
 import club.sjmc.smp3.shop.ShopChecks;
 import club.sjmc.smp3.sign.PlayerSignData;
 import club.sjmc.smp3.sign.SignFailureChecks;
@@ -28,6 +28,7 @@ import club.sjmc.smp3.time.SignDateChecks;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
+
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
@@ -53,6 +54,9 @@ public final class FeatureChecks implements ModInitializer {
 			}
 			Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING);
 			ShopChecks.install(path.resolveSibling("shops.json"));
+			try (var gacha = FeatureChecks.class.getResourceAsStream("/gacha.json")) {
+				Files.copy(gacha, path.resolveSibling("gacha.json"), StandardCopyOption.REPLACE_EXISTING);
+			}
 			Files.writeString(path.resolveSibling("notices.json"), "{\"categories\":[],\"entries\":[]}");
 			Files.writeString(path.resolveSibling("client.json"), "{\"questHudVisible\":false}");
 		} catch (IOException e) {

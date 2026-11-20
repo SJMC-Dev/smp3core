@@ -30,7 +30,7 @@ public final class ServerDates {
 		return now.isBefore(resetAt(date)) ? date.minusDays(1) : date;
 	}
 
-	private static ZonedDateTime resetAt(LocalDate date) {
+	public static ZonedDateTime resetAt(LocalDate date) {
 		var local = date.atTime(resetTime);
 		var zone = clock.getZone();
 		var transition = zone.getRules().getTransition(local);

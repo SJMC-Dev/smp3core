@@ -19,20 +19,24 @@ import club.sjmc.smp3.daily.ui.DailyQuestGui;
 import club.sjmc.smp3.daily.ui.QuestRewardsGui;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
+import club.sjmc.smp3.gacha.GachaChecks;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.ui.PackGui;
 import club.sjmc.smp3.notice.NoticeFixture;
 import club.sjmc.smp3.notice.NoticeModule;
+import club.sjmc.smp3.notice.NoticePayloads;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
+import net.minecraft.client.gui.components.MultilineTextField;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
@@ -211,6 +215,20 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.runOnClient(client -> client.getConnection().sendCommand("smp3 info edit"));
 			context.waitForScreen(NoticeEditorScreen.class);
 			context.runOnClient(client -> {
+				String rule = "1. "
+				              + "除自然生成的奖励箱外，所有箱子、潜影盒等容器，无论他人是否标记，未经允许均**"
+				              + "不可擅自拿取或借用其中物品**。";
+				var field = new MultilineTextField(client.font, 120);
+				field.setValue(rule);
+				field.seekCursorToPoint(0, client.font.lineHeight);
+				if (field.cursor() <= 3 || !field.value().equals(rule))
+					throw new AssertionError("Chinese wrapping stranded the list marker or changed the source");
+				var preview = BookText.lines(new NoticePayloads.Body("", "", rule, true), client.font, 120);
+				if (client.font.width(preview.getFirst()) <= client.font.width("1."))
+					throw new AssertionError("Chinese preview stranded the list marker");
+				for (var line : preview)
+					if (client.font.width(line) > 120)
+						throw new AssertionError("Chinese preview line overflowed");
 				var inputs = client.gui.screen()
 				                 .children()
 				                 .stream()
@@ -226,7 +244,8 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				    .map(MultiLineEditBox.class ::cast)
 				    .findFirst()
 				    .orElseThrow()
-				    .setValue("# 一起建设公共花园\n\n欢迎带上**花卉和木材**参与活动。\n\n1. 在出生点集合。\n2. "
+				    .setValue("# 一起建设公共花园\n\n欢迎带上**花卉和木材**参与活动。\n\n" + rule +
+					          "\n\n1. 在出生点集合。\n2. "
 				              + "和其他玩家商量分工。");
 			});
 			context.takeScreenshot("notice-editor-wide");
@@ -447,6 +466,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 					throw new AssertionError("Failed reload replaced valid catalog");
 			});
 			NoticeFixture.install();
+			GachaChecks.run(context, world);
 		}
 		context.runOnClient(client -> {
 			if (!Smp3Client.BOOK.messages.isEmpty() || Smp3Client.BALANCES.coins.received ||

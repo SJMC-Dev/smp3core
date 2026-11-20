@@ -13,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 
 public record ShopEntry(String id, TradeDirection direction, Component name, List<String> description, Item icon,
                         ItemStack template, TagKey<Item> tag, JsonObject delivery, Smp3Currency currency, int amount,
-                        int price, int normalLimit, int advancedLimit) {
+                        int price, int normalLimit, int advancedLimit, ShopPeriod period, String title, int weight) {
 	public static final int UNLIMITED = -1;
 	public ShopEntry { description = List.copyOf(description); }
 	public boolean matches(ItemStack stack) {

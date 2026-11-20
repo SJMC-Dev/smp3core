@@ -14,7 +14,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
-final class ServerBookScreen extends Screen {
+public final class ServerBookScreen extends Screen {
 	private static final int INK = PaperStyle.INK, MUTED = PaperStyle.MUTED;
 	private final ServerBookState state = Smp3Client.BOOK;
 	private int x, y, bookWidth, bookHeight, sidebar, bodyTop, bodyBottom, listScroll, textScroll, headerExtra;

@@ -8,6 +8,7 @@ import java.util.PriorityQueue;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
+import club.sjmc.smp3.gacha.GachaModule;
 import club.sjmc.smp3.watchdog.WatchdogConfig;
 
 import net.minecraft.server.level.ServerLevel;
@@ -178,7 +179,7 @@ public final class ItemCleanupService {
 	}
 
 	private boolean eligible(ItemEntity item, int age) {
-		return item.isAlive() && item.getAge() >= age &&
+		return item.isAlive() && item.getAge() >= age && !GachaModule.receiving(item) &&
 		    ((ServerLevel)item.level()).isPositionEntityTicking(item.blockPosition()) &&
 		    policy.eligible(item.getItem().getItem());
 	}

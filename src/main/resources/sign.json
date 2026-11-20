@@ -34,7 +34,7 @@
     ]},
     {"days": 5, "grants": [
       {"type": "currency", "id": "smp3:tongbao", "count": 100},
-      {"type": "command", "command": "/gacha give <player> ten"}
+      {"type": "item", "id": "smp3:ticket_ten", "count": 1}
     ]},
     {"days": 6, "grants": [
       {"type": "currency", "id": "smp3:tongbao", "count": 200}
