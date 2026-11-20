@@ -7608,7 +7608,7 @@
         "grants": [
           {
             "type": "loot_table",
-            "id": "minecraft:chests/buried_treasure",
+            "id": "smp3:quests/buried_treasure",
             "rolls": 5
           }
         ]
@@ -7641,7 +7641,7 @@
         "grants": [
           {
             "type": "loot_table",
-            "id": "minecraft:chests/village/village_weaponsmith",
+            "id": "smp3:quests/village_weaponsmith",
             "rolls": 3
           }
         ]
@@ -7673,7 +7673,7 @@
         "grants": [
           {
             "type": "loot_table",
-            "id": "minecraft:chests/desert_pyramid",
+            "id": "smp3:quests/desert_pyramid",
             "rolls": 3
           }
         ]
@@ -7705,7 +7705,7 @@
         "grants": [
           {
             "type": "loot_table",
-            "id": "minecraft:chests/ancient_city",
+            "id": "smp3:quests/ancient_city",
             "rolls": 2
           }
         ]
@@ -8441,7 +8441,7 @@
         "grants": [
           {
             "type": "loot_table",
-            "id": "minecraft:chests/end_city_treasure",
+            "id": "smp3:quests/end_city_treasure",
             "rolls": 3
           }
         ]
@@ -12357,7 +12357,7 @@
         "grants": [
           {
             "type": "loot_table",
-            "id": "minecraft:chests/abandoned_mineshaft",
+            "id": "smp3:quests/abandoned_mineshaft",
             "rolls": 3
           }
         ]
@@ -12720,7 +12720,7 @@
         "grants": [
           {
             "type": "loot_table",
-            "id": "minecraft:chests/nether_bridge",
+            "id": "smp3:quests/nether_bridge",
             "rolls": 3
           }
         ]
@@ -12772,7 +12772,7 @@
         "grants": [
           {
             "type": "loot_table",
-            "id": "minecraft:chests/woodland_mansion",
+            "id": "smp3:quests/woodland_mansion",
             "rolls": 3
           }
         ]
@@ -12801,7 +12801,7 @@
         "grants": [
           {
             "type": "loot_table",
-            "id": "minecraft:chests/end_city_treasure",
+            "id": "smp3:quests/end_city_treasure",
             "rolls": 3
           }
         ]

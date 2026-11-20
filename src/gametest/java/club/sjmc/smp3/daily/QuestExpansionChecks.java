@@ -80,7 +80,8 @@ final class QuestExpansionChecks {
 		    [{"type":"loot_table","id":"smp3:quests/shipwreck","rolls":3}]
 		    """).getAsJsonArray());
 		var loot = RewardBundle.resolve(grants, new Random(1), player);
-		test.assertTrue(loot.items().size() > 3, "Loot rolls were truncated to three items");
+		test.assertTrue(loot.items().stream().mapToInt(item -> item.get("count").getAsInt()).sum() == 3,
+		                "Three shipwreck reward rolls must yield exactly three items");
 		player.getInventory().clearContent();
 		for (int i = 0; i < 36; i++)
 			player.getInventory().setItem(i, new ItemStack(Items.STONE, 64));
