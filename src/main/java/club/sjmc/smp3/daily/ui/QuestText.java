@@ -29,8 +29,17 @@ final class QuestText {
 				                                                                       : "完成全部子目标。"));
 			return wrap(parts);
 		}
-		var conditions = task.definition.objectives().getFirst().objective().conditions();
+		var goal = task.definition.objectives().getFirst();
+		var conditions = goal.objective().conditions();
 		String description = task.definition.description();
+		if (description != null && goal.target() != null &&
+		    (goal.selection().equals("random") || goal.countBy().equals("distinct")) &&
+		    !description.contains("{" + goal.target().field() + "}")) {
+			parts.add(Component.literal(goal.countBy().equals("distinct") ? "不同目标（需 " + goal.count() + " 种）："
+			                                                              : "本次目标："));
+			parts.addAll(targets(goal.target().field(), goal.target().values()));
+			parts.add(Component.literal("\n"));
+		}
 		if (description == null) {
 			conditions.entrySet().forEach(condition -> {
 				parts.add(Component.literal(QuestField.find(condition.getKey()).label() + "："));

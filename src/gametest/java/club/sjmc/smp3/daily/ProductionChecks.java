@@ -1,10 +1,12 @@
 package club.sjmc.smp3.daily;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import eu.pb4.sgui.api.ClickType;
 import eu.pb4.sgui.api.SguiUtils;
 import eu.pb4.sgui.api.gui.SimpleGui;
@@ -49,7 +51,7 @@ final class ProductionChecks {
 		                                .parseString("{\"item\":[\"minecraft:iron_ingot\",\"minecraft:cooked_cod\","
 		                                             + "\"minecraft:netherite_pickaxe\",\"minecraft:potion\"]}")
 		                                .getAsJsonObject(),
-		                            100, List.of(), "amount", "any")),
+		                            new JsonPrimitive(100), List.of(), "amount", "any")),
 			                    "all", List.of(), List.of(), null);
 		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
 		DailyQuestModule.current().state(player).assignments.set(0, task);
@@ -118,7 +120,7 @@ final class ProductionChecks {
 		    List.of(new QuestDefinition.Goal(
 		        "Inventory", "inventory_changed", null,
 		        JsonParser.parseString("{\"item\":[\"minecraft:oak_planks\",\"#minecraft:planks\"]}").getAsJsonObject(),
-		        6, List.of(), "amount", "any")),
+		        new JsonPrimitive(6), List.of(), "amount", "any")),
 		    "all", List.of(), List.of(), null);
 		task = new QuestDay.Assignment(
 		    definition, 1,
@@ -324,5 +326,61 @@ final class ProductionChecks {
 		player.closeContainer();
 		test.assertTrue(QuestHudPayload.of(service.state(player)).entries().getFirst().target() == 5,
 		                "Multi-objective HUD target does not count goals");
+		var anyDefinition = QuestConfig.JSON.fromJson("""
+		    {"id":"hud_any","name":"Mining","category":"mining","difficulty":"B","icon":"minecraft:book","completion":"any",
+		     "objectives":[
+		      {"name":"Emerald","event":"block_broken","conditions":{"block":"minecraft:emerald_ore"},"count":6},
+		      {"name":"Diamond","event":"block_broken","conditions":{"block":"minecraft:diamond_ore"},"count":12},
+		      {"name":"Debris","event":"block_broken","conditions":{"block":"minecraft:ancient_debris"},"count":2}]}
+		    """, QuestDefinition.class);
+		var any = new QuestDay.Assignment(anyDefinition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
+		var day = service.state(player);
+		var previous = day.assignments.set(0, any);
+		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:emerald_ore")), 3));
+		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:diamond_ore")), 5));
+		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:ancient_debris")), 1));
+		var hud = QuestHudPayload.of(day).entries().getFirst();
+		test.assertTrue(hud.progress() == 3 && hud.target() == 6 &&
+		                    hud.icon().toString().equals("minecraft:emerald_ore") && !any.complete(),
+		                "Any-objective HUD must compare ratios and keep configuration order on ties");
+		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:diamond_ore")), 2));
+		hud = QuestHudPayload.of(day).entries().getFirst();
+		test.assertTrue(hud.progress() == 7 && hud.target() == 12 &&
+		                    hud.icon().toString().equals("minecraft:diamond_ore"),
+		                "HUD did not follow the new leading objective");
+		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:ancient_debris")), 1));
+		hud = QuestHudPayload.of(day).entries().getFirst();
+		test.assertTrue(hud.progress() == 2 && hud.target() == 2 && hud.complete() && any.complete(),
+		                "Any-objective completion disagrees with HUD progress");
+		var visitDefinition = QuestConfig.JSON.fromJson("""
+		    {"id":"visit_random","name":"Explore","description":"到达指定的生物群系。","category":"exploration","difficulty":"C","icon":"minecraft:grass_block",
+		     "objectives":[{"event":"biome_visited","selection":"random","countBy":"distinct","count":1,
+		     "target":{"field":"biome","values":["minecraft:plains","minecraft:sunflower_plains"]}}]}
+		    """, QuestDefinition.class);
+		var diamond = JsonParser.parseString("{\"id\":\"minecraft:diamond\",\"count\":2}").getAsJsonObject();
+		var visit = new QuestDay.Assignment(visitDefinition, 1, new QuestReward(0, 0, List.of(diamond)), Set.of(),
+		                                    new Random(1), player);
+		day.assignments.set(0, visit);
+		String selected = QuestDefinition.values(visit.definition.objectives().getFirst().target().values()).getFirst();
+		String other = selected.equals("minecraft:plains") ? "minecraft:sunflower_plains" : "minecraft:plains";
+		day.record(new QuestDefinition.Event("biome_visited", Map.of("biome", Set.of(other))));
+		test.assertTrue(!visit.complete(), "Unselected biome completed the random exploration task");
+		DailyQuestGui.show(player);
+		var visitGui = (SimpleGui)SguiUtils.getCurrentGui(player);
+		var visitLore = visitGui.getGuiElement(10).getItemStack().get(DataComponents.LORE).lines().toString();
+		test.assertTrue(visitLore.contains("biome." + selected.replace(':', '.')) &&
+		                    !visitLore.contains("biome." + other.replace(':', '.')),
+		                "Random exploration lore must show only assigned targets, preserving translation");
+		test.assertTrue(visitGui.getGuiElement(19)
+		                    .getItemStack()
+		                    .get(DataComponents.LORE)
+		                    .lines()
+		                    .toString()
+		                    .contains("item.minecraft.diamond"),
+		                "Reward lore was flattened into the server language");
+		player.closeContainer();
+		day.record(new QuestDefinition.Event("biome_visited", Map.of("biome", Set.of(selected))));
+		test.assertTrue(visit.complete(), "Selected biome did not complete exploration");
+		day.assignments.set(0, previous);
 	}
 }

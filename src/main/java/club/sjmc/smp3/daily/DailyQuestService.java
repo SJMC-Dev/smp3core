@@ -235,23 +235,24 @@ public final class DailyQuestService {
 		QuestRewards.grant(player, entitlement);
 		Smp3Core.LOGGER.info("[SMP3] 任务奖励到账 player={} day={} slot={}", player.getUUID(), date, slot + 1);
 		ItemDelivery.deliver(player);
-		var parts = new ArrayList<String>();
+		var parts = new ArrayList<Component>();
 		if (reward.tongbao() > 0)
-			parts.add("通宝 x " + reward.tongbao());
+			parts.add(Component.literal("通宝 x " + reward.tongbao()));
 		if (reward.coffeeStamp() > 0)
-			parts.add("咖啡印章 x " + reward.coffeeStamp());
+			parts.add(Component.literal("咖啡印章 x " + reward.coffeeStamp()));
 		reward.items().forEach(item -> {
 			var stack = ItemDefinitions.stack(item, player.registryAccess());
-			parts.add(stack.getHoverName().getString() + " x " + stack.getCount());
+			parts.add(stack.getHoverName().copy().append(" x " + stack.getCount()));
 		});
-		reward.effects().forEach(
-		    effect -> parts.add(RewardBundle.description(effect, player.registryAccess()).getString()));
-		player.sendSystemMessage(Component.literal(
-		    "已完成「" + name + "」" + (parts.isEmpty() ? "" : "，奖励已结算：" + String.join("，", parts)) +
-		    (ItemDelivery.pending(player).isEmpty() ? "" : "；背包不足，剩余物品保留待领取") +
-		    (ItemDelivery.pendingEffects(player).isEmpty()
-		         ? ""
-				 : "；剩余奖励保留待发，生物需附近合适空间（水生生物需水域）")));
+		reward.effects().forEach(effect -> parts.add(RewardBundle.description(effect, player.registryAccess())));
+		var message = Component.literal("已完成「" + name + "」");
+		for (int i = 0; i < parts.size(); i++)
+			message.append(i == 0 ? "，奖励已结算：" : "，").append(parts.get(i));
+		if (!ItemDelivery.pending(player).isEmpty())
+			message.append("；背包不足，剩余物品保留待领取");
+		if (!ItemDelivery.pendingEffects(player).isEmpty())
+			message.append("；剩余奖励保留待发，生物需附近合适空间（水生生物需水域）");
+		player.sendSystemMessage(message);
 	}
 
 	private static boolean valid(QuestDay day, long today, long date, int slot, String token) {

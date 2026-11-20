@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import eu.pb4.sgui.api.ClickType;
 import eu.pb4.sgui.api.SguiUtils;
@@ -239,8 +240,8 @@ public final class DailyQuestGameTest {
 			conditions.addProperty("dimension", "minecraft:the_nether");
 			var exploration =
 			    new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
-				                    List.of(new QuestDefinition.Goal("Explore", "biome_visited", null, conditions, 1,
-				                                                     List.of(), "amount", "any")),
+				                    List.of(new QuestDefinition.Goal("Explore", "biome_visited", null, conditions,
+				                                                     new JsonPrimitive(1), List.of(), "amount", "any")),
 				                    "all", List.of(), List.of(), null);
 			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1),
 			                               player);
@@ -251,8 +252,8 @@ public final class DailyQuestGameTest {
 			conditions.addProperty("biome", level.getBiome(player.blockPosition()).getRegisteredName());
 			exploration =
 			    new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
-				                    List.of(new QuestDefinition.Goal("Explore", "biome_visited", null, conditions, 1,
-				                                                     List.of(), "amount", "any")),
+				                    List.of(new QuestDefinition.Goal("Explore", "biome_visited", null, conditions,
+				                                                     new JsonPrimitive(1), List.of(), "amount", "any")),
 				                    "all", List.of(), List.of(), null);
 			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1),
 			                               player);

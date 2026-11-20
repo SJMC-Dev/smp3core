@@ -45,8 +45,8 @@ public final class QuestRewardsGui extends ReturningGui {
 		for (int i = 0; i < 45 && page * 45 + i < items.size(); i++) {
 			ItemStack stack = items.get(page * 45 + i);
 			var icon = new GuiElementBuilder(stack.copyWithCount(Math.min(stack.getCount(), stack.getMaxStackSize())))
-			               .addLoreLine(GuiStyle.text(stack.getHoverName().getString() + " x " + stack.getCount(),
-			                                          GuiStyle.MUTED));
+			               .addLoreLine(
+			                   stack.getHoverName().copy().append(" x " + stack.getCount()).withStyle(GuiStyle.MUTED));
 			if (stack.getItem() instanceof PackItem)
 				icon.addLoreLine(GuiStyle.text("点击查看礼包内容", GuiStyle.ACTION));
 			setSlot(i, GuiStyle

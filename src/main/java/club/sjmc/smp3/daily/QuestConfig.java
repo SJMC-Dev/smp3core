@@ -303,7 +303,7 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 							                .count();
 							for (var band : progression.bands)
 								if (task.supports(band.tier))
-									require(size >= goal.target(band.tier),
+									require(size >= goal.maximum(band.tier),
 									        "objectives[" + i + "]: insufficient distinct candidates");
 						}
 					}
@@ -389,10 +389,22 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 		}
 	}
 
+	private static void count(JsonElement value, String at) {
+		if (!value.isJsonObject()) {
+			require(integer(value, at) > 0, at + ": count must be positive");
+			return;
+		}
+		var range = value.getAsJsonObject();
+		shape(range, at, "min max", "");
+		int min = integer(range.get("min"), at + ".min");
+		int max = integer(range.get("max"), at + ".max");
+		require(min > 0 && max >= min, at + ": expected 0 < min <= max");
+	}
+
 	private static void counts(JsonObject object, String at, boolean multi, boolean rewards) {
 		require(!(object.has("count") && object.has("tiers")), at + ": count and tiers are mutually exclusive");
 		if (object.has("count"))
-			require(integer(object.get("count"), at + ".count") > 0, at + ": count must be positive");
+			count(object.get("count"), at + ".count");
 		if (!object.has("tiers"))
 			return;
 		require(!object.getAsJsonArray("tiers").isEmpty(), at + ": tiers is empty");
@@ -401,7 +413,7 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 			shape(tier, at + ".tiers", multi ? "tier" : "tier count", rewards ? "rewards" : "");
 			require(integer(tier.get("tier"), at + ".tiers.tier") > 0, at + ": tier must be positive");
 			if (!multi)
-				require(integer(tier.get("count"), at + ".tiers.count") > 0, at + ": count must be positive");
+				count(tier.get("count"), at + ".tiers.count");
 			if (tier.has("rewards"))
 				reward(tier.getAsJsonObject("rewards"), at + ".tiers.rewards", true);
 		}

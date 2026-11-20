@@ -54,8 +54,10 @@ public final class Smp3Client implements ClientModInitializer {
 			else if (context.client().gui.screen() instanceof NoticeEditorScreen screen)
 				screen.result(payload);
 		});
-		ClientPlayNetworking.registerGlobalReceiver(HudSettingsPayload.TYPE,
-		                                            (request, context) -> pendingSettings = true);
+		ClientPlayNetworking.registerGlobalReceiver(HudSettingsPayload.TYPE, (request, context) -> {
+			Smp3Core.LOGGER.info("[SMP3 HUD] client settings visible={} rows={}", HUD.visible, HUD.state.rows.size());
+			pendingSettings = true;
+		});
 		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Catalog.TYPE,
 		                                            (catalog, context) -> BOOK.accept(catalog));
 		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Body.TYPE, (body, context) -> BOOK.accept(body));
@@ -69,8 +71,20 @@ public final class Smp3Client implements ClientModInitializer {
 		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("smp3", "main"));
 		KeyMapping toggle = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.quest_hud", InputConstants.UNKNOWN.getValue(), category));
-		ClientPlayNetworking.registerGlobalReceiver(QuestHudPayload.TYPE,
-		                                            (snapshot, context) -> HUD.state.accept(snapshot, HUD.visible));
+		ClientPlayNetworking.registerGlobalReceiver(QuestHudPayload.TYPE, (snapshot, context) -> {
+			int before = HUD.state.rows.size();
+			HUD.state.accept(snapshot, HUD.visible);
+			if (snapshot.diagnostic())
+				Smp3Core.LOGGER.info(
+				    "[SMP3 HUD] client snapshot date={} entries={} unclaimed={} visible={} rowsBefore={} rowsAfter={}",
+				    snapshot.date(), snapshot.entries().size(),
+				    snapshot.entries().stream().filter(e -> !e.claimed()).count(), HUD.visible, before,
+				    HUD.state.rows.size());
+		});
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+			if (ClientPlayNetworking.canSend(QuestHudPayload.Request.TYPE))
+				ClientPlayNetworking.send(QuestHudPayload.Request.INSTANCE);
+		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			HUD.state.clear();
 			BOOK.clear();

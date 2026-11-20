@@ -1,6 +1,7 @@
 package club.sjmc.smp3.daily;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -105,6 +106,34 @@ public final class DailyQuestChecks {
 		assert assignment.reward.items().stream().map(v -> v.get("id").getAsString()).distinct().count() == 2;
 		var saved = QuestConfig.JSON.fromJson(QuestConfig.JSON.toJson(assignment), QuestDay.Assignment.class);
 		assert saved.reward.equals(assignment.reward);
+		task.remove("rewards");
+		task.add("objectives", JsonParser.parseString("""
+		    [{"event":"block_broken","conditions":{"block":"minecraft:emerald_ore"},"count":{"min":4,"max":8}},
+		     {"event":"block_broken","conditions":{"block":"minecraft:ancient_debris"},"tiers":[{"tier":1,"count":{"min":1,"max":2}}]}]
+		    """));
+		config = QuestConfig.parse(template.toString());
+		var observed = new HashSet<Integer>();
+		for (int i = 0; i < 32; i++) {
+			assignment =
+			    new QuestDay.Assignment(config.tasks().getFirst(), 1, new QuestReward(0, 0), Set.of(), random, null);
+			int count = assignment.definition.objectives().getFirst().count();
+			int second = assignment.definition.objectives().getLast().count();
+			assert count >= 4 && count <= 8 && second >= 1 && second <= 2;
+			observed.add(count);
+		}
+		assert observed.containsAll(Set.of(4, 5, 6, 7, 8));
+		saved = QuestConfig.JSON.fromJson(QuestConfig.JSON.toJson(assignment), QuestDay.Assignment.class);
+		saved.reset();
+		assert saved.definition.equals(assignment.definition);
+		var firstGoal = task.getAsJsonArray("objectives").get(0).getAsJsonObject();
+		for (String bad :
+		     List.of("{\"min\":0,\"max\":8}", "{\"min\":8,\"max\":4}", "{\"min\":4,\"max\":4.5}", "{\"min\":4}")) {
+			firstGoal.add("count", JsonParser.parseString(bad));
+			reject(template);
+		}
+		firstGoal.addProperty("count", 4);
+
+		task.add("rewards", JsonParser.parseString("{\"grants\":[{\"type\":\"random\",\"pool\":\"food\"}]}"));
 		template.getAsJsonObject("rewardPools")
 		    .getAsJsonArray("food")
 		    .get(0)

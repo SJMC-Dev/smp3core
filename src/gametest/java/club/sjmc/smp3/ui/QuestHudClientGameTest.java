@@ -14,6 +14,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.QuestDefinition;
+import club.sjmc.smp3.daily.QuestHudPayload;
 import club.sjmc.smp3.daily.ui.DailyQuestGui;
 import club.sjmc.smp3.daily.ui.QuestRewardsGui;
 import club.sjmc.smp3.economy.Smp3AccountStore;
@@ -26,6 +27,7 @@ import club.sjmc.smp3.notice.NoticeModule;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.components.Button;
@@ -54,6 +56,33 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 					throw new AssertionError("HUD settings command unavailable to ordinary players");
 				Smp3Client.toggleHud();
 			});
+			var expectedRows =
+			    context.computeOnClient(client -> Smp3Client.HUD.state.rows.stream().map(row -> row.entry).toList());
+			for (boolean visible : List.of(true, false)) {
+				context.runOnClient(client -> {
+					if (Smp3Client.HUD.visible != visible)
+						Smp3Client.toggleHud();
+					Smp3Client.HUD.state.clear();
+					client.getConnection().sendCommand("smp3 hud");
+				});
+				context.waitForScreen(HudSettingsScreen.class);
+				context.waitFor(
+				    client -> Smp3Client.HUD.state.rows.stream().map(row -> row.entry).toList().equals(expectedRows));
+				context.runOnClient(client -> {
+					if (Smp3Client.HUD.visible != visible)
+						throw new AssertionError("HUD refresh changed the visibility preference");
+					client.gui.setScreen(null);
+					Smp3Client.HUD.state.clear();
+					ClientPlayNetworking.send(QuestHudPayload.Request.INSTANCE);
+				});
+				context.waitFor(
+				    client -> Smp3Client.HUD.state.rows.stream().map(row -> row.entry).toList().equals(expectedRows));
+				context.runOnClient(client -> {
+					if (Smp3Client.HUD.visible != visible || client.gui.screen() != null)
+						throw new AssertionError("HUD snapshot request changed client preferences or opened a screen");
+				});
+			}
+			context.runOnClient(client -> Smp3Client.toggleHud());
 			world.getServer().runOnServer(server -> {
 				var player = world.getConnection().getServerPlayer();
 				server.getPlayerList().op(new NameAndId(player.getGameProfile()),

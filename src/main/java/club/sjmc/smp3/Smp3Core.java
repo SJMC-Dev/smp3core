@@ -65,11 +65,13 @@ public final class Smp3Core implements ModInitializer {
 			        .then(Commands.literal("hud").executes(context -> {
 				        var player = context.getSource().getPlayerOrException();
 				        if (!ServerPlayNetworking.canSend(player, HudSettingsPayload.TYPE)) {
+					        LOGGER.info("[SMP3 HUD] server player={} uuid={} settingsChannel=false",
+							            player.getName().getString(), player.getUUID());
 					        context.getSource().sendFailure(Component.literal("请更新 SMP3 客户端以打开 HUD 设置"));
 					        return 0;
 				        }
 				        ServerPlayNetworking.send(player, HudSettingsPayload.INSTANCE);
-				        return 1;
+				        return DailyQuestModule.refreshHud(player) ? 1 : 0;
 			        }));
 			DailyQuestCommand.register(root);
 			dispatcher.register(root);

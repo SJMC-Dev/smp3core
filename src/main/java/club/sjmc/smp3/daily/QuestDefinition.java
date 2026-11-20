@@ -13,6 +13,8 @@ import java.util.regex.Pattern;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.annotations.SerializedName;
 
 public record QuestDefinition(String id, String name, String description, String category, String difficulty,
                               String icon, List<Goal> objectives, String completion, List<Tier> tiers,
@@ -25,7 +27,7 @@ public record QuestDefinition(String id, String name, String description, String
 		objectives = List.copyOf(objectives);
 		completion = completion == null ? "all" : completion;
 	}
-	public record Tier(int tier, Integer count, QuestRewardSpec rewards) {}
+	public record Tier(int tier, JsonElement count, QuestRewardSpec rewards) {}
 	public record Candidate(String id, String name, String description, String icon, JsonObject conditions,
 	                        QuestRewardSpec rewards) {}
 	public record Target(String field, JsonElement values, List<Candidate> candidates) {
@@ -33,8 +35,9 @@ public record QuestDefinition(String id, String name, String description, String
 		public Target(String field, JsonElement values) { this(field, values, List.of()); }
 	}
 
-	public record Goal(String name, String event, Target target, JsonObject conditions, Integer count, List<Tier> tiers,
-	                   String countBy, String selection) {
+	public record
+	    Goal(String name, String event, Target target, JsonObject conditions,
+		     @SerializedName("count") JsonElement quantity, List<Tier> tiers, String countBy, String selection) {
 		public Goal {
 			tiers = tiers == null ? List.of() : List.copyOf(tiers);
 			conditions = conditions == null ? new JsonObject() : conditions.deepCopy();
@@ -51,12 +54,21 @@ public record QuestDefinition(String id, String name, String description, String
 			return conditions.has(field) || target != null && target.field.equals(field);
 		}
 		boolean supports(int tier) { return tiers.isEmpty() || tiers.stream().anyMatch(t -> t.tier == tier); }
-		int target(int tier) {
-			return tiers.isEmpty() ? (count == null ? 1 : count)
+		JsonElement target(int tier) {
+			return tiers.isEmpty() ? (quantity == null ? new JsonPrimitive(1) : quantity)
 			                       : tiers.stream().filter(t -> t.tier == tier).findFirst().orElseThrow().count;
 		}
+		public int count() { return quantity == null ? 1 : quantity.getAsInt(); }
+		int maximum(int tier) {
+			var count = target(tier);
+			return count.isJsonObject() ? count.getAsJsonObject().get("max").getAsInt() : count.getAsInt();
+		}
 		Goal resolve(int tier, RandomGenerator random) {
-			int quantity = target(tier);
+			var count = target(tier);
+			int quantity = count.isJsonObject()
+			                   ? (int)random.nextLong(count.getAsJsonObject().get("min").getAsInt(),
+			                                          (long)count.getAsJsonObject().get("max").getAsInt() + 1)
+			                   : count.getAsInt();
 			Target chosen = target;
 			var filters = conditions.deepCopy();
 			if (target != null && !target.candidates.isEmpty()) {
@@ -74,7 +86,7 @@ public record QuestDefinition(String id, String name, String description, String
 					selected.add(candidates.remove(random.nextInt(candidates.size())));
 				chosen = new Target(target.field, selected);
 			}
-			return new Goal(name, event, chosen, filters, quantity, List.of(), countBy, "any");
+			return new Goal(name, event, chosen, filters, new JsonPrimitive(quantity), List.of(), countBy, selection);
 		}
 		public Set<String> identities(Event action) {
 			if (target == null)

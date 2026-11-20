@@ -7,6 +7,7 @@ import java.util.Set;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.item.ItemDelivery;
@@ -141,7 +142,7 @@ final class QuestExpansionChecks {
 	}
 	private static QuestDay.Assignment watch(ServerPlayer player, String event, String filters) {
 		var goal = new QuestDefinition.Goal("Event", event, null, JsonParser.parseString(filters).getAsJsonObject(),
-		                                    100, List.of(), "amount", "any");
+		                                    new JsonPrimitive(100), List.of(), "amount", "any");
 		var definition = new QuestDefinition("event_test", "Event", null, "world", "C", "minecraft:book", List.of(goal),
 		                                     "all", List.of(), List.of(), null);
 		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);

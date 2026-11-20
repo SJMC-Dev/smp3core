@@ -3,7 +3,6 @@ package club.sjmc.smp3.daily;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import club.sjmc.smp3.Smp3Core;
@@ -15,12 +14,14 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 
 public final class DailyQuestModule {
 	private static DailyQuestService instance;
-	private static final Map<UUID, HudSnapshot> hudSnapshots = new HashMap<>();
+	private static final Map<ServerGamePacketListenerImpl, HudSnapshot> hudSnapshots = new HashMap<>();
 	private record HudSnapshot(QuestDay day, int revision, QuestHudPayload payload) {}
 	private static long currentDate = Long.MIN_VALUE;
 	private DailyQuestModule() {}
@@ -30,6 +31,12 @@ public final class DailyQuestModule {
 	public static void register() {
 		BarterAttribution.register();
 		PayloadTypeRegistry.clientboundPlay().register(QuestHudPayload.TYPE, QuestHudPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(QuestHudPayload.Request.TYPE, QuestHudPayload.Request.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(QuestHudPayload.Request.TYPE, (request, context) -> {
+			var player = context.player();
+			hudSnapshots.remove(player.connection);
+			syncHud(player, instance == null ? null : instance.state(player), false);
+		});
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			try {
 				QuestConfig config = QuestConfig.load(
@@ -64,11 +71,11 @@ public final class DailyQuestModule {
 			if (instance != null) {
 				instance.settle(handler.player);
 				DailyQuestEvents.inventoryChanged(handler.player);
-				syncHud(handler.player, instance.state(handler.player));
+				syncHud(handler.player, instance.state(handler.player), false);
 			}
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-			hudSnapshots.remove(handler.player.getUUID());
+			hudSnapshots.remove(handler);
 			DailyQuestEvents.forgetInventory(handler.player.getUUID());
 			QuestStructures.forget(handler.player.getUUID());
 			QuestMovement.forget(handler.player.getUUID());
@@ -101,7 +108,7 @@ public final class DailyQuestModule {
 					DailyQuestEvents.explore(player);
 				}
 				instance.settle(player, day);
-				syncHud(player, day);
+				syncHud(player, day, false);
 			}
 		});
 		DailyQuestEvents.register();
@@ -109,16 +116,42 @@ public final class DailyQuestModule {
 		QuestStructures.register();
 	}
 
-	private static void syncHud(ServerPlayer player, QuestDay day) {
-		if (!ServerPlayNetworking.canSend(player, QuestHudPayload.TYPE))
-			return;
-		var previous = hudSnapshots.get(player.getUUID());
+	public static boolean refreshHud(ServerPlayer player) {
+		return syncHud(player, instance == null ? null : instance.state(player), true);
+	}
+
+	private static boolean syncHud(ServerPlayer player, QuestDay day, boolean diagnostic) {
+		boolean available = ServerPlayNetworking.canSend(player, QuestHudPayload.TYPE);
+		var previous = hudSnapshots.get(player.connection);
 		int revision = day == null ? 0 : day.revision;
-		if (previous != null && previous.day == day && previous.revision == revision)
-			return;
+		boolean unchanged = previous != null && previous.day == day && previous.revision == revision;
+		if (diagnostic) {
+			Smp3Core.LOGGER.info(
+			    "[SMP3 HUD] server player={} uuid={} date={} total={} unclaimed={} channel={} revision={} cache={} "
+			        + "cachedDate={} cachedRevision={}",
+			    player.getName().getString(), player.getUUID(), day == null ? null : day.date,
+			    day == null ? 0 : day.assignments.size(),
+			    day == null ? 0 : day.assignments.stream().filter(a -> !a.claimed).count(), available, revision,
+			    previous == null ? "missing"
+				: unchanged      ? "current"
+				                 : "stale",
+			    previous == null ? null : previous.payload.date(), previous == null ? null : previous.revision);
+			if (!available || day == null) {
+				String message = !available ? "任务 HUD 通道不可用，请更新 SMP3 客户端"
+				                            : "每日任务数据不可用，HUD 未刷新，请检查服务器日志";
+				player.sendSystemMessage(Component.literal(message));
+				return false;
+			}
+		}
+		if (!available)
+			return false;
+		if (!diagnostic && unchanged)
+			return true;
 		QuestHudPayload snapshot = QuestHudPayload.of(day);
-		hudSnapshots.put(player.getUUID(), new HudSnapshot(day, revision, snapshot));
-		if (previous == null || !snapshot.equals(previous.payload))
-			ServerPlayNetworking.send(player, snapshot);
+		if (diagnostic || previous == null || !snapshot.equals(previous.payload))
+			ServerPlayNetworking.send(
+			    player, diagnostic ? new QuestHudPayload(snapshot.date(), snapshot.entries(), true) : snapshot);
+		hudSnapshots.put(player.connection, new HudSnapshot(day, revision, snapshot));
+		return true;
 	}
 }

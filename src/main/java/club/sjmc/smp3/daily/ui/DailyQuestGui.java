@@ -96,7 +96,11 @@ public final class DailyQuestGui extends SimpleGui {
 		QuestDay.Assignment task = shown.assignments().get(slot);
 		long date = shown.date;
 		int column = 1 + slot * 2;
-		DyeColor accent = slot == 0 ? DyeColor.LIGHT_BLUE : slot == 1 ? DyeColor.LIME : DyeColor.WHITE;
+		DyeColor accent = switch (task.definition.difficulty()) {
+			case "B" -> DyeColor.LIME;
+			case "C" -> DyeColor.YELLOW;
+			default -> DyeColor.WHITE;
+		};
 		var background =
 		    GuiStyle.item(Items.STAINED_GLASS_PANE.pick(accent), " ", GuiStyle.MUTED).hideTooltip().build();
 		setSlot(column, background);
@@ -140,8 +144,8 @@ public final class DailyQuestGui extends SimpleGui {
 		var rewardItems =
 		    task.reward.items().stream().map(item -> ItemDefinitions.stack(item, player.registryAccess())).toList();
 		rewardItems.forEach(item
-		                    -> rewardIcon.addLoreLine(GuiStyle.text(
-		                        item.getHoverName().getString() + " x " + item.getCount(), GuiStyle.MUTED)));
+		                    -> rewardIcon.addLoreLine(
+		                        item.getHoverName().copy().append(" x " + item.getCount()).withStyle(GuiStyle.MUTED)));
 		for (var effect : task.reward.effects())
 			rewardIcon.addLoreLine(
 			    RewardBundle.description(effect, player.registryAccess()).copy().withStyle(GuiStyle.MUTED));
