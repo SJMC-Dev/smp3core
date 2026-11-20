@@ -101,3 +101,72 @@ class ShopQuotaMigrationTests(unittest.TestCase):
                 convert(root / "snapshot", None, root / "output", None,
                         migrate_shop_quotas=True, as_of=date(2026, 11, 20))
             self.assertFalse((root / "output").exists())
+
+
+class SignTicketMigrationTests(unittest.TestCase):
+    @staticmethod
+    def write_sign(path, records):
+        import struct
+
+        def name(value):
+            data = value.encode()
+            return struct.pack(">H", len(data)) + data
+
+        data = b"\x0a\x00\x00\x0a" + name("data") + b"\x0a" + name("players")
+        for owner, claimed in records.items():
+            data += b"\x0a" + name(owner) + b"\x0b" + name("serverClaimed")
+            data += struct.pack(">i", len(claimed)) + b"".join(struct.pack(">i", day) for day in claimed)
+            data += b"\x03" + name("serverTotal") + struct.pack(">i", 99) + b"\x00"
+        path.write_bytes(gzip.compress(data + b"\x00\x00\x00"))
+
+    def test_compensation_composes_with_quotas_and_survives_delivery(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            snapshot = root / "snapshot"
+            accounts = snapshot / "config/smp3/accounts"
+            accounts.mkdir(parents=True)
+            owner, missing, ineligible = [f"00000000-0000-0000-0000-{i:012d}" for i in range(1, 4)]
+            legacy = root / "sign-mod.dat"
+            self.write_sign(legacy, {owner: [1, 5], missing: [5], ineligible: [1, 3]})
+            original = {"balances": {"tongbao": 12345, "coffee_stamp": 500}, "rewardStates": {
+                "sign": {"serverClaimed": [1, 5], "pending": []}, "milestones": {"tree.all": []},
+                "questsAndPacks": {"sequence": 7, "inventory": [{"id": "minecraft:stone", "count": 64}],
+                                   "pending": [{"id": "minecraft:diamond", "count": 2}],
+                                   "effects": [], "shop": {"date": "2026-11-20", "used": {"stone": 12}}}}}
+            (accounts / f"{owner}.json").write_text(json.dumps(original))
+            (accounts / f"{ineligible}.json").write_text(json.dumps({"balances": {}, "rewardStates": {
+                "sign": {"serverClaimed": [5]}}}))
+            before = {p.name: p.read_bytes() for p in accounts.iterdir()}
+            output = root / "output"
+            report = convert(snapshot, None, output, None, migrate_shop_quotas=True,
+                             as_of=date(2026, 11, 20), legacy_sign=legacy)
+            self.assertEqual(report["signTickets"]["queued"], [owner, missing])
+            self.assertEqual(report["signTickets"]["eligible"], 2)
+            self.assertEqual(before, {p.name: p.read_bytes() for p in accounts.iterdir()})
+            results = output / "overlay/config/smp3/accounts"
+            self.assertEqual({p.stem for p in results.iterdir()}, {owner, missing})
+            account = json.loads((results / f"{owner}.json").read_text())
+            expected = copy.deepcopy(original)
+            expected["rewardStates"]["questsAndPacks"]["shop"] = {
+                "stone": {"end": "2026-11-21", "weekly": False, "count": 12}}
+            expected["rewardStates"]["questsAndPacks"]["pending"].append({"id": "smp3:ticket_ten", "count": 1})
+            expected["rewardStates"]["migrations"] = {"legacySignTicketV1": True}
+            self.assertEqual(account, expected)
+            for p in results.iterdir():
+                account = json.loads(p.read_text())
+                account["rewardStates"]["questsAndPacks"]["pending"] = []
+                (accounts / p.name).write_text(json.dumps(account))
+            report = convert(snapshot, None, root / "repeat", None, legacy_sign=legacy)
+            self.assertEqual(report["signTickets"]["queued"], [])
+            self.assertEqual(report["signTickets"]["alreadyQueued"], [owner, missing])
+            self.assertEqual(list((root / "repeat").iterdir()), [root / "repeat/report.json"])
+
+    def test_invalid_recipient_does_not_publish_partial_compensation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "snapshot/config/smp3/accounts").mkdir(parents=True)
+            legacy = root / "sign-mod.dat"
+            self.write_sign(legacy, {"00000000-0000-0000-0000-000000000001": [5], "invalid": [5]})
+            with self.assertRaisesRegex(ValueError, "UUID"):
+                convert(root / "snapshot", None, root / "output", None, legacy_sign=legacy)
+            self.assertFalse((root / "output").exists())

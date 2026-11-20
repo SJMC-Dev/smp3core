@@ -187,7 +187,38 @@ def shop_quotas(snapshot, read, artifacts, as_of):
     return report
 
 
-def convert(snapshot, configs, output, minecraft_jar, titles_only=False, migrate_shop_quotas=False, as_of=None):
+def sign_tickets(snapshot, read, artifacts, legacy_sign, full_migration):
+    directory = snapshot / "config/smp3/accounts"
+    if not full_migration and not directory.is_dir():
+        raise ValueError("Ticket compensation requires the current config/smp3/accounts directory")
+    signs = read_sign(legacy_sign)
+    eligible = sorted(owner for owner, state in signs.items() if 5 in state.get("serverClaimed", []))
+    report = {"source": str(legacy_sign), "sha256": hashlib.sha256(legacy_sign.read_bytes()).hexdigest(),
+              "item": "smp3:ticket_ten", "countPerPlayer": 1, "eligible": len(eligible),
+              "queued": [], "alreadyQueued": []}
+    for owner in eligible:
+        if str(UUID(owner)) != owner:
+            raise ValueError(f"Noncanonical UUID: {owner}")
+        relative = f"config/smp3/accounts/{owner}.json"
+        destination = "overlay/" + relative
+        account = artifacts.get(destination)
+        if account is None:
+            account = read(relative) if (snapshot / relative).exists() else {"balances": {}, "rewardStates": {}}
+        state = account["rewardStates"]
+        migrations = state.setdefault("migrations", {})
+        if migrations.get("legacySignTicketV1") is True:
+            report["alreadyQueued"].append(owner)
+            continue
+        state.setdefault("questsAndPacks", {}).setdefault("pending", []).append(
+            {"id": "smp3:ticket_ten", "count": 1})
+        migrations["legacySignTicketV1"] = True
+        artifacts[destination] = account
+        report["queued"].append(owner)
+    return report
+
+
+def convert(snapshot, configs, output, minecraft_jar, titles_only=False, migrate_shop_quotas=False, as_of=None,
+            legacy_sign=None):
     sources = [snapshot / "config", snapshot / "world"]
     if configs is not None:
         sources.append(configs)
@@ -200,16 +231,26 @@ def convert(snapshot, configs, output, minecraft_jar, titles_only=False, migrate
         hashes[relative] = hashlib.sha256(data).hexdigest()
         return json.loads(gzip.decompress(data) if relative.endswith(".gz") else data)
 
+    def finish(report, full_migration=False):
+        if legacy_sign is not None:
+            report["signTickets"] = sign_tickets(snapshot, read, artifacts, legacy_sign, full_migration)
+            report["notes"].append("One ten-draw ticket is queued per legacy five-day claimant; the compensation marker prevents repeat queuing.")
+        write_result(output, artifacts, report)
+        return report
+
     if migrate_shop_quotas:
         if as_of is None:
             raise ValueError("Shop quota migration requires --as-of (server business date)")
         quotas = shop_quotas(snapshot, read, artifacts, as_of)
         if not titles_only:
             report = {"mode": "shop-quotas", "shopQuotas": quotas, "sourceSHA256": hashes,
-                      "notes": ["Only accounts with legacy shop quotas are included in the overlay.",
-                                "Balances and all other reward state remain unchanged. Deploy while stopped."]}
-            write_result(output, artifacts, report)
-            return report
+                      "notes": ["Legacy shop quotas are converted where present.",
+                                "Balances and check-in/milestone receipts remain unchanged. Deploy while stopped."]}
+            return finish(report)
+
+    if legacy_sign is not None and not titles_only and configs is None and minecraft_jar is None:
+        return finish({"mode": "sign-tickets", "sourceSHA256": hashes,
+                       "notes": ["Existing balances, check-in claims and other rewards are preserved."]})
 
     definitions = read("config/fuji/modules/title/config.json")
     definitions["default_active_title_id"] = title_id(definitions["default_active_title_id"])
@@ -242,15 +283,14 @@ def convert(snapshot, configs, output, minecraft_jar, titles_only=False, migrate
                   "permissionUsers": len(permissions["users"]), "permissionGroups": len(permissions["groups"]),
                   "sourceSHA256": hashes,
                   "notes": ["Only Fuji title definitions, equipped titles and LuckPerms title nodes are converted.",
-                            "SMP3 accounts, balances, reward receipts and configurations remain unchanged.",
+                            "SMP3 balances, check-in/milestone receipts and configurations remain unchanged.",
                             "Import the fresh complete LuckPerms export using replace semantics during maintenance."]}
         if migrate_shop_quotas:
             report["mode"] = "titles-and-shop-quotas"
             report["shopQuotas"] = quotas
             report["notes"][0] = "Fuji title definitions, equipped titles and LuckPerms title nodes are converted."
-            report["notes"][1] = "Only legacy shop quotas change in SMP3 accounts; balances and other reward state are preserved."
-        write_result(output, artifacts, report)
-        return report
+            report["notes"][1] = "Legacy shop quotas are converted; balances and check-in/milestone receipts are preserved."
+        return finish(report)
 
     if list((snapshot / "config/smp3/accounts").glob("*.json")):
         raise ValueError("Snapshot contains new account ledgers; reconcile those instead of replaying legacy balances")
@@ -327,8 +367,7 @@ def convert(snapshot, configs, output, minecraft_jar, titles_only=False, migrate
                         "Credits are a forecast only. The overlay preserves balances and leaves reward ledgers unclaimed.",
                         "Historical daily coffee stamps are not backfilled. Existing title ownership is preserved.",
                         "Gacha pools remain empty until their actual locations and rewards are configured."]}
-    write_result(output, artifacts, report)
-    return report
+    return finish(report, full_migration=True)
 
 
 def write_result(output, artifacts, report):
@@ -355,6 +394,8 @@ def main():
     parser.add_argument("--snapshot", type=Path, required=True)
     parser.add_argument("--titles-only", action="store_true", help="Convert Fuji titles and LuckPerms only; preserve upgraded accounts")
     parser.add_argument("--shop-quotas", action="store_true", help="Migrate legacy shop quotas; may be combined with --titles-only")
+    parser.add_argument("--sign-tickets", type=Path, metavar="LEGACY_SIGN_NBT",
+                        help="Queue one ten-draw ticket per claimed five-day milestone in this pre-upgrade sign-mod.dat; usable alone or with other modes")
     parser.add_argument("--as-of", type=date.fromisoformat, help="Server business date YYYY-MM-DD for --shop-quotas (before daily reset, use the previous date)")
     parser.add_argument("--configs", type=Path, help="Reviewed JSON configuration directory (full migration)")
     parser.add_argument("--output", type=Path, required=True, help="New directory; never an existing server directory")
@@ -365,15 +406,17 @@ def main():
     if args.titles_only or args.shop_quotas:
         if args.configs or args.minecraft_jar:
             parser.error("partial migration does not use --configs or --minecraft-jar")
-    elif not args.configs or not args.minecraft_jar:
+    elif (args.configs or args.minecraft_jar or args.sign_tickets is None) and (not args.configs or not args.minecraft_jar):
         parser.error("full migration requires --configs and --minecraft-jar")
     report = convert(args.snapshot, args.configs, args.output, args.minecraft_jar,
-                     args.titles_only, args.shop_quotas, args.as_of)
+                     args.titles_only, args.shop_quotas, args.as_of, args.sign_tickets)
     keys = (("mode", "titleDefinitions", "titlePreferences", "permissionUsers", "permissionGroups")
             if args.titles_only else ("players", "accounts", "signRecords", "balanceRawTotals",
                                      "playersWithAdvancementCredits", "advancementCredits"))
     if args.shop_quotas:
         keys = (keys if args.titles_only else ("mode",)) + ("shopQuotas",)
+    if args.sign_tickets is not None:
+        keys = (("mode",) if report.get("mode") == "sign-tickets" else keys) + ("signTickets",)
     print(json.dumps({key: report[key] for key in keys}, indent=2))
 
 
