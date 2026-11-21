@@ -147,7 +147,7 @@ public final class DailyQuestModule {
 			return false;
 		if (!diagnostic && unchanged)
 			return true;
-		QuestHudPayload snapshot = QuestHudPayload.of(day);
+		QuestHudPayload snapshot = QuestHudPayload.of(day, player.registryAccess());
 		if (diagnostic || previous == null || !snapshot.equals(previous.payload))
 			ServerPlayNetworking.send(
 			    player, diagnostic ? new QuestHudPayload(snapshot.date(), snapshot.entries(), true) : snapshot);

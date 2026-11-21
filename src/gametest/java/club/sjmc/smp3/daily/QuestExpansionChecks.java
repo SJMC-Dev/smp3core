@@ -144,8 +144,9 @@ final class QuestExpansionChecks {
 	private static QuestDay.Assignment watch(ServerPlayer player, String event, String filters) {
 		var goal = new QuestDefinition.Goal("Event", event, null, JsonParser.parseString(filters).getAsJsonObject(),
 		                                    new JsonPrimitive(100), List.of(), "amount", "any");
-		var definition = new QuestDefinition("event_test", "Event", null, "world", "C", "minecraft:book", List.of(goal),
-		                                     "all", List.of(), List.of(), null);
+		var definition = new QuestDefinition("event_test", "Event", null, "world", "C",
+		                                     new JsonPrimitive("minecraft:book"), List.of(goal),
+		                                     "all", List.of(), List.of(), null, 1);
 		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
 		Smp3AccountStore.commitReward(player.getUUID(), ItemDelivery.LEDGER_KEY,
 		                              Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY),

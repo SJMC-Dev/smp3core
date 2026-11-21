@@ -1,6 +1,8 @@
 package club.sjmc.smp3.daily.ui;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
@@ -8,26 +10,27 @@ import eu.pb4.sgui.api.gui.SimpleGui;
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.DailyQuestService;
 import club.sjmc.smp3.daily.QuestDay;
+import club.sjmc.smp3.daily.QuestDefinition;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.item.RewardBundle;
 import club.sjmc.smp3.ui.GuiStyle;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public final class DailyQuestGui extends SimpleGui {
 	private final DailyQuestService service;
+	private final List<List<ItemStack>> icons = new ArrayList<>();
 	private QuestDay shown;
 	private int revision = -1;
 	private long pending = -1;
+	private int frame = -1;
 
 	private DailyQuestGui(ServerPlayer player, DailyQuestService service) {
 		super(MenuType.GENERIC_9x4, player, false);
@@ -59,18 +62,39 @@ public final class DailyQuestGui extends SimpleGui {
 			close();
 			return;
 		}
-		if (current != shown || current.revision() != revision || pending != pendingCount())
+		if (current != shown || current.revision() != revision || pending != pendingCount()) {
 			refresh(current);
+			return;
+		}
+		int frame = frame();
+		if (frame == this.frame)
+			return;
+		this.frame = frame;
+		for (int slot = 0; slot < icons.size(); slot++)
+			if (icons.get(slot).size() > 1)
+				setSlot(10 + slot * 2, taskIcon(slot).build());
 	}
 
 	private long pendingCount() {
 		return ItemDelivery.pending(player).stream().mapToLong(stack -> stack.getCount()).sum() +
 		    ItemDelivery.pendingEffects(player).size();
 	}
+
+	private int frame() {
+		return (int)(player.level().getGameTime() / QuestDefinition.ICON_CYCLE_TICKS);
+	}
+
 	private void refresh(QuestDay current) {
 		pending = pendingCount();
 		shown = current;
 		revision = shown.revision();
+		frame = frame();
+		icons.clear();
+		for (var assignment : shown.assignments())
+			icons.add(assignment.definition.icons()
+			              .stream()
+			              .map(icon -> ItemDefinitions.stack(icon, player.registryAccess()).copyWithCount(1))
+			              .toList());
 		GuiStyle.fill(this, 36);
 		long complete = shown.assignments().stream().filter(QuestDay.Assignment::complete).count();
 		long claimed = shown.assignments().stream().filter(a -> a.claimed()).count();
@@ -106,19 +130,7 @@ public final class DailyQuestGui extends SimpleGui {
 		setSlot(column, background);
 		ChatFormatting color = task.claimed() ? GuiStyle.READY : GuiStyle.ACTIVE;
 		String status = status(task);
-		Item icon = BuiltInRegistries.ITEM.getValue(Identifier.parse(task.definition.icon()));
-		GuiElementBuilder objective =
-		    GuiStyle
-		        .item(icon, task.definition.name() + (task.tier() == 0 ? "" : " " + task.tier() + "级"),
-				      GuiStyle.difficulty(task.definition.difficulty()))
-		        .addLoreLine(GuiStyle.text("难度 " + task.definition.difficulty(), GuiStyle.MUTED));
-		objective.addLoreLine(Component.empty());
-		var description = QuestText.lore(task);
-		description.stream().limit(4).forEach(objective::addLoreLine);
-		if (description.size() > 4)
-			objective.addLoreLine(GuiStyle.text("……", GuiStyle.MUTED));
-		objective.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("点击查看详细条件", GuiStyle.ACTION));
-		setSlot(9 + column, GuiStyle.onLeftClick(objective, () -> new QuestDetailsGui(player, task).open()).build());
+		setSlot(9 + column, taskIcon(slot).build());
 		var rewardIcon = GuiStyle.item(Items.WOOL.pick(task.claimed()    ? DyeColor.LIME
 		                                               : task.complete() ? DyeColor.ORANGE
 		                                                                 : DyeColor.WHITE),
@@ -174,6 +186,29 @@ public final class DailyQuestGui extends SimpleGui {
 			                                      }
 		                                      })
 		                         .build());
+	}
+
+	private GuiElementBuilder taskIcon(int slot) {
+		QuestDay.Assignment task = shown.assignments().get(slot);
+		GuiElementBuilder objective =
+		    GuiStyle
+		        .item(icon(slot), task.definition.name() + (task.tier() == 0 ? "" : " " + task.tier() + "级"),
+				      GuiStyle.difficulty(task.definition.difficulty()))
+		        .addLoreLine(GuiStyle.text("难度 " + task.definition.difficulty(), GuiStyle.MUTED));
+		objective.addLoreLine(Component.empty());
+		var description = QuestText.lore(task);
+		description.stream().limit(4).forEach(objective::addLoreLine);
+		if (description.size() > 4)
+			objective.addLoreLine(GuiStyle.text("……", GuiStyle.MUTED));
+		objective.addLoreLine(Component.empty()).addLoreLine(GuiStyle.text("点击查看详细条件", GuiStyle.ACTION));
+		return GuiStyle.onLeftClick(objective, () -> new QuestDetailsGui(player, task).open());
+	}
+
+	private ItemStack icon(int slot) {
+		List<ItemStack> candidates = slot < icons.size() ? icons.get(slot) : List.of();
+		if (candidates.isEmpty())
+			return new ItemStack(Items.PAPER);
+		return candidates.get(Math.floorMod(frame, candidates.size()));
 	}
 
 	private void confirm(long date, int slot, QuestDay.Assignment task) {

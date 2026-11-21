@@ -17,18 +17,52 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.annotations.SerializedName;
 
 public record QuestDefinition(String id, String name, String description, String category, String difficulty,
-                              String icon, List<Goal> objectives, String completion, List<Tier> tiers,
-                              List<String> requires, QuestRewardSpec rewards) {
+                              JsonElement icon, List<Goal> objectives, String completion, List<Tier> tiers,
+                              List<String> requires, QuestRewardSpec rewards, int weight) {
 	public static final Pattern DESCRIPTION_FIELD = Pattern.compile("\\{([^{}]*)}");
+	/** 多图标轮播的间隔（tick），客户端与服务端共用这一个常量。 */
+	public static final int ICON_CYCLE_TICKS = 20;
 
 	public QuestDefinition {
 		tiers = tiers == null ? List.of() : List.copyOf(tiers);
 		requires = requires == null ? List.of() : List.copyOf(requires);
 		objectives = List.copyOf(objectives);
 		completion = completion == null ? "all" : completion;
+		weight = Math.max(1, weight);
 	}
+
+	/** 归一化后的图标列表；字符串写法等价于单个 {"id":"..."} 对象。 */
+	public List<JsonObject> icons() { return normalize(icon); }
+
+	static List<JsonObject> normalize(JsonElement icon) {
+		if (icon == null || icon.isJsonNull())
+			return List.of();
+		var icons = new ArrayList<JsonObject>();
+		if (icon.isJsonArray()) {
+			for (var element : icon.getAsJsonArray())
+				addIcon(icons, element);
+		} else {
+			addIcon(icons, icon);
+		}
+		return List.copyOf(icons);
+	}
+
+	private static void addIcon(List<JsonObject> icons, JsonElement element) {
+		if (element == null || element.isJsonNull())
+			return;
+		if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
+			var item = new JsonObject();
+			item.add("id", element);
+			icons.add(item);
+			return;
+		}
+		if (!element.isJsonObject())
+			throw new IllegalArgumentException("icon must be an item id or an item object");
+		icons.add(element.getAsJsonObject());
+	}
+
 	public record Tier(int tier, JsonElement count, QuestRewardSpec rewards) {}
-	public record Candidate(String id, String name, String description, String icon, JsonObject conditions,
+	public record Candidate(String id, String name, String description, JsonElement icon, JsonObject conditions,
 	                        QuestRewardSpec rewards) {}
 	public record Target(String field, JsonElement values, List<Candidate> candidates) {
 		public Target { candidates = candidates == null ? List.of() : List.copyOf(candidates); }
@@ -96,7 +130,7 @@ public record QuestDefinition(String id, String name, String description, String
 			for (String id : action.facts.getOrDefault(target.field, Set.of())) {
 				if (id.startsWith("#") || !accepted.contains(id))
 					continue;
-				found.add(target.field.equals("block") ? id.replace("_wall_coral_fan", "_coral_fan") : id);
+				found.add(identity(target.field, id));
 			}
 			return found;
 		}
@@ -110,7 +144,8 @@ public record QuestDefinition(String id, String name, String description, String
 				selected = band.rewards;
 		}
 		var goals = objectives.stream().map(g -> g.resolve(tier, random)).toList();
-		String resolvedName = name, resolvedDescription = description, resolvedIcon = icon;
+		String resolvedName = name, resolvedDescription = description;
+		JsonElement resolvedIcon = icon;
 		if (goals.size() == 1 && goals.getFirst().target != null && !goals.getFirst().target.candidates.isEmpty()) {
 			var candidate = goals.getFirst().target.candidates.getFirst();
 			if (candidate.name != null)
@@ -123,13 +158,28 @@ public record QuestDefinition(String id, String name, String description, String
 				selected = candidate.rewards;
 		}
 		return new QuestDefinition(id, resolvedName, resolvedDescription, category, difficulty, resolvedIcon, goals,
-		                           completion, List.of(), requires, selected);
+		                           completion, List.of(), requires, selected, weight);
 	}
 
 	public boolean tiered() { return !tiers.isEmpty() || objectives.stream().anyMatch(g -> !g.tiers.isEmpty()); }
 	boolean supports(int tier) {
 		return (tiers.isEmpty() || tiers.stream().anyMatch(t -> t.tier == tier)) &&
 		    objectives.stream().allMatch(g -> g.supports(tier));
+	}
+
+	/**
+	 * 同一类方块的不同形态只算一种：珊瑚、珊瑚扇（含墙面珊瑚扇）与珊瑚块统一归并到 {@code *_coral}，
+	 * 其余方块保持原样。
+	 */
+	public static String identity(String field, String id) {
+		if (!field.equals("block"))
+			return id;
+		String normalized = id.replace("_wall_coral_fan", "_coral_fan");
+		for (String suffix : List.of("_coral_fan", "_coral_block")) {
+			if (normalized.endsWith(suffix))
+				return normalized.substring(0, normalized.length() - suffix.length()) + "_coral";
+		}
+		return normalized;
 	}
 
 	public record Event(String type, Map<String, Set<String>> facts, int amount) {

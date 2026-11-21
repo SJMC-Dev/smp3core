@@ -43,10 +43,10 @@
     {
       "id": "kill_zombie/husk/drowned/zombie_villager",
       "name": "你怎么绿绿的？",
-      "description": "亲手或用投射物击败 {count} 只{entity}，候选生物可混合累计。",
+      "description": "击败 {count} 只僵尸（或其变种）。",
       "category": "combat",
       "difficulty": "C",
-      "icon": "minecraft:rotten_flesh",
+      "icon": ["minecraft:zombie_head",{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Husk"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Drowned"}}}],
       "tiers": [
         {
           "tier": 1,
@@ -143,10 +143,10 @@
     {
       "id": "kill_skeleton/bogged/parched/stray",
       "name": "白骨苏生异变",
-      "description": "亲手或用投射物击败 {count} 只{entity}，候选生物可混合累计。",
+      "description": "击败 {count} 只骷髅（或其变种）。",
       "category": "combat",
       "difficulty": "C",
-      "icon": "minecraft:bone",
+      "icon": ["minecraft:skeleton_skull"],
       "tiers": [
         {
           "tier": 1,
@@ -243,10 +243,10 @@
     {
       "id": "kill_spider/cave_spider",
       "name": "恐蛛症",
-      "description": "亲手或用投射物击败 {count} 只{entity}，候选生物可混合累计。",
+      "description": "击败 {count} 只蜘蛛或洞穴蜘蛛。",
       "category": "combat",
       "difficulty": "C",
-      "icon": "minecraft:spider_eye",
+      "icon": [{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Spider"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_CaveSpider"}}}],
       "tiers": [
         {
           "tier": 1,
@@ -341,10 +341,10 @@
     {
       "id": "kill_creeper",
       "name": "Creeper?",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只苦力怕。",
       "category": "combat",
       "difficulty": "C",
-      "icon": "minecraft:gunpowder",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Creeper"}}},
       "tiers": [
         {
           "tier": 1,
@@ -436,10 +436,10 @@
     {
       "id": "kill_slime",
       "name": "绿色的是草元素吗？",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只史莱姆。",
       "category": "combat",
       "difficulty": "C",
-      "icon": "minecraft:slime_ball",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Slime"}}},
       "tiers": [
         {
           "tier": 1,
@@ -531,10 +531,10 @@
     {
       "id": "kill_anti_pig",
       "name": "这猪变异了？",
-      "description": "击败 {count} 只{entity}。",
+      "description": "击败 {count} 只猪灵、疣猪兽（或二者的变种）。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:porkchop",
+      "icon": [{"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2FkN2I1YWViMjIwYzA3OWUzMTljZDcwYWM4ODAwZTgwNzc0YTkzMTNjMjJmMzhlNzdhZmI4OTk5OWU2ZWM4NyJ9fX0="}]}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTY3ZTE4NjAyZTAzMDM1YWQ2ODk2N2NlMDkwMjM1ZDg5OTY2NjNmYjllYTQ3NTc4ZDNhN2ViYmM0MmE1Y2NmOSJ9fX0="}]}}},"minecraft:piglin_head",{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_PigZombie"}}}],
       "tiers": [
         {
           "tier": 1,
@@ -632,10 +632,10 @@
     {
       "id": "kill_enderman",
       "name": "两格高的优势",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只末影人。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:ender_pearl",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Enderman"}}},
       "tiers": [
         {
           "tier": 1,
@@ -726,11 +726,11 @@
     },
     {
       "id": "kill_magma",
-      "name": "我怎么老被撞啊",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "name": "怎么老被撞啊",
+      "description": "击败 {count} 只岩浆怪。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:magma_cream",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_LavaSlime"}}},
       "tiers": [
         {
           "tier": 1,
@@ -822,10 +822,10 @@
     {
       "id": "kill_blaze",
       "name": "与火搏斗",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只烈焰人。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:blaze_rod",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Blaze"}}},
       "tiers": [
         {
           "tier": 1,
@@ -917,10 +917,10 @@
     {
       "id": "kill_ghast",
       "name": "恶魂的眼泪？",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只恶魂。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:ghast_tear",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Ghast"}}},
       "tiers": [
         {
           "tier": 1,
@@ -1012,10 +1012,10 @@
     {
       "id": "kill_phantom",
       "name": "海拔160米的高天之上，宿管被流放于此",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只幻翼。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:phantom_membrane",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Phantom"}}},
       "tiers": [
         {
           "tier": 2,
@@ -1081,8 +1081,8 @@
     },
     {
       "id": "kill_wither_skeleton",
-      "name": "这么黑是挖煤挖的吗？",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "name": "这么黑是挖煤挖的？",
+      "description": "击败 {count} 只凋灵骷髅。",
       "category": "combat",
       "difficulty": "B",
       "icon": "minecraft:wither_skeleton_skull",
@@ -1151,11 +1151,11 @@
     },
     {
       "id": "kill_guardian",
-      "name": "大眼珠子来了",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "name": "大眼珠子你瞅啥",
+      "description": "击败 {count} 只守卫者。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:prismarine_shard",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Guardian"}}},
       "tiers": [
         {
           "tier": 2,
@@ -1222,10 +1222,10 @@
     {
       "id": "kill_breeze",
       "name": "你有一个喷火的兄弟",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只旋风人。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:breeze_rod",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Breeze"}}},
       "tiers": [
         {
           "tier": 2,
@@ -1292,10 +1292,10 @@
     {
       "id": "kill_creaking",
       "name": "一二三，木头人",
-      "description": "破坏正在维系嘎吱的嘎吱之心，消灭 {count} 只嘎吱。",
+      "description": "击败 {count} 只嘎枝。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:creaking_heart",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Creaking"}}},
       "tiers": [
         {
           "tier": 2,
@@ -1362,10 +1362,10 @@
     {
       "id": "kill_endermite",
       "name": "阿卡林之物",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只末影螨。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:endermite_spawn_egg",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Endermite"}}},
       "tiers": [
         {
           "tier": 2,
@@ -1431,11 +1431,11 @@
     },
     {
       "id": "kill_shulker",
-      "name": "啊啊啊快放我下来~",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "name": "快-放-我-下-来——",
+      "description": "击败 {count} 只潜影贝。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:shulker_shell",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Shulker"}}},
       "tiers": [
         {
           "tier": 2,
@@ -1502,10 +1502,10 @@
     {
       "id": "kill_evoker/pillager/vindicator/witch/ravager",
       "name": "我的诡厄巫法呢？",
-      "description": "亲手或用投射物击败 {count} 只{entity}，候选生物可混合累计。",
+      "description": "击败 {count} 只灾厄村民。",
       "category": "combat",
       "difficulty": "B",
-      "icon": "minecraft:totem_of_undying",
+      "icon": [{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Evoker"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Illager"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Vindicator"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Witch"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWM3M2UxNmZhMjkyNjg5OWNmMTg0MzQzNjBlMjE0NGY4NGVmMWViOTgxZjk5NjE0ODkxMjE0OGRkODdlMGIyYSJ9fX0="}]}}}],
       "tiers": [
         {
           "tier": 2,
@@ -1560,10 +1560,10 @@
     {
       "id": "kill_elder_guardian",
       "name": "挖掘疲劳Ⅲ笑谈个人能力",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只远古守卫者。",
       "category": "combat",
       "difficulty": "A",
-      "icon": "minecraft:sponge",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGRmNGZlYzNhYTM0Y2VkZGIwMjVhNDJjOWZjNDM1YTgwMjliMDYyNTk4YjMyNTMyMmJhM2NiNWU1ZjM1MWMxZiJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 3,
@@ -1605,7 +1605,7 @@
     {
       "id": "kill_ender_dragon",
       "name": "龙，可是帝王之征啊！",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "description": "击败 {count} 只末影龙。",
       "category": "combat",
       "difficulty": "A",
       "icon": "minecraft:dragon_head",
@@ -1649,11 +1649,11 @@
     },
     {
       "id": "kill_wither",
-      "name": "谁第一个把它从画里召唤出来的？",
-      "description": "亲手或用投射物击败 {count} 只{entity}。",
+      "name": "三头有了，六臂呢？",
+      "description": "击败 {count} 只凋灵。",
       "category": "combat",
       "difficulty": "A",
-      "icon": "minecraft:nether_star",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2RmNzRlMzIzZWQ0MTQzNjk2NWY1YzU3ZGRmMjgxNWQ1MzMyZmU5OTllNjhmYmI5ZDZjZjVjOGJkNDEzOWYifX19"}]}}},
       "tiers": [
         {
           "tier": 3,
@@ -1695,10 +1695,10 @@
     {
       "id": "kill_warden",
       "name": "嘘！",
-      "description": "击败 {count} 只{entity}。",
+      "description": "击败 {count} 只监守者。",
       "category": "combat",
       "difficulty": "A",
-      "icon": "minecraft:sculk_shrieker",
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Warden"}}},
       "tiers": [
         {
           "tier": 3,
@@ -1740,7 +1740,7 @@
     {
       "id": "craft_wood",
       "name": "木材，建筑的基“石”",
-      "description": "制作 {count} 个木制建筑方块，木板、原木加工方块、楼梯、台阶、门、围栏、展示架及木制工作设施均可。",
+      "description": "制作 {count} 个木制建筑方块。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:oak_planks",
@@ -2238,7 +2238,7 @@
     {
       "id": "craft_stone",
       "name": "石粒！",
-      "description": "制作或切石取得 {count} 个石质建筑方块，普通石材及其楼梯、台阶等变体可混合累计。",
+      "description": "制作 {count} 个石质建筑方块。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:stone_bricks",
@@ -2741,7 +2741,7 @@
     {
       "id": "craft_raw_ore_block",
       "name": "未经烧炼的原胚",
-      "description": "制作 {count} 个粗铁块、粗铜块或粗金块，可混合累计。",
+      "description": "制作 {count} 个粗矿块。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:raw_iron_block",
@@ -2813,7 +2813,7 @@
     {
       "id": "craft_ore_block",
       "name": "启洲流通的一切矿物似乎都是某人的血肉……",
-      "description": "制作 {count} 个矿物储存或矿物建筑方块，装甲和工具不计。",
+      "description": "使用矿物制作 {count} 个方块。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:iron_block",
@@ -2998,7 +2998,7 @@
     {
       "id": "craft_color",
       "name": "Jeb or wololo? 彩色更新！",
-      "description": "制作 {count} 个有色羊毛、陶瓦、混凝土或玻璃方块及其变体，可混合累计。",
+      "description": "制作 {count} 个可被染色的建筑方块。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:red_wool",
@@ -3392,10 +3392,10 @@
     {
       "id": "craft_bed",
       "name": "床其实是用来睡觉的？",
-      "description": "任选一项完成：制作一张床，或制作八张麦秆床。",
+      "description": "制作一张床，或制作八张麦秆床。",
       "category": "crafting",
       "difficulty": "C",
-      "icon": "minecraft:red_bed",
+      "icon": ["minecraft:red_bed","minecraft:straw_bed"],
       "completion": "any",
       "objectives": [
         {
@@ -3428,7 +3428,7 @@
     {
       "id": "craft_copper",
       "name": "我们合并了所有模组的铜！但什么是朝东的倒置的含水的氧化的切制铜楼梯？",
-      "description": "制作 {count} 个可氧化或涂蜡的铜质方块，已氧化及涂蜡变体均可。",
+      "description": "制作 {count} 个可被氧化与涂蜡的铜质方块。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:copper_block",
@@ -3643,7 +3643,7 @@
     {
       "id": "craft_store",
       "name": "公私仓廪俱丰实",
-      "description": "制作 {count} 个储物容器，箱子、木桶、漏斗、收纳袋、陶罐、潜影盒及载货船车均可。",
+      "description": "制作 {count} 个储物容器。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:chest",
@@ -4423,7 +4423,7 @@
     {
       "id": "craft_cooked_food",
       "name": "你最好找些吃的",
-      "description": "从熔炉或烟熏炉取出 {count} 个熟食，烤肉、熟鱼、烤马铃薯和干海带均可。",
+      "description": "使用熔炉或烟熏炉烹饪 {count} 个熟食。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:cooked_beef",
@@ -4477,6 +4477,7 @@
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:suspicious_stew",
+      "weight": 4,
       "rewards": {
         "grants": [
           {
@@ -4774,7 +4775,7 @@
                   "source": "crafting"
                 },
                 "name": "谜之炖菜不成谜：抗火",
-                "description": "使用绒球葱中的任一种花，合成一碗指定效果的谜之炖菜。"
+                "description": "使用绒球葱，合成一碗指定效果的谜之炖菜。"
               },
               {
                 "id": "minecraft:jump_boost",
@@ -4783,7 +4784,7 @@
                   "source": "crafting"
                 },
                 "name": "谜之炖菜不成谜：跳跃提升",
-                "description": "使用矢车菊中的任一种花，合成一碗指定效果的谜之炖菜。"
+                "description": "使用矢车菊，合成一碗指定效果的谜之炖菜。"
               },
               {
                 "id": "minecraft:nausea",
@@ -4792,7 +4793,7 @@
                   "source": "crafting"
                 },
                 "name": "谜之炖菜不成谜：反胃",
-                "description": "使用闭合的眼眸花中的任一种花，合成一碗指定效果的谜之炖菜。"
+                "description": "使用闭合的眼眸花，合成一碗指定效果的谜之炖菜。"
               },
               {
                 "id": "minecraft:night_vision",
@@ -4810,7 +4811,7 @@
                   "source": "crafting"
                 },
                 "name": "谜之炖菜不成谜：中毒",
-                "description": "使用铃兰中的任一种花，合成一碗指定效果的谜之炖菜。"
+                "description": "使用铃兰，合成一碗指定效果的谜之炖菜。"
               },
               {
                 "id": "minecraft:regeneration",
@@ -4819,7 +4820,7 @@
                   "source": "crafting"
                 },
                 "name": "谜之炖菜不成谜：生命恢复",
-                "description": "使用滨菊中的任一种花，合成一碗指定效果的谜之炖菜。"
+                "description": "使用滨菊，合成一碗指定效果的谜之炖菜。"
               },
               {
                 "id": "minecraft:saturation",
@@ -4837,7 +4838,7 @@
                   "source": "crafting"
                 },
                 "name": "谜之炖菜不成谜：虚弱",
-                "description": "使用橙色郁金香、粉红色郁金香、红色郁金香、白色郁金香中的任一种花，合成一碗指定效果的谜之炖菜。"
+                "description": "使用郁金香，合成一碗指定效果的谜之炖菜。"
               },
               {
                 "id": "minecraft:wither",
@@ -4846,7 +4847,7 @@
                   "source": "crafting"
                 },
                 "name": "谜之炖菜不成谜：凋零",
-                "description": "使用凋灵玫瑰中的任一种花，合成一碗指定效果的谜之炖菜。"
+                "description": "使用凋灵玫瑰，合成一碗指定效果的谜之炖菜。"
               }
             ]
           },
@@ -5130,8 +5131,8 @@
     },
     {
       "id": "craft_show",
-      "name": "我将参展",
-      "description": "制作 {count} 个物品展示框、盔甲架或木制展示架，荧光物品展示框也计入。",
+      "name": "It's show time. ",
+      "description": "制作 {count} 个框/台/架用于展示物品。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:item_frame",
@@ -5216,7 +5217,7 @@
     {
       "id": "craft_structure",
       "name": "Mojang建的没我好，有感觉吗",
-      "description": "制作或切石取得 {count} 个海晶石、下界砖或紫珀建筑方块。",
+      "description": "制作 {count} 个海底神殿/下界要塞/末地城风格的建筑方块。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:prismarine",
@@ -5337,7 +5338,7 @@
     {
       "id": "craft_sulfur",
       "name": "混沌材料？",
-      "description": "制作或切石取得 {count} 个硫黄或朱砂方块及其变体。",
+      "description": "使用来源自硫磺洞穴的方块合成 {count} 个建筑材料。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:sulfur",
@@ -5763,7 +5764,7 @@
     {
       "id": "craft_invisibility_potion",
       "name": "这下hide了",
-      "description": "酿造并取出 {count} 瓶隐身药水，可混合累计；普通、喷溅、滞留及该药水已有的长效、增强版本均可。",
+      "description": "酿造 {count} 瓶隐身药水。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:fermented_spider_eye",
@@ -5840,7 +5841,7 @@
     {
       "id": "craft_night_vision_potion",
       "name": "记得补充维生素A",
-      "description": "酿造并取出 {count} 瓶夜视药水，可混合累计；普通、喷溅、滞留及该药水已有的长效、增强版本均可。",
+      "description": "酿造 {count} 瓶夜视药水。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:golden_carrot",
@@ -5917,7 +5918,7 @@
     {
       "id": "craft_protection_potion",
       "name": "奶还是盾？",
-      "description": "酿造并取出 {count} 瓶再生、治疗、神龟药水，可混合累计；普通、喷溅、滞留及该药水已有的长效、增强版本均可。",
+      "description": "酿造 {count} 瓶再生/治疗/神龟药水。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:turtle_scute",
@@ -6000,7 +6001,7 @@
     {
       "id": "craft_power_potion",
       "name": "刀刀烈火刀刀爆！",
-      "description": "酿造并取出 {count} 瓶力量、蓄风药水，可混合累计；普通、喷溅、滞留及该药水已有的长效、增强版本均可。",
+      "description": "酿造 {count} 瓶力量/蓄风药水。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:blaze_powder",
@@ -6094,7 +6095,7 @@
     {
       "id": "craft_spider_potion",
       "name": "能力越大，责任越大",
-      "description": "酿造并取出 {count} 瓶盘丝药水，可混合累计；普通、喷溅、滞留及该药水已有的长效、增强版本均可。",
+      "description": "酿造 {count} 瓶盘丝药水。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:cobweb",
@@ -6170,7 +6171,7 @@
     {
       "id": "craft_infestation_oozing",
       "name": "斩杀线下的一角",
-      "description": "酿造并取出 {count} 瓶渗浆、虫蚀药水，可混合累计；普通、喷溅、滞留及该药水已有的长效、增强版本均可。",
+      "description": "酿造 {count} 瓶渗浆/虫蚀药水。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:slime_block",
@@ -6273,10 +6274,11 @@
     {
       "id": "craft_flag_1",
       "name": "旗帜飘扬I",
-      "description": "在织布机上为一面旗帜新增Mojang徽标、头颅盾徽或苦力怕盾徽图案；已有图案不重复计入。",
+      "description": "使用织布机制作 {count} 面绘有指定图案的旗帜。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:mojang_banner_pattern",
+      "weight": 2,
       "rewards": {
         "grants": [
           {
@@ -6348,13 +6350,32 @@
           "event": "item_crafted",
           "conditions": {
             "item": "#minecraft:banners",
-            "pattern": [
-              "minecraft:mojang",
-              "minecraft:skull",
-              "minecraft:creeper"
-            ],
             "source": "loom"
           },
+          "target": {
+            "field": "pattern",
+            "values": [
+              {
+                "id": "minecraft:mojang",
+                "icon": "minecraft:mojang_banner_pattern",
+                "name": "旗帜飘扬I",
+                "description": "使用织布机制作 {count} 面绘有Mojang徽标图案的旗帜。"
+              },
+              {
+                "id": "minecraft:skull",
+                "icon": "minecraft:skull_banner_pattern",
+                "name": "旗帜飘扬I",
+                "description": "使用织布机制作 {count} 面绘有头颅盾徽图案的旗帜。"
+              },
+              {
+                "id": "minecraft:creeper",
+                "icon": "minecraft:creeper_banner_pattern",
+                "name": "旗帜飘扬I",
+                "description": "使用织布机制作 {count} 面绘有苦力怕盾徽图案的旗帜。"
+              }
+            ]
+          },
+          "selection": "random",
           "count": 1
         }
       ]
@@ -6362,10 +6383,10 @@
     {
       "id": "craft_spider_eye",
       "name": "论发酵蛛眼的4种用法",
-      "description": "酿造并取出 {count} 瓶伤害、迟缓、隐身、虚弱药水，可混合累计；普通、喷溅、滞留及该药水已有的长效、增强版本均可。",
+      "description": "酿造伤害、迟缓、隐身、虚弱药水中的 {count} 种。",
       "category": "crafting",
       "difficulty": "B",
-      "icon": "minecraft:spider_eye",
+      "icon": "minecraft:fermented_spider_eye",
       "tiers": [
         {
           "tier": 1,
@@ -6518,7 +6539,7 @@
     {
       "id": "craft_golden_food",
       "name": "这能吃得下去吗…",
-      "description": "制作 {count} 个金苹果、金胡萝卜或闪烁的西瓜片，可混合累计。",
+      "description": "使用金和食物制作 {count} 个看起来可食用的物品。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:golden_apple",
@@ -6574,7 +6595,7 @@
     {
       "id": "craft_shulker_box",
       "name": "我超，盒！",
-      "description": "制作 {count} 个潜影盒，染色潜影盒也计入。",
+      "description": "制作 {count} 个未染色的潜影盒。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:shulker_box",
@@ -6608,7 +6629,7 @@
         {
           "event": "item_crafted",
           "conditions": {
-            "item": "#minecraft:shulker_boxes"
+            "item": "minecraft:shulker_box"
           },
           "tiers": [
             {
@@ -6617,7 +6638,7 @@
             },
             {
               "tier": 3,
-              "count": 3
+              "count": 2
             }
           ]
         }
@@ -6626,7 +6647,7 @@
     {
       "id": "craft_red_stone",
       "name": "雷石东改变生活",
-      "description": "制作 {count} 个红石制品，采用原版配方的红石分类，包含线路、机关、开关、轨道及相关装置。",
+      "description": "制作 {count} 个红石制品。",
       "category": "crafting",
       "difficulty": "B",
       "icon": "minecraft:redstone",
@@ -6795,10 +6816,10 @@
     {
       "id": "craft_baked_food",
       "name": "烘焙时间！",
-      "description": "分别制作蛋糕、曲奇、面包和南瓜派各一个，四项全部完成。",
+      "description": "制作蛋糕、曲奇、面包和南瓜派各一个。",
       "category": "crafting",
       "difficulty": "A",
-      "icon": "minecraft:cake",
+      "icon": ["minecraft:cake","minecraft:cookie","minecraft:bread","minecraft:pumpkin_pie"],
       "completion": "all",
       "objectives": [
         {
@@ -6851,6 +6872,7 @@
       "category": "crafting",
       "difficulty": "A",
       "icon": "minecraft:sentry_armor_trim_smithing_template",
+      "weight": 4,
       "rewards": {
         "grants": [
           {
@@ -7077,7 +7099,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:coast_armor_trim_smithing_template",
@@ -7085,7 +7107,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:dune_armor_trim_smithing_template",
@@ -7093,7 +7115,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:eye_armor_trim_smithing_template",
@@ -7101,7 +7123,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:flow_armor_trim_smithing_template",
@@ -7109,7 +7131,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:host_armor_trim_smithing_template",
@@ -7117,7 +7139,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:raiser_armor_trim_smithing_template",
@@ -7125,7 +7147,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:rib_armor_trim_smithing_template",
@@ -7133,7 +7155,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:sentry_armor_trim_smithing_template",
@@ -7141,7 +7163,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:shaper_armor_trim_smithing_template",
@@ -7149,7 +7171,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:silence_armor_trim_smithing_template",
@@ -7157,7 +7179,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:snout_armor_trim_smithing_template",
@@ -7165,7 +7187,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:spire_armor_trim_smithing_template",
@@ -7173,7 +7195,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:tide_armor_trim_smithing_template",
@@ -7181,7 +7203,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:vex_armor_trim_smithing_template",
@@ -7189,7 +7211,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:ward_armor_trim_smithing_template",
@@ -7197,7 +7219,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:wayfinder_armor_trim_smithing_template",
@@ -7205,7 +7227,7 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               },
               {
                 "id": "minecraft:wild_armor_trim_smithing_template",
@@ -7213,19 +7235,18 @@
                   "source": "smithing"
                 },
                 "name": "无限模板（误）",
-                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造；复制模板不计入。"
+                "description": "使用指定的{template}完成 {count} 次盔甲纹饰锻造。"
               }
             ]
           },
-          "selection": "random",
-          "count": 1
+          "selection": "random"
         }
       ]
     },
     {
       "id": "craft_resin",
       "name": "你们有没有树脂啊",
-      "description": "制作或切石取得 {count} 个树脂相关建筑方块。",
+      "description": "使用树脂制作 {count} 个建筑方块。",
       "category": "crafting",
       "difficulty": "A",
       "icon": "minecraft:resin_bricks",
@@ -7301,10 +7322,11 @@
     {
       "id": "craft_flag_2",
       "name": "旗帜飘扬Ⅱ",
-      "description": "在织布机上为一面旗帜新增地球、旋风、涡流或猪鼻图案；已有图案不重复计入。",
+      "description": "使用织布机制作 {count} 面绘有指定图案的旗帜。",
       "category": "crafting",
       "difficulty": "A",
       "icon": "minecraft:globe_banner_pattern",
+      "weight": 2,
       "rewards": {
         "grants": [
           {
@@ -7319,14 +7341,38 @@
           "event": "item_crafted",
           "conditions": {
             "item": "#minecraft:banners",
-            "pattern": [
-              "minecraft:globe",
-              "minecraft:guster",
-              "minecraft:flow",
-              "minecraft:piglin"
-            ],
             "source": "loom"
           },
+          "target": {
+            "field": "pattern",
+            "values": [
+              {
+                "id": "minecraft:globe",
+                "icon": "minecraft:globe_banner_pattern",
+                "name": "旗帜飘扬Ⅱ",
+                "description": "使用织布机制作 {count} 面绘有地球图案的旗帜。"
+              },
+              {
+                "id": "minecraft:guster",
+                "icon": "minecraft:guster_banner_pattern",
+                "name": "旗帜飘扬Ⅱ",
+                "description": "使用织布机制作 {count} 面绘有旋风图案的旗帜。"
+              },
+              {
+                "id": "minecraft:flow",
+                "icon": "minecraft:flow_banner_pattern",
+                "name": "旗帜飘扬Ⅱ",
+                "description": "使用织布机制作 {count} 面绘有涡流图案的旗帜。"
+              },
+              {
+                "id": "minecraft:piglin",
+                "icon": "minecraft:piglin_banner_pattern",
+                "name": "旗帜飘扬Ⅱ",
+                "description": "使用织布机制作 {count} 面绘有猪鼻图案的旗帜。"
+              }
+            ]
+          },
+          "selection": "random",
           "count": 1
         }
       ]
@@ -7365,7 +7411,7 @@
     {
       "id": "visit_ocean",
       "name": "一直游到海水变蓝Ⅰ",
-      "description": "到达任意海洋类生物群系",
+      "description": "抵达任意海洋类生物群系。",
       "icon": "minecraft:kelp",
       "category": "exploration",
       "difficulty": "C",
@@ -7392,7 +7438,7 @@
     {
       "id": "visit_hill",
       "name": "因为山就在那里",
-      "description": "到达任意山地类生物群系。",
+      "description": "抵达任意山地类生物群系。",
       "category": "exploration",
       "difficulty": "C",
       "icon": "minecraft:snow_block",
@@ -7421,7 +7467,7 @@
     {
       "id": "visit_forest",
       "name": "森林寂静之时",
-      "description": "到达任意森林类生物群系。",
+      "description": "抵达任意森林类生物群系。",
       "category": "exploration",
       "difficulty": "C",
       "icon": "minecraft:oak_sapling",
@@ -7585,7 +7631,7 @@
     {
       "id": "visit_wetland",
       "name": "接下来，水很重要",
-      "description": "到达任意湿地类生物群系",
+      "description": "抵达任意湿地类生物群系。",
       "icon": "minecraft:lily_pad",
       "category": "exploration",
       "difficulty": "C",
@@ -7617,7 +7663,7 @@
     {
       "id": "visit_plain",
       "name": "一马平川",
-      "description": "到达任意平原/高原生物群系",
+      "description": "抵达任意平原、高原类生物群系。",
       "icon": "minecraft:grass_block",
       "category": "exploration",
       "difficulty": "C",
@@ -7650,7 +7696,7 @@
     {
       "id": "visit_drought",
       "name": "渺渺黄沙天万里",
-      "description": "到达任意沙漠/恶地生物群系",
+      "description": "抵达任意沙漠、恶地生物群系。",
       "icon": "minecraft:sand",
       "category": "exploration",
       "difficulty": "C",
@@ -7682,7 +7728,7 @@
     {
       "id": "visit_cave",
       "name": "复行数十步，豁然开朗",
-      "description": "到达任意洞穴类生物群系",
+      "description": "抵达任意洞穴类生物群系。",
       "icon": "minecraft:pointed_dripstone",
       "category": "exploration",
       "difficulty": "B",
@@ -7714,8 +7760,9 @@
     {
       "id": "visit_ocean_2",
       "name": "一直游到海水变蓝Ⅱ",
-      "description": "到达以下 {count} 种生物群系：{biome}。",
+      "description": "抵达以下 {count} 种生物群系：{biome}。",
       "icon": "minecraft:tropical_fish",
+      "weight": 4,
       "category": "exploration",
       "difficulty": "B",
       "objectives": [
@@ -7800,8 +7847,9 @@
     {
       "id": "visit_hill_2",
       "name": "因为山就在那里",
-      "description": "到达以下 {count} 种生物群系：{biome}。",
+      "description": "抵达以下 {count} 种生物群系：{biome}。",
       "icon": "minecraft:packed_ice",
+      "weight": 3,
       "category": "exploration",
       "difficulty": "B",
       "objectives": [
@@ -7889,8 +7937,9 @@
     {
       "id": "visit_forest_2",
       "name": "森林寂静之时",
-      "description": "到达以下 {count} 种生物群系：{biome}。",
+      "description": "抵达以下 {count} 种生物群系：{biome}。",
       "icon": "minecraft:spruce_sapling",
+      "weight": 4,
       "category": "exploration",
       "difficulty": "B",
       "objectives": [
@@ -7979,8 +8028,9 @@
     {
       "id": "visit_wetland_2",
       "name": "接下来，水很重要",
-      "description": "到达以下 {count} 种生物群系：{biome}。",
+      "description": "抵达以下 {count} 种生物群系：{biome}。",
       "icon": "minecraft:mangrove_roots",
+      "weight": 2,
       "category": "exploration",
       "difficulty": "B",
       "objectives": [
@@ -8070,8 +8120,9 @@
     {
       "id": "visit_plain_2",
       "name": "一马平川",
-      "description": "到达以下 {count} 种生物群系：{biome}。",
+      "description": "抵达以下 {count} 种生物群系：{biome}。",
       "icon": "minecraft:sunflower",
+      "weight": 3,
       "category": "exploration",
       "difficulty": "B",
       "objectives": [
@@ -8162,8 +8213,9 @@
     {
       "id": "visit_drought_2",
       "name": "渺渺黄沙天万里",
-      "description": "到达以下 {count} 种生物群系：{biome}。",
+      "description": "抵达以下 {count} 种生物群系：{biome}。",
       "icon": "minecraft:red_sand",
+      "weight": 2,
       "category": "exploration",
       "difficulty": "B",
       "objectives": [
@@ -8253,7 +8305,7 @@
     {
       "id": "visit_mushroom_fields",
       "name": "真菌世界",
-      "description": "真菌世界（到达蘑菇岛）",
+      "description": "抵达蘑菇岛。",
       "category": "exploration",
       "difficulty": "B",
       "icon": "minecraft:red_mushroom_block",
@@ -8284,7 +8336,7 @@
     {
       "id": "visit_pale_garden",
       "name": "褪色的故事",
-      "description": "褪色的故事（到达苍白之园）",
+      "description": "抵达苍白之园。",
       "category": "exploration",
       "difficulty": "B",
       "icon": "minecraft:pale_oak_sapling",
@@ -8310,7 +8362,7 @@
     {
       "id": "visit_bamboo_jungle",
       "name": "宁可食无肉，不可居无竹",
-      "description": "到达竹林",
+      "description": "抵达竹林。",
       "icon": "minecraft:bamboo",
       "category": "exploration",
       "difficulty": "B",
@@ -8338,7 +8390,7 @@
     {
       "id": "visit_mangrove_swamp",
       "name": "红树林不红",
-      "description": "红树林不红（到达红树林沼泽）",
+      "description": "抵达红树林沼泽。",
       "category": "exploration",
       "difficulty": "B",
       "icon": "minecraft:mangrove_propagule",
@@ -8364,7 +8416,7 @@
     {
       "id": "visit_ice_spikes",
       "name": "无神怜爱的雪国",
-      "description": "无神怜爱的雪国（到达冰刺之地）",
+      "description": "抵达冰刺之地。",
       "category": "exploration",
       "difficulty": "B",
       "icon": "minecraft:blue_ice",
@@ -8390,7 +8442,7 @@
     {
       "id": "visit_sulfur_caves",
       "name": "混沌世界",
-      "description": "混沌世界（到达硫磺洞穴）",
+      "description": "抵达硫磺洞穴。",
       "category": "exploration",
       "difficulty": "B",
       "icon": "minecraft:sulfur",
@@ -8416,8 +8468,9 @@
     {
       "id": "visit_end",
       "name": "最喜欢的末地更新",
-      "description": "到达以下 {count} 种不同的生物群系：{biome}。",
+      "description": "抵达以下 {count} 种不同的生物群系：{biome}。",
       "icon": "minecraft:end_stone",
+      "weight": 3,
       "category": "exploration",
       "difficulty": "A",
       "objectives": [
@@ -8450,8 +8503,9 @@
     {
       "id": "visit_nether",
       "name": "Make the Nether Great Again!",
-      "description": "到达以下 {count} 种不同的生物群系：{biome}。",
+      "description": "抵达以下 {count} 种不同的生物群系：{biome}。",
       "icon": "minecraft:netherrack",
+      "weight": 3,
       "category": "exploration",
       "difficulty": "A",
       "objectives": [
@@ -8484,7 +8538,7 @@
     {
       "id": "log_broken",
       "name": "要致富，先撸树",
-      "description": "破坏 {count} 个原木或菌柄类方块。",
+      "description": "破坏 {count} 个原木方块。",
       "category": "gathering",
       "difficulty": "C",
       "icon": "minecraft:oak_log",
@@ -10225,7 +10279,7 @@
     {
       "id": "dirt_broken",
       "name": "启洲的大地啊",
-      "description": "破坏 {count} 个泥土、砂土或缠根泥土。",
+      "description": "破坏 {count} 个土类方块。",
       "category": "gathering",
       "difficulty": "C",
       "icon": "minecraft:dirt",
@@ -10376,7 +10430,19 @@
         {
           "event": "block_broken",
           "conditions": {
-            "block": "#minecraft:dirt"
+            "block": [
+              "minecraft:dirt",
+              "minecraft:coarse_dirt",
+              "minecraft:rooted_dirt",
+              "minecraft:grass_block",
+              "minecraft:podzol",
+              "minecraft:mycelium",
+              "minecraft:moss_block",
+              "minecraft:mud",
+              "minecraft:muddy_mangrove_roots",
+              "minecraft:farmland",
+              "minecraft:dirt_path"
+            ]
           },
           "tiers": [
             {
@@ -10398,7 +10464,7 @@
     {
       "id": "stone_broken",
       "name": "最有用的一集",
-      "description": "破坏 {count} 个安山岩、闪长岩、花岗岩、凝灰岩或玄武岩。",
+      "description": "破坏 {count} 个“废石”。",
       "category": "gathering",
       "difficulty": "C",
       "icon": "minecraft:andesite",
@@ -10643,7 +10709,7 @@
     {
       "id": "ice_broken",
       "name": "！？冰冰？！",
-      "description": "破坏 {count} 个冰、浮冰、蓝冰或霜冰方块。",
+      "description": "破坏 {count} 个冰、浮冰或蓝冰方块。",
       "category": "gathering",
       "difficulty": "C",
       "icon": "minecraft:ice",
@@ -10689,7 +10755,11 @@
         {
           "event": "block_broken",
           "conditions": {
-            "block": "#minecraft:ice"
+            "block": [
+              "minecraft:ice",
+              "minecraft:packed_ice",
+              "minecraft:blue_ice"
+            ]
           },
           "tiers": [
             {
@@ -10711,8 +10781,8 @@
     {
       "id": "ore_broken_1",
       "name": "Mine_Craft Ⅰ",
-      "description": "完成以下任意一项采矿目标，普通矿石和对应的深层矿石可混合累计。",
-      "icon": "minecraft:iron_ore",
+      "description": "完成以下任意一项采矿目标。",
+      "icon": ["minecraft:coal_ore","minecraft:iron_ore","minecraft:gold_ore"],
       "category": "gathering",
       "difficulty": "C",
       "objectives": [
@@ -10777,7 +10847,7 @@
       "id": "ore_broken_nether",
       "name": "Mine_Craft·下界版",
       "description": "完成以下任意一项采矿目标。",
-      "icon": "minecraft:nether_quartz_ore",
+      "icon": ["minecraft:nether_quartz_ore","minecraft:nether_gold_ore"],
       "category": "gathering",
       "difficulty": "C",
       "objectives": [
@@ -10824,8 +10894,8 @@
     {
       "id": "melon_broken",
       "name": "没有东瓜的世界",
-      "description": "破坏西瓜+南瓜/雕刻南瓜/南瓜灯",
-      "icon": "minecraft:melon",
+      "description": "破坏西瓜和南瓜类方块。",
+      "icon": ["minecraft:melon","minecraft:pumpkin","minecraft:carved_pumpkin","minecraft:jack_o_lantern"],
       "category": "world",
       "difficulty": "C",
       "objectives": [
@@ -10866,7 +10936,7 @@
     {
       "id": "fugus_broken",
       "name": "菇菇菇",
-      "description": "破坏任意蘑菇，含方块*32",
+      "description": "破坏32个蘑菇造物。",
       "icon": "minecraft:red_mushroom",
       "category": "world",
       "difficulty": "C",
@@ -10899,7 +10969,7 @@
     {
       "id": "bee_broken",
       "name": "养蜂人",
-      "description": "破坏一个蜂巢、蜂箱、蜂蜜块或蜜脾块。",
+      "description": "破坏一个与蜜蜂相关的方块。",
       "category": "gathering",
       "difficulty": "C",
       "icon": "minecraft:bee_nest",
@@ -10955,7 +11025,7 @@
     {
       "id": "sculk_broken",
       "name": "循声而来",
-      "description": "循声而来（破坏32个幽匿系列方块）",
+      "description": "破坏32个幽匿类方块。",
       "category": "gathering",
       "difficulty": "B",
       "icon": "minecraft:sculk",
@@ -10988,7 +11058,7 @@
     {
       "id": "cobweb_broken",
       "name": "拒绝慢性死亡",
-      "description": "拒绝慢性死亡（破坏16个蜘蛛网）",
+      "description": "破坏16个蜘蛛网。",
       "category": "gathering",
       "difficulty": "B",
       "icon": "minecraft:cobweb",
@@ -11014,8 +11084,8 @@
     {
       "id": "ore_broken_2",
       "name": "Mine_Craft Ⅱ",
-      "description": "完成以下任意一项采矿目标，普通矿石和对应的深层矿石可混合累计。",
-      "icon": "minecraft:diamond_ore",
+      "description": "完成以下任意一项采矿目标。",
+      "icon": ["minecraft:emerald_ore","minecraft:diamond_ore","minecraft:ancient_debris"],
       "category": "gathering",
       "difficulty": "B",
       "objectives": [
@@ -11080,6 +11150,7 @@
       "name": "采花大盗",
       "description": "破坏以下 {count} 种不同的花：{block}。",
       "icon": "minecraft:poppy",
+      "weight": 4,
       "category": "world",
       "difficulty": "A",
       "objectives": [
@@ -11154,6 +11225,7 @@
       "name": "草",
       "description": "破坏以下 {count} 种不同的植物：{block}。",
       "icon": "minecraft:fern",
+      "weight": 4,
       "category": "world",
       "difficulty": "A",
       "objectives": [
@@ -11301,10 +11373,10 @@
     {
       "id": "rare_ore_broken",
       "name": "最少见的一集",
-      "description": "任选一项完成：挖掘八个深层煤矿石，或一个深层绿宝石矿石。",
+      "description": "挖掘八个深层煤矿石或一个深层绿宝石矿石。",
       "category": "gathering",
       "difficulty": "A",
-      "icon": "minecraft:deepslate_emerald_ore",
+      "icon": ["minecraft:deepslate_coal_ore","minecraft:deepslate_emerald_ore"],
       "completion": "any",
       "objectives": [
         {
@@ -11337,7 +11409,7 @@
     {
       "id": "nether_protal",
       "name": "穿越相面",
-      "description": "点燃一个下界传送门",
+      "description": "点燃一个下界传送门。",
       "icon": "minecraft:flint_and_steel",
       "category": "world",
       "difficulty": "C",
@@ -11362,6 +11434,7 @@
       "name": "齐民之术Ⅰ",
       "description": "收获 {count} 个{item}。",
       "icon": "minecraft:wheat",
+      "weight": 3,
       "category": "world",
       "difficulty": "C",
       "objectives": [
@@ -11389,7 +11462,7 @@
     {
       "id": "fishing_count",
       "name": "钓鱼佬",
-      "description": "钓鱼16次",
+      "description": "钓鱼16次。",
       "icon": "minecraft:fishing_rod",
       "category": "world",
       "difficulty": "C",
@@ -11414,6 +11487,7 @@
       "name": "新质生产力Ⅰ",
       "description": "成功繁殖{entity} {count} 次。",
       "icon": "minecraft:wheat_seeds",
+      "weight": 3,
       "category": "world",
       "difficulty": "C",
       "objectives": [
@@ -11449,7 +11523,7 @@
     {
       "id": "taming_1",
       "name": "我和我的动物朋友Ⅰ",
-      "description": "驯服一只狼/猫/鹦鹉",
+      "description": "驯服一只狼、猫或鹦鹉。",
       "icon": "minecraft:bone",
       "category": "world",
       "difficulty": "C",
@@ -11480,7 +11554,7 @@
     {
       "id": "taming_2",
       "name": "我和我的动物朋友Ⅱ",
-      "description": "驯服一只可骑乘的生物：马/驴/羊驼/骆驼/鹦鹉螺",
+      "description": "驯服一只忠实的坐骑。",
       "icon": "minecraft:saddle",
       "category": "world",
       "difficulty": "C",
@@ -11518,7 +11592,7 @@
     {
       "id": "copper_golem",
       "name": "铜傀儡排序",
-      "description": "召唤一只铜傀儡",
+      "description": "召唤一只铜傀儡。",
       "icon": "minecraft:copper_golem_spawn_egg",
       "category": "world",
       "difficulty": "C",
@@ -11536,7 +11610,7 @@
     {
       "id": "snow_golem",
       "name": "你必须先攻击那个带有嘲讽的随从",
-      "description": "召唤一只雪傀儡",
+      "description": "召唤一只雪傀儡。",
       "icon": "minecraft:snow_golem_spawn_egg",
       "category": "world",
       "difficulty": "C",
@@ -11554,7 +11628,7 @@
     {
       "id": "iron_golem_fix",
       "name": "撑住啊，老铁",
-      "description": "使用铁锭修复铁傀儡",
+      "description": "使用铁锭修复铁傀儡。",
       "icon": "minecraft:iron_ingot",
       "category": "world",
       "difficulty": "C",
@@ -11586,6 +11660,7 @@
       "name": "成交！奸商？",
       "description": "与{profession}完成 {count} 次交易。",
       "icon": "minecraft:emerald",
+      "weight": 4,
       "category": "world",
       "difficulty": "C",
       "objectives": [
@@ -11626,7 +11701,7 @@
     {
       "id": "trading_2",
       "name": "你是？",
-      "description": "与傻子村民进行交互",
+      "description": "向傻子村民打招呼。",
       "icon": "minecraft:villager_spawn_egg",
       "category": "world",
       "difficulty": "C",
@@ -11656,7 +11731,7 @@
     {
       "id": "blocking",
       "name": "反弹！",
-      "description": "举盾格挡弹射物5次",
+      "description": "举盾格挡弹射物5次。",
       "icon": "minecraft:shield",
       "category": "world",
       "difficulty": "C",
@@ -11790,7 +11865,7 @@
     {
       "id": "iron_golem",
       "name": "优质铁锭来源",
-      "description": "召唤一只铁傀儡",
+      "description": "召唤一只铁傀儡。",
       "icon": "minecraft:iron_golem_spawn_egg",
       "category": "world",
       "difficulty": "B",
@@ -11817,7 +11892,7 @@
     {
       "id": "taming_3",
       "name": "我和我的动物朋友Ⅲ",
-      "description": "使一只狐狸/豹猫信任你",
+      "description": "使一只怕生的狐狸或豹猫信任你。",
       "icon": "minecraft:sweet_berries",
       "category": "world",
       "difficulty": "B",
@@ -11847,7 +11922,7 @@
     {
       "id": "archaeology_brush",
       "name": "真是扫完了",
-      "description": "使用刷子获得8个考古战利品",
+      "description": "使用刷子获得8个考古战利品。",
       "icon": "minecraft:brush",
       "category": "world",
       "difficulty": "B",
@@ -11871,7 +11946,7 @@
     {
       "id": "conduit_frame",
       "name": "驭水之术",
-      "description": "建设一个潮涌框架",
+      "description": "建设一个潮涌框架。",
       "icon": "minecraft:conduit",
       "category": "world",
       "difficulty": "B",
@@ -11896,6 +11971,7 @@
       "name": "齐民之术Ⅱ",
       "description": "收获 {count} 个{item}。",
       "icon": "minecraft:cocoa_beans",
+      "weight": 3,
       "category": "world",
       "difficulty": "B",
       "objectives": [
@@ -11920,7 +11996,7 @@
     {
       "id": "fishing_trash",
       "name": "水质不佳",
-      "description": "钓到8次垃圾",
+      "description": "钓到8次垃圾。",
       "icon": "minecraft:leather_boots",
       "category": "world",
       "difficulty": "C",
@@ -11946,7 +12022,7 @@
     {
       "id": "fishing_treasure",
       "name": "疯狂水世界",
-      "description": "钓到8次宝藏",
+      "description": "钓到8次宝藏。",
       "icon": "minecraft:nautilus_shell",
       "category": "world",
       "difficulty": "B",
@@ -11974,6 +12050,7 @@
       "name": "新质生产力Ⅱ",
       "description": "成功繁殖{entity} {count} 次。",
       "icon": "minecraft:golden_carrot",
+      "weight": 4,
       "category": "world",
       "difficulty": "B",
       "objectives": [
@@ -12015,7 +12092,7 @@
     {
       "id": "armadillo_brush",
       "name": "梳理皮毛",
-      "description": "使用刷子刷取犰狳",
+      "description": "使用刷子刷取犰狳。",
       "icon": "minecraft:armadillo_scute",
       "category": "world",
       "difficulty": "B",
@@ -12045,7 +12122,7 @@
     {
       "id": "conversion_zombie",
       "name": "异界的排斥",
-      "description": "空手潜行右键指定目标，再完成转化。将一名猪灵/疣猪兽转化为僵尸猪灵/僵尸疣猪兽",
+      "description": "将一名互动过的猪灵或疣猪兽僵尸化。",
       "icon": "minecraft:zombified_piglin_spawn_egg",
       "category": "world",
       "difficulty": "B",
@@ -12086,7 +12163,7 @@
     {
       "id": "zombie_skeleton_conversion",
       "name": "更换新装",
-      "description": "空手潜行右键指定目标，再完成转化。将骷髅转化为流浪者/尸壳、僵尸、溺尸之间的转化",
+      "description": "将一名互动过的骷髅或僵尸进行转化。",
       "icon": "minecraft:powder_snow_bucket",
       "category": "world",
       "difficulty": "B",
@@ -12115,7 +12192,7 @@
     {
       "id": "witch_conversion",
       "name": "雷电法王",
-      "description": "空手潜行右键指定目标，再完成转化。使用闪电将村民转化为女巫",
+      "description": "使用闪电将村民转化为女巫。",
       "icon": "minecraft:lightning_rod",
       "category": "world",
       "difficulty": "B",
@@ -12140,7 +12217,7 @@
     {
       "id": "conversion_mooshroom",
       "name": "变色菇？谨慎食用",
-      "description": "空手潜行右键指定目标，再完成转化。使用闪电将哞菇转换颜色",
+      "description": "使用闪电转换哞菇的颜色。",
       "icon": "minecraft:mooshroom_spawn_egg",
       "category": "world",
       "difficulty": "A",
@@ -12204,7 +12281,7 @@
     {
       "id": "nether_reactor",
       "name": "被老资历吓哭了",
-      "description": "搭建 3×3×3 反应器，空手潜行右键中心钻石块。底层：金块圆石金块 / 圆石圆石圆石 / 金块圆石金块；中层：圆石空气圆石 / 空气钻石块空气 / 圆石空气圆石；顶层：空气圆石空气 / 圆石圆石圆石 / 空气圆石空气。激活将结构转为下界岩。",
+      "description": "搭建 3×3×3 下界反应器。",
       "icon": "minecraft:gilded_blackstone",
       "category": "world",
       "difficulty": "A",
@@ -12248,7 +12325,7 @@
     {
       "id": "raid_victory",
       "name": "向灾厄村民，开战！",
-      "description": "袭击胜利",
+      "description": "获得一次袭击胜利。",
       "icon": "minecraft:ominous_bottle",
       "category": "world",
       "difficulty": "A",
@@ -12276,7 +12353,7 @@
     {
       "id": "ruined_portal",
       "name": "尘封的故事",
-      "description": "尘封的故事（发现一个废弃传送门）",
+      "description": "发现一个废弃传送门。",
       "category": "exploration",
       "difficulty": "C",
       "icon": "minecraft:crying_obsidian",
@@ -12310,7 +12387,7 @@
     {
       "id": "buried_treasure",
       "name": "海盗的遗产",
-      "description": "海盗的遗产（发现一个埋藏的宝藏）",
+      "description": "发现一个埋藏的宝藏。",
       "category": "exploration",
       "difficulty": "C",
       "icon": "minecraft:chest",
@@ -12336,7 +12413,7 @@
     {
       "id": "mineshaft",
       "name": "纵横之道",
-      "description": "发现一个废弃矿井",
+      "description": "发现一个废弃矿井。",
       "icon": "minecraft:rail",
       "category": "exploration",
       "difficulty": "C",
@@ -12366,7 +12443,7 @@
     {
       "id": "abandoned_camp",
       "name": "休息一下，马上回来",
-      "description": "休息一下，马上回来（发现一个废弃营地）",
+      "description": "发现一个废弃营地。",
       "category": "exploration",
       "difficulty": "C",
       "icon": "minecraft:campfire",
@@ -12589,7 +12666,7 @@
     {
       "id": "shipwreck",
       "name": "泰坦尼克",
-      "description": "发现一个沉船",
+      "description": "发现一艘沉船。",
       "icon": "minecraft:oak_boat",
       "category": "exploration",
       "difficulty": "C",
@@ -12619,7 +12696,7 @@
     {
       "id": "ancient_city",
       "name": "The Sift",
-      "description": "The Sift（发现一个远古城市）",
+      "description": "发现一座远古城市。",
       "category": "exploration",
       "difficulty": "B",
       "icon": "minecraft:reinforced_deepslate",
@@ -12645,7 +12722,7 @@
     {
       "id": "trial_chamber",
       "name": "挑战时间",
-      "description": "挑战时间（发现一个试炼密室）",
+      "description": "发现一个试炼密室。",
       "category": "exploration",
       "difficulty": "B",
       "icon": "minecraft:trial_key",
@@ -12674,7 +12751,7 @@
     {
       "id": "bastion_remnant",
       "name": "温暖如家",
-      "description": "温暖如家（发现一个堡垒遗迹）",
+      "description": "发现一座堡垒遗迹。",
       "category": "exploration",
       "difficulty": "B",
       "icon": "minecraft:polished_blackstone_bricks",
@@ -12700,7 +12777,7 @@
     {
       "id": "nether_fotress",
       "name": "必经之路",
-      "description": "发现一个下界要塞",
+      "description": "发现一个下界要塞。",
       "icon": "minecraft:nether_bricks",
       "category": "exploration",
       "difficulty": "B",
@@ -12729,8 +12806,9 @@
     {
       "id": "pyramid",
       "name": "旧世界的神",
-      "description": "发现丛林神庙/沙漠神殿/海底神殿",
+      "description": "发现一座曾经的神庙或是神殿。",
       "icon": "minecraft:chiseled_sandstone",
+      "weight": 2,
       "category": "exploration",
       "difficulty": "A",
       "objectives": [
@@ -12752,7 +12830,7 @@
     {
       "id": "woodland_mansion",
       "name": "灾厄大本营",
-      "description": "发现一个林地府邸",
+      "description": "发现一座林地府邸。",
       "icon": "minecraft:dark_oak_log",
       "category": "exploration",
       "difficulty": "A",
@@ -12781,7 +12859,7 @@
     {
       "id": "end_city",
       "name": "漂浮之城",
-      "description": "发现一个末地城",
+      "description": "发现一个末地城。",
       "icon": "minecraft:purpur_block",
       "category": "exploration",
       "difficulty": "A",
@@ -12810,7 +12888,7 @@
     {
       "id": "craft_travel",
       "name": "扬帆起航",
-      "description": "制作 {count} 件旅行用品：矿车、船、鞍、挽具或两种引导钓竿。",
+      "description": "制作 {count} 件使你能够进行中途以上旅行的物品。",
       "category": "crafting",
       "difficulty": "C",
       "icon": "minecraft:oak_boat",
@@ -12893,10 +12971,11 @@
     {
       "id": "coral_broken",
       "name": "五彩斑斓的海",
-      "description": "挖掘 {count} 种活珊瑚。珊瑚、珊瑚扇与珊瑚块分别计数，墙扇与地面扇合并计数。",
+      "description": "挖掘 {count} 种活珊瑚。",
       "category": "gathering",
       "difficulty": "B",
-      "icon": "minecraft:brain_coral",
+      "icon": ["minecraft:brain_coral","minecraft:bubble_coral","minecraft:fire_coral","minecraft:horn_coral","minecraft:tube_coral"],
+      "weight": 3,
       "objectives": [
         {
           "event": "block_broken",
@@ -12924,15 +13003,15 @@
           "tiers": [
             {
               "tier": 1,
-              "count": 3
+              "count": 2
             },
             {
               "tier": 2,
-              "count": 5
+              "count": 3
             },
             {
               "tier": 3,
-              "count": 7
+              "count": 5
             }
           ]
         }

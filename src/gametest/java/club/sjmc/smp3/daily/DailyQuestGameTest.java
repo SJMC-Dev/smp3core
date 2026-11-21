@@ -242,7 +242,7 @@ public final class DailyQuestGameTest {
 			    new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
 				                    List.of(new QuestDefinition.Goal("Explore", "biome_visited", null, conditions,
 				                                                     new JsonPrimitive(1), List.of(), "amount", "any")),
-				                    "all", List.of(), List.of(), null);
+				                    "all", List.of(), List.of(), null, 1);
 			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1),
 			                               player);
 			day.assignments.set(0, task);
@@ -254,7 +254,7 @@ public final class DailyQuestGameTest {
 			    new QuestDefinition("explore_test", "探索测试", null, "exploration", "C", forest.icon(),
 				                    List.of(new QuestDefinition.Goal("Explore", "biome_visited", null, conditions,
 				                                                     new JsonPrimitive(1), List.of(), "amount", "any")),
-				                    "all", List.of(), List.of(), null);
+				                    "all", List.of(), List.of(), null, 1);
 			task = new QuestDay.Assignment(exploration, 1, service.config.rewards().get("C"), Set.of(), new Random(1),
 			                               player);
 			day.assignments.set(0, task);

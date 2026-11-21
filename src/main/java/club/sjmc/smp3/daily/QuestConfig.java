@@ -18,6 +18,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.RewardBundle;
 
 import net.minecraft.core.Registry;
@@ -107,7 +108,9 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 			var task = element.getAsJsonObject();
 			String at = "任务 " + task.get("id");
 			shape(task, at, "id name category difficulty icon objectives",
-			      "description requires rewards completion tiers");
+			      "description requires rewards completion tiers weight");
+			if (task.has("weight"))
+				require(task.get("weight").getAsInt() >= 1, at + ".weight must be at least 1");
 			require(!task.getAsJsonArray("objectives").isEmpty(), at + ".objectives is empty");
 			for (int i = 0; i < task.getAsJsonArray("objectives").size(); i++) {
 				var goal = task.getAsJsonArray("objectives").get(i).getAsJsonObject();
@@ -264,8 +267,15 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 	public void validateRegistries(RegistryAccess registries, Set<String> dimensions) {
 		for (QuestDefinition task : tasks) {
 			try {
-				require(registries.lookupOrThrow(Registries.ITEM).containsKey(Identifier.parse(task.icon())),
-				        "icon does not exist: " + task.icon());
+				require(!task.icons().isEmpty(), task.id() + ": icon is empty");
+				for (var icon : task.icons()) {
+					require(icon.has("id") && icon.get("id").isJsonPrimitive(),
+					        "icon needs an item id: " + icon);
+					var identifier = Identifier.parse(icon.get("id").getAsString());
+					require(registries.lookupOrThrow(Registries.ITEM).containsKey(identifier),
+					        "icon does not exist: " + identifier);
+					ItemDefinitions.stack(icon, registries);
+				}
 				for (int i = 0; i < task.objectives().size(); i++) {
 					var goal = task.objectives().get(i);
 					validateObjective(goal.objective(), registries, dimensions);
@@ -287,18 +297,12 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 						var values = goal.target().values().getAsJsonArray();
 						values.asList().clear();
 						expanded.stream()
-						    .map(id
-							     -> goal.countBy().equals("distinct") && goal.target().field().equals("block")
-						                ? id.replace("_wall_coral_fan", "_coral_fan")
-										: id)
+						    .map(id -> QuestDefinition.identity(goal.target().field(), id))
 						    .distinct()
 						    .forEach(values::add);
 						if (goal.countBy().equals("distinct")) {
 							long size = expanded.stream()
-							                .map(id
-							                     -> goal.target().field().equals("block")
-							                            ? id.replace("_wall_coral_fan", "_coral_fan")
-							                            : id)
+							                .map(id -> QuestDefinition.identity(goal.target().field(), id))
 							                .distinct()
 							                .count();
 							for (var band : progression.bands)
@@ -477,6 +481,16 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 			}
 	}
 
+	private static void icon(JsonElement value, String at) {
+		List<JsonObject> icons;
+		try {
+			icons = QuestDefinition.normalize(value);
+		} catch (RuntimeException error) {
+			throw new IllegalArgumentException(at + ": must be an item id or a nonempty array of item ids", error);
+		}
+		require(!icons.isEmpty(), at + ": must not be an empty array");
+	}
+
 	private static void shape(JsonObject object, String at, String required, String optional) {
 		var mandatory = new HashSet<>(Arrays.asList(required.split(" ")));
 		mandatory.remove("");
@@ -484,13 +498,15 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 		allowed.addAll(Arrays.asList(optional.split(" ")));
 		require(object.keySet().containsAll(mandatory) && allowed.containsAll(object.keySet()),
 		        at + ": fields required=" + mandatory + ", allowed=" + allowed);
-		for (String field : List.of("id", "name", "category", "difficulty", "icon", "description", "completion")) {
+		for (String field : List.of("id", "name", "category", "difficulty", "description", "completion")) {
 			if (!object.has(field))
 				continue;
 			var value = object.get(field);
 			require(value.isJsonPrimitive() && value.getAsJsonPrimitive().isString() && !value.getAsString().isBlank(),
 			        at + "." + field + ": must be a nonempty string");
 		}
+		if (object.has("icon"))
+			icon(object.get("icon"), at + ".icon");
 		if (object.has("requires")) {
 			require(object.get("requires").isJsonArray(), at + ".requires: must be an array");
 			for (var ref : object.getAsJsonArray("requires"))

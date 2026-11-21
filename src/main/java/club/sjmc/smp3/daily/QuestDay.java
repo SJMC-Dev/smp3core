@@ -208,7 +208,16 @@ public final class QuestDay {
 		List<QuestDefinition> varied = choices.stream().filter(t -> !categories.contains(t.category())).toList();
 		if (!varied.isEmpty())
 			choices = varied;
-		return choices.get(random.nextInt(choices.size()));
+		int total = 0;
+		for (QuestDefinition choice : choices)
+			total += choice.weight();
+		int pick = random.nextInt(total);
+		for (QuestDefinition choice : choices) {
+			pick -= choice.weight();
+			if (pick < 0)
+				return choice;
+		}
+		return choices.getLast();
 	}
 
 	private List<QuestDefinition> candidates(QuestConfig config, String difficulty) {

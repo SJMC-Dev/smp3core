@@ -13,6 +13,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public final class GuiStyle {
@@ -49,6 +50,10 @@ public final class GuiStyle {
 	}
 
 	public static GuiElementBuilder item(Item icon, String name, ChatFormatting color) {
+		return new GuiElementBuilder(icon).setName(text(name, color)).hideDefaultTooltip();
+	}
+
+	public static GuiElementBuilder item(ItemStack icon, String name, ChatFormatting color) {
 		return new GuiElementBuilder(icon).setName(text(name, color)).hideDefaultTooltip();
 	}
 

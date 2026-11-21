@@ -1,10 +1,13 @@
 package club.sjmc.smp3.ui;
 
+import java.util.List;
+
+import club.sjmc.smp3.daily.QuestDefinition;
+
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
 
 final class QuestHud {
@@ -83,13 +86,21 @@ final class QuestHud {
 					graphics.fill(left + 6 + i, py, left + 8 + i, py + 2, color);
 				}
 			}
-			graphics.item(new ItemStack(BuiltInRegistries.ITEM.getValue(row.entry.icon())), left + 22, y + 2);
+			var icons = row.entry.icons();
+			if (!icons.isEmpty())
+				graphics.item(icon(icons), left + 22, y + 2);
 			String ratio = ratio(row);
 			graphics.text(client.font, ratio, left + width - 4 - client.font.width(ratio), y + 6, color);
 			y += 22;
 		}
 		graphics.disableScissor();
 		graphics.pose().popMatrix();
+	}
+
+	private static ItemStack icon(List<ItemStack> icons) {
+		var level = Minecraft.getInstance().level;
+		int frame = level == null ? 0 : (int)(level.getGameTime() / QuestDefinition.ICON_CYCLE_TICKS);
+		return icons.get(Math.floorMod(frame, icons.size()));
 	}
 
 	private static String ratio(QuestHudState.Row row) { return row.entry.progress() + "/" + row.entry.target(); }

@@ -44,7 +44,8 @@ import net.minecraft.world.level.storage.TagValueInput;
 final class ProductionChecks {
 	static void run(GameTestHelper test, ServerPlayer player, BlockPos pos) {
 		var definition =
-		    new QuestDefinition("production", "Production", null, "crafting", "A", "minecraft:iron_ingot",
+		    new QuestDefinition("production", "Production", null, "crafting", "A",
+		                        new JsonPrimitive("minecraft:iron_ingot"),
 			                    List.of(new QuestDefinition.Goal(
 		                            "Production", "item_crafted", null,
 		                            JsonParser
@@ -52,7 +53,7 @@ final class ProductionChecks {
 		                                             + "\"minecraft:netherite_pickaxe\",\"minecraft:potion\"]}")
 		                                .getAsJsonObject(),
 		                            new JsonPrimitive(100), List.of(), "amount", "any")),
-			                    "all", List.of(), List.of(), null);
+			                    "all", List.of(), List.of(), null, 1);
 		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
 		DailyQuestModule.current().state(player).assignments.set(0, task);
 		player.getInventory().clearContent();
@@ -116,12 +117,12 @@ final class ProductionChecks {
 		definitions(test, player, pos);
 		var service = DailyQuestModule.current();
 		definition = new QuestDefinition(
-		    "inventory", "Inventory", null, "collecting", "A", "minecraft:oak_planks",
+		    "inventory", "Inventory", null, "collecting", "A", new JsonPrimitive("minecraft:oak_planks"),
 		    List.of(new QuestDefinition.Goal(
 		        "Inventory", "inventory_changed", null,
 		        JsonParser.parseString("{\"item\":[\"minecraft:oak_planks\",\"#minecraft:planks\"]}").getAsJsonObject(),
 		        new JsonPrimitive(6), List.of(), "amount", "any")),
-		    "all", List.of(), List.of(), null);
+		    "all", List.of(), List.of(), null, 1);
 		task = new QuestDay.Assignment(
 		    definition, 1,
 		    new QuestReward(
@@ -165,7 +166,7 @@ final class ProductionChecks {
 		player.inventoryMenu.broadcastChanges();
 		DailyQuestEvents.flushInventories(player.level().getServer());
 		service.settle(player);
-		var hud = QuestHudPayload.of(service.state(player)).entries().getFirst();
+		var hud = QuestHudPayload.of(service.state(player), player.registryAccess()).entries().getFirst();
 		test.assertTrue(hud.progress() == 6 && hud.complete() && hud.claimed() &&
 		                    ItemDelivery.pending(player).getFirst().getCount() == 2 &&
 		                    QuestRewards.progress(player).completed() == completed + 1,
@@ -324,8 +325,8 @@ final class ProductionChecks {
 		test.assertTrue(SguiUtils.getCurrentGui(player) instanceof DailyQuestGui,
 		                "Task details cannot return to the overview");
 		player.closeContainer();
-		test.assertTrue(QuestHudPayload.of(service.state(player)).entries().getFirst().target() == 5,
-		                "Multi-objective HUD target does not count goals");
+		var overviewHud = QuestHudPayload.of(service.state(player), player.registryAccess()).entries().getFirst();
+		test.assertTrue(overviewHud.target() == 5, "Multi-objective HUD target does not count goals");
 		var anyDefinition = QuestConfig.JSON.fromJson("""
 		    {"id":"hud_any","name":"Mining","category":"mining","difficulty":"B","icon":"minecraft:book","completion":"any",
 		     "objectives":[
@@ -339,17 +340,17 @@ final class ProductionChecks {
 		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:emerald_ore")), 3));
 		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:diamond_ore")), 5));
 		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:ancient_debris")), 1));
-		var hud = QuestHudPayload.of(day).entries().getFirst();
-		test.assertTrue(hud.progress() == 3 && hud.target() == 6 &&
-		                    hud.icon().toString().equals("minecraft:emerald_ore") && !any.complete(),
+		var hud = QuestHudPayload.of(day, player.registryAccess()).entries().getFirst();
+		test.assertTrue(hud.progress() == 3 && hud.target() == 6 && hud.icons().size() == 1 &&
+		                    hud.icons().getFirst().is(Items.EMERALD_ORE) && !any.complete(),
 		                "Any-objective HUD must compare ratios and keep configuration order on ties");
 		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:diamond_ore")), 2));
-		hud = QuestHudPayload.of(day).entries().getFirst();
-		test.assertTrue(hud.progress() == 7 && hud.target() == 12 &&
-		                    hud.icon().toString().equals("minecraft:diamond_ore"),
+		hud = QuestHudPayload.of(day, player.registryAccess()).entries().getFirst();
+		test.assertTrue(hud.progress() == 7 && hud.target() == 12 && hud.icons().size() == 1 &&
+		                    hud.icons().getFirst().is(Items.DIAMOND_ORE),
 		                "HUD did not follow the new leading objective");
 		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:ancient_debris")), 1));
-		hud = QuestHudPayload.of(day).entries().getFirst();
+		hud = QuestHudPayload.of(day, player.registryAccess()).entries().getFirst();
 		test.assertTrue(hud.progress() == 2 && hud.target() == 2 && hud.complete() && any.complete(),
 		                "Any-objective completion disagrees with HUD progress");
 		var visitDefinition = QuestConfig.JSON.fromJson("""

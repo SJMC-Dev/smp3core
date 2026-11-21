@@ -27,9 +27,31 @@ public final class QuestConversions {
 	    Identifier.fromNamespaceAndPath("smp3", "conversion_owner"), UUIDUtil.CODEC);
 	private QuestConversions() {}
 	static void register() {
+		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, base, taken, blocked) -> {
+			if (!(source.getEntity() instanceof ServerPlayer player) || entity.getAttached(OWNER) != null)
+				return;
+			var service = DailyQuestModule.current();
+			if (service == null)
+				return;
+			var day = service.state(player);
+			if (day == null)
+				return;
+			for (var task : day.assignments) {
+				if (task.complete())
+					continue;
+				for (var goal : task.definition.objectives()) {
+					if (!goal.event().equals("entity_converted"))
+						continue;
+					var filter = goal.objective().conditions();
+					if (filter.has("entity") && !matchesType(entity, filter.get("entity")))
+						continue;
+					entity.setAttached(OWNER, player.getUUID());
+					return;
+				}
+			}
+		});
 		UseEntityCallback.EVENT.register((actor, level, hand, entity, hit) -> {
-			if (!(actor instanceof ServerPlayer player) || !player.isShiftKeyDown() ||
-			    !player.getItemInHand(hand).isEmpty())
+			if (!(actor instanceof ServerPlayer player) || !player.getItemInHand(hand).isEmpty())
 				return InteractionResult.PASS;
 			var service = DailyQuestModule.current();
 			if (service == null)
