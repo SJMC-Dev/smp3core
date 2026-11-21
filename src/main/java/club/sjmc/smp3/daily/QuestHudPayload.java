@@ -2,10 +2,6 @@ package club.sjmc.smp3.daily;
 
 import java.util.List;
 
-import com.google.gson.JsonObject;
-
-import club.sjmc.smp3.item.ItemDefinitions;
-
 import io.netty.buffer.ByteBuf;
 
 import net.minecraft.core.RegistryAccess;
@@ -19,9 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public record QuestHudPayload(long date, List<Entry> entries, boolean diagnostic) implements CustomPacketPayload {
-	/** 通道名带版本：旧客户端不认领该通道，不会解码错位，只会看到更新提示。 */
-	public static final Type<QuestHudPayload> TYPE =
-	    new Type<>(Identifier.fromNamespaceAndPath("smp3", "quest_hud2"));
+	public static final Type<QuestHudPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("smp3", "quest_hud"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, QuestHudPayload> CODEC = StreamCodec.composite(
 	    ByteBufCodecs.LONG, QuestHudPayload::date, Entry.CODEC.apply(ByteBufCodecs.list(4)), QuestHudPayload::entries,
 	    ByteBufCodecs.BOOL, QuestHudPayload::diagnostic, QuestHudPayload::new);
@@ -39,10 +33,11 @@ public record QuestHudPayload(long date, List<Entry> entries, boolean diagnostic
 	}
 
 	public record Entry(String token, List<ItemStack> icons, int progress, int target, boolean claimed) {
-		private static final StreamCodec<RegistryFriendlyByteBuf, Entry> CODEC = StreamCodec.composite(
-		    ByteBufCodecs.stringUtf8(36), Entry::token, ItemStack.STREAM_CODEC.apply(ByteBufCodecs.list(8)),
-		    Entry::icons, ByteBufCodecs.VAR_INT, Entry::progress, ByteBufCodecs.VAR_INT, Entry::target,
-		    ByteBufCodecs.BOOL, Entry::claimed, Entry::new);
+		private static final StreamCodec<RegistryFriendlyByteBuf, Entry> CODEC =
+		    StreamCodec.composite(ByteBufCodecs.stringUtf8(36), Entry::token,
+			                      ItemStack.STREAM_CODEC.apply(ByteBufCodecs.list(QuestDefinition.MAX_ICONS)),
+			                      Entry::icons, ByteBufCodecs.VAR_INT, Entry::progress, ByteBufCodecs.VAR_INT,
+			                      Entry::target, ByteBufCodecs.BOOL, Entry::claimed, Entry::new);
 
 		public boolean complete() { return progress >= target; }
 	}
@@ -50,12 +45,12 @@ public record QuestHudPayload(long date, List<Entry> entries, boolean diagnostic
 	public static QuestHudPayload of(QuestDay day, RegistryAccess registries) {
 		if (day == null)
 			return new QuestHudPayload(0, List.of(), false);
-		return new QuestHudPayload(day.date,
-		                           day.assignments.stream().map(task -> entry(task, registries)).toList(), false);
+		return new QuestHudPayload(day.date, day.assignments.stream().map(task -> entry(task, registries)).toList(),
+		                           false);
 	}
 
 	private static Entry entry(QuestDay.Assignment task, RegistryAccess registries) {
-		List<ItemStack> icons = stacks(task.definition.icons(), registries);
+		List<ItemStack> icons = task.definition.iconStacks(registries);
 		var goals = task.definition.objectives();
 		if (goals.size() == 1 || !task.definition.completion().equals("any"))
 			return new Entry(task.token, icons, task.progress, task.target, task.claimed);
@@ -83,10 +78,6 @@ public record QuestHudPayload(long date, List<Entry> entries, boolean diagnostic
 		}
 		return new Entry(task.token, derived.isEmpty() ? icons : derived, task.goalProgress(best), goal.count(),
 		                 task.claimed);
-	}
-
-	private static List<ItemStack> stacks(List<JsonObject> icons, RegistryAccess registries) {
-		return icons.stream().map(icon -> ItemDefinitions.stack(icon, registries).copyWithCount(1)).toList();
 	}
 
 	@Override

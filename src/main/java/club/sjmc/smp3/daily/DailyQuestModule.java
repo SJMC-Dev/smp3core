@@ -113,7 +113,6 @@ public final class DailyQuestModule {
 		});
 		DailyQuestEvents.register();
 		QuestConversions.register();
-		QuestStructures.register();
 	}
 
 	public static boolean refreshHud(ServerPlayer player) {

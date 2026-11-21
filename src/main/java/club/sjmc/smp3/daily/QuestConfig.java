@@ -110,7 +110,9 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 			shape(task, at, "id name category difficulty icon objectives",
 			      "description requires rewards completion tiers weight");
 			if (task.has("weight"))
-				require(task.get("weight").getAsInt() >= 1, at + ".weight must be at least 1");
+				require(integer(task.get("weight"), at + ".weight") >= 1, at + ".weight must be at least 1");
+			else
+				task.addProperty("weight", 1);
 			require(!task.getAsJsonArray("objectives").isEmpty(), at + ".objectives is empty");
 			for (int i = 0; i < task.getAsJsonArray("objectives").size(); i++) {
 				var goal = task.getAsJsonArray("objectives").get(i).getAsJsonObject();
@@ -267,17 +269,15 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 	public void validateRegistries(RegistryAccess registries, Set<String> dimensions) {
 		for (QuestDefinition task : tasks) {
 			try {
-				require(!task.icons().isEmpty(), task.id() + ": icon is empty");
-				for (var icon : task.icons()) {
-					require(icon.has("id") && icon.get("id").isJsonPrimitive(),
-					        "icon needs an item id: " + icon);
-					var identifier = Identifier.parse(icon.get("id").getAsString());
-					require(registries.lookupOrThrow(Registries.ITEM).containsKey(identifier),
-					        "icon does not exist: " + identifier);
+				for (var icon : task.icons())
 					ItemDefinitions.stack(icon, registries);
-				}
 				for (int i = 0; i < task.objectives().size(); i++) {
 					var goal = task.objectives().get(i);
+					if (goal.target() != null)
+						for (var candidate : goal.target().candidates())
+							if (candidate.icon() != null)
+								for (var icon : QuestDefinition.normalize(candidate.icon()))
+									ItemDefinitions.stack(icon, registries);
 					validateObjective(goal.objective(), registries, dimensions);
 					if (goal.target() != null) {
 						var expanded = new TreeSet<String>();
@@ -294,12 +294,15 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 								        -> t.forEach(
 								            h -> expanded.add(h.unwrapKey().orElseThrow().identifier().toString())));
 						}
+						if (goal.target().field().equals("block")) {
+							for (String id : List.copyOf(expanded)) {
+								if (id.startsWith("minecraft:") && id.endsWith("_coral_fan") && !id.contains("_wall_"))
+									expanded.add(id.replace("_coral_fan", "_wall_coral_fan"));
+							}
+						}
 						var values = goal.target().values().getAsJsonArray();
 						values.asList().clear();
-						expanded.stream()
-						    .map(id -> QuestDefinition.identity(goal.target().field(), id))
-						    .distinct()
-						    .forEach(values::add);
+						expanded.forEach(values::add);
 						if (goal.countBy().equals("distinct")) {
 							long size = expanded.stream()
 							                .map(id -> QuestDefinition.identity(goal.target().field(), id))
@@ -481,16 +484,6 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 			}
 	}
 
-	private static void icon(JsonElement value, String at) {
-		List<JsonObject> icons;
-		try {
-			icons = QuestDefinition.normalize(value);
-		} catch (RuntimeException error) {
-			throw new IllegalArgumentException(at + ": must be an item id or a nonempty array of item ids", error);
-		}
-		require(!icons.isEmpty(), at + ": must not be an empty array");
-	}
-
 	private static void shape(JsonObject object, String at, String required, String optional) {
 		var mandatory = new HashSet<>(Arrays.asList(required.split(" ")));
 		mandatory.remove("");
@@ -506,7 +499,7 @@ public record QuestConfig(int dailyRerollLimit, Progression progression, Map<Str
 			        at + "." + field + ": must be a nonempty string");
 		}
 		if (object.has("icon"))
-			icon(object.get("icon"), at + ".icon");
+			QuestDefinition.normalize(object.get("icon"));
 		if (object.has("requires")) {
 			require(object.get("requires").isJsonArray(), at + ".requires: must be an array");
 			for (var ref : object.getAsJsonArray("requires"))

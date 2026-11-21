@@ -3,6 +3,8 @@ package club.sjmc.smp3.daily;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
+import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 import com.google.gson.JsonParser;
@@ -34,15 +36,16 @@ final class QuestItemChecks {
 		config.validateRegistries(player.registryAccess(),
 		                          Set.of("minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"));
 		config.validateLoot(player.level().getServer());
-		for (String id : new String[] {"craft_travel", "coral_broken"}) {
-			var definition = config.tasks().stream().filter(t -> t.id().equals(id)).findFirst().orElseThrow();
-			int[] counts = id.equals("craft_travel") ? new int[] {1, 2, 4} : new int[] {3, 5, 7};
-			for (int tier = 1; tier <= 3; tier++) {
-				var task =
-				    new QuestDay.Assignment(definition, tier, new QuestReward(0, 0), Set.of(), new Random(1), player);
-				test.assertTrue(task.target == counts[tier - 1], "Deferred quest used the wrong tier count");
-			}
-		}
+		var coral = config.tasks().stream().filter(t -> t.id().equals("coral_broken")).findFirst().orElseThrow();
+		var coralTask = new QuestDay.Assignment(coral, 3, new QuestReward(0, 0), Set.of(), new Random(1), player);
+		var day = new QuestDay(100, 0, 0, Set.of(), config, new Random(1), player);
+		day.assignments.clear();
+		day.assignments.add(coralTask);
+		for (String block : List.of("brain_coral_block", "brain_coral_fan", "brain_coral_wall_fan", "brain_coral"))
+			day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:" + block))));
+		test.assertTrue(coralTask.progress() == 1, "Same-color coral forms were rejected or counted separately");
+		day.record(new QuestDefinition.Event("block_broken", Map.of("block", Set.of("minecraft:fire_coral_fan"))));
+		test.assertTrue(coralTask.progress() == 2, "A second coral color did not advance the quest");
 		var pack = new ItemStack(Smp3Items.RANDOM_PACK, 2);
 		pack.set(ItemDefinitions.PACK, JsonParser.parseString("""
 		    {"options":[{"name":"Map","grants":[{"type":"loot_table","id":"smp3:quests/explorer_maps"}]}]}

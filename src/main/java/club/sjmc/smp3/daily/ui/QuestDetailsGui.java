@@ -31,21 +31,20 @@ final class QuestDetailsGui extends SimpleGui {
 			var goal = task.definition.objectives().get(i);
 			String progress = goal.name() + " (" + task.goalProgress(i) + "/" + goal.count() + ")";
 			if (goal.countBy().equals("distinct")) {
-				for (String target : QuestDefinition.values(goal.target().values())) {
+				for (String target : QuestDefinition.values(goal.target().values())
+				                         .stream()
+				                         .map(id -> QuestDefinition.identity(goal.target().field(), id))
+				                         .distinct()
+				                         .toList()) {
 					boolean done = task.completedTargets(i).contains(target);
 					add(progress, done ? "已完成" : "未完成",
 					    QuestText.condition(goal.target().field(), new JsonPrimitive(target)));
 				}
 			}
-			if (goal.event().equals("entity_converted")) {
-				var bound = task.binding(i);
-				var entity = bound == null ? null : player.level().getEntity(bound);
-				add(progress,
-				    bound == null    ? "尚未指定生物"
-				    : entity == null ? "已指定生物"
-				                     : "已指定：" + entity.getDisplayName().getString(),
-				    List.of(GuiStyle.text("空手潜行右键选择或更换目标", GuiStyle.ACTION)));
-			}
+			if (goal.event().equals("entity_converted"))
+				add(progress, "转化归属",
+				    List.of(GuiStyle.text("计入16格内最近的、持有对应未完成任务的玩家", GuiStyle.MUTED)));
+
 			goal.objective().conditions().entrySet().forEach(condition -> {
 				if (goal.countBy().equals("distinct") && condition.getKey().equals(goal.target().field()))
 					return;

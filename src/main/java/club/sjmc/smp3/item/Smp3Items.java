@@ -3,6 +3,7 @@ package club.sjmc.smp3.item;
 import java.util.List;
 
 import club.sjmc.smp3.Smp3Core;
+import club.sjmc.smp3.block.Smp3Blocks;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
@@ -13,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.component.ItemLore;
 
 public final class Smp3Items {
@@ -34,6 +36,13 @@ public final class Smp3Items {
 	                    Component.translatable("tooltip.smp3.any_enchanted_book.usage").withStyle(ChatFormatting.GRAY),
 	                    Component.translatable("tooltip.smp3.any_enchanted_book.cost")
 	                        .withStyle(ChatFormatting.GRAY))))));
+
+	public static final Item NETHER_REACTOR_CORE =
+	    Registry.register(BuiltInRegistries.ITEM, Smp3Blocks.REACTOR_ID,
+		                  new BlockItem(Smp3Blocks.NETHER_REACTOR_CORE,
+		                                new Item.Properties()
+		                                    .setId(ResourceKey.create(Registries.ITEM, Smp3Blocks.REACTOR_ID))
+		                                    .useBlockDescriptionPrefix()));
 
 	public static final Item CHOICE_PACK = pack("choice_pack", true);
 	public static final Item RANDOM_PACK = pack("random_pack", false);

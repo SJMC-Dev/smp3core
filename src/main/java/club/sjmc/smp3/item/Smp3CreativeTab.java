@@ -26,6 +26,7 @@ public final class Smp3CreativeTab {
 		                      .displayItems((parameters, output) -> {
 			                      output.accept(Smp3Items.ANY_ENCHANTED_BOOK);
 			                      output.accept(Smp3Items.CORAL_TOOL);
+			                      output.accept(Smp3Items.NETHER_REACTOR_CORE);
 			                      output.accept(Smp3Items.TICKET_SINGLE);
 			                      output.accept(Smp3Items.TICKET_TEN);
 			                      String supplies = """

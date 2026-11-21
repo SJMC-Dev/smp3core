@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "phase=0": {
+      "model": "smp3:block/nether_reactor_core_inactive"
+    },
+    "phase=1": {
+      "model": "smp3:block/nether_reactor_core_active"
+    },
+    "phase=2": {
+      "model": "smp3:block/nether_reactor_core_finished"
+    }
+  }
+}

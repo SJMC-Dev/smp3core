@@ -24,5 +24,6 @@
   "item.smp3.ticket_single": "抽奖券",
   "item.smp3.ticket_ten": "十连抽奖券",
   "tooltip.smp3.ticket.usage": "投掷到抽奖池内使用",
-  "tooltip.smp3.ticket.ten_guarantee": "末抽必为 A 级及以上"
+  "tooltip.smp3.ticket.ten_guarantee": "末抽必为 A 级及以上",
+  "block.smp3.nether_reactor_core": "下界反应器核心"
 }

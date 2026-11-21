@@ -24,5 +24,6 @@
   "item.smp3.ticket_single": "Gacha Ticket",
   "item.smp3.ticket_ten": "Ten-Draw Gacha Ticket",
   "tooltip.smp3.ticket.usage": "Throw into a gacha pool to use",
-  "tooltip.smp3.ticket.ten_guarantee": "The final draw guarantees A tier or above"
+  "tooltip.smp3.ticket.ten_guarantee": "The final draw guarantees A tier or above",
+  "block.smp3.nether_reactor_core": "Nether Reactor Core"
 }

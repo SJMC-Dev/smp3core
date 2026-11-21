@@ -80,9 +80,7 @@ public final class DailyQuestGui extends SimpleGui {
 		    ItemDelivery.pendingEffects(player).size();
 	}
 
-	private int frame() {
-		return (int)(player.level().getGameTime() / QuestDefinition.ICON_CYCLE_TICKS);
-	}
+	private int frame() { return (int)(player.level().getGameTime() / QuestDefinition.ICON_CYCLE_TICKS); }
 
 	private void refresh(QuestDay current) {
 		pending = pendingCount();
@@ -91,10 +89,7 @@ public final class DailyQuestGui extends SimpleGui {
 		frame = frame();
 		icons.clear();
 		for (var assignment : shown.assignments())
-			icons.add(assignment.definition.icons()
-			              .stream()
-			              .map(icon -> ItemDefinitions.stack(icon, player.registryAccess()).copyWithCount(1))
-			              .toList());
+			icons.add(assignment.definition.iconStacks(player.registryAccess()));
 		GuiStyle.fill(this, 36);
 		long complete = shown.assignments().stream().filter(QuestDay.Assignment::complete).count();
 		long claimed = shown.assignments().stream().filter(a -> a.claimed()).count();
@@ -205,9 +200,7 @@ public final class DailyQuestGui extends SimpleGui {
 	}
 
 	private ItemStack icon(int slot) {
-		List<ItemStack> candidates = slot < icons.size() ? icons.get(slot) : List.of();
-		if (candidates.isEmpty())
-			return new ItemStack(Items.PAPER);
+		List<ItemStack> candidates = icons.get(slot);
 		return candidates.get(Math.floorMod(frame, candidates.size()));
 	}
 

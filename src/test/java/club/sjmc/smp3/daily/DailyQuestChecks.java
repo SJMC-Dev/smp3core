@@ -8,6 +8,7 @@ import java.util.Random;
 import java.util.Set;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 
 import club.sjmc.smp3.economy.EconomyChecks;
@@ -42,6 +43,17 @@ public final class DailyQuestChecks {
 		invalid = template.deepCopy();
 		invalid.getAsJsonArray("tasks").asList().removeIf(
 		    v -> v.getAsJsonObject().get("difficulty").getAsString().equals("A"));
+		reject(invalid);
+		invalid = template.deepCopy();
+		invalid.getAsJsonArray("tasks").forEach(t -> t.getAsJsonObject().addProperty("weight", Integer.MAX_VALUE));
+		new QuestDay(100, 0, 0, Set.of(), QuestConfig.parse(invalid.toString()), random, null);
+		invalid.getAsJsonArray("tasks").get(0).getAsJsonObject().addProperty("weight", 1.5);
+		reject(invalid);
+		invalid = template.deepCopy();
+		var tooManyIcons = new JsonArray();
+		for (int i = 0; i <= QuestDefinition.MAX_ICONS; i++)
+			tooManyIcons.add("minecraft:stone");
+		invalid.getAsJsonArray("tasks").get(0).getAsJsonObject().add("icon", tooManyIcons);
 		reject(invalid);
 		var task = template.getAsJsonArray("tasks").get(0).getAsJsonObject();
 		task.remove("tiers");

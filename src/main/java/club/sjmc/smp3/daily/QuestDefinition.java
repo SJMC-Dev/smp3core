@@ -16,27 +16,34 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.annotations.SerializedName;
 
+import club.sjmc.smp3.item.ItemDefinitions;
+
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.world.item.ItemStack;
+
 public record QuestDefinition(String id, String name, String description, String category, String difficulty,
                               JsonElement icon, List<Goal> objectives, String completion, List<Tier> tiers,
                               List<String> requires, QuestRewardSpec rewards, int weight) {
 	public static final Pattern DESCRIPTION_FIELD = Pattern.compile("\\{([^{}]*)}");
-	/** 多图标轮播的间隔（tick），客户端与服务端共用这一个常量。 */
 	public static final int ICON_CYCLE_TICKS = 20;
+	public static final int MAX_ICONS = 8;
 
 	public QuestDefinition {
 		tiers = tiers == null ? List.of() : List.copyOf(tiers);
 		requires = requires == null ? List.of() : List.copyOf(requires);
 		objectives = List.copyOf(objectives);
 		completion = completion == null ? "all" : completion;
-		weight = Math.max(1, weight);
 	}
 
-	/** 归一化后的图标列表；字符串写法等价于单个 {"id":"..."} 对象。 */
 	public List<JsonObject> icons() { return normalize(icon); }
+
+	public List<ItemStack> iconStacks(RegistryAccess registries) {
+		return icons().stream().map(icon -> ItemDefinitions.stack(icon, registries).copyWithCount(1)).toList();
+	}
 
 	static List<JsonObject> normalize(JsonElement icon) {
 		if (icon == null || icon.isJsonNull())
-			return List.of();
+			throw new IllegalArgumentException("icon must be an item id, item object, or array");
 		var icons = new ArrayList<JsonObject>();
 		if (icon.isJsonArray()) {
 			for (var element : icon.getAsJsonArray())
@@ -44,12 +51,12 @@ public record QuestDefinition(String id, String name, String description, String
 		} else {
 			addIcon(icons, icon);
 		}
+		if (icons.isEmpty() || icons.size() > MAX_ICONS)
+			throw new IllegalArgumentException("icon must contain 1 to " + MAX_ICONS + " items");
 		return List.copyOf(icons);
 	}
 
 	private static void addIcon(List<JsonObject> icons, JsonElement element) {
-		if (element == null || element.isJsonNull())
-			return;
 		if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
 			var item = new JsonObject();
 			item.add("id", element);
@@ -113,11 +120,23 @@ public record QuestDefinition(String id, String name, String description, String
 				if (candidate.conditions != null)
 					candidate.conditions.entrySet().forEach(e -> filters.add(e.getKey(), e.getValue()));
 			} else if (selection.equals("random")) {
-				var candidates = new ArrayList<>(values(target.values));
+				var candidates =
+				    new ArrayList<>(values(target.values)
+					                    .stream()
+					                    .map(id -> countBy.equals("distinct") ? identity(target.field, id) : id)
+					                    .distinct()
+					                    .toList());
 				var selected = new JsonArray();
 				int size = countBy.equals("distinct") ? quantity : 1;
 				for (int i = 0; i < size; i++)
 					selected.add(candidates.remove(random.nextInt(candidates.size())));
+				if (countBy.equals("distinct")) {
+					var identities = values(selected);
+					selected = new JsonArray();
+					for (var id : values(target.values))
+						if (identities.contains(identity(target.field, id)))
+							selected.add(id);
+				}
 				chosen = new Target(target.field, selected);
 			}
 			return new Goal(name, event, chosen, filters, new JsonPrimitive(quantity), List.of(), countBy, selection);
@@ -167,12 +186,8 @@ public record QuestDefinition(String id, String name, String description, String
 		    objectives.stream().allMatch(g -> g.supports(tier));
 	}
 
-	/**
-	 * 同一类方块的不同形态只算一种：珊瑚、珊瑚扇（含墙面珊瑚扇）与珊瑚块统一归并到 {@code *_coral}，
-	 * 其余方块保持原样。
-	 */
 	public static String identity(String field, String id) {
-		if (!field.equals("block"))
+		if (!field.equals("block") || !id.startsWith("minecraft:"))
 			return id;
 		String normalized = id.replace("_wall_coral_fan", "_coral_fan");
 		for (String suffix : List.of("_coral_fan", "_coral_block")) {

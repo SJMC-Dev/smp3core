@@ -13,13 +13,11 @@ import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.item.RewardBundle;
 
-import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ConversionParams;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -29,6 +27,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.InteractionResult;
+import club.sjmc.smp3.block.NetherReactorCoreBlock;
+import club.sjmc.smp3.block.Smp3Blocks;
+import io.netty.channel.embedded.EmbeddedChannel;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.server.network.CommonListenerCookie;
 
 final class QuestExpansionChecks {
 	static void run(GameTestHelper test, ServerPlayer player) {
@@ -62,19 +68,69 @@ final class QuestExpansionChecks {
 		test.assertTrue(task.progress() == 1, "Taming success hook missed");
 		var zombie = test.spawnWithNoFreeWill(EntityTypes.ZOMBIE, new BlockPos(1, 2, 1));
 		task = watch(player, "entity_converted", "{\"entity\":\"minecraft:zombie\",\"result\":\"minecraft:drowned\"}");
-		player.setShiftKeyDown(true);
-		player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-		UseEntityCallback.EVENT.invoker().interact(player, level, InteractionHand.MAIN_HAND, zombie, null);
-		test.assertTrue(zombie.getUUID().equals(task.binding(0)) && task.progress() == 0,
-		                "Designation changed progress or failed to bind");
+		var origin = zombie.position();
+		player.setPos(origin.add(16, 0, 0));
 		zombie.convertTo(EntityTypes.DROWNED, ConversionParams.single(zombie, false, false), converted -> {});
-		test.assertTrue(task.progress() == 1, "Native conversion lost the designated player");
+		test.assertTrue(task.progress() == 1, "Conversion at the range boundary was not credited");
 		var another = test.spawnWithNoFreeWill(EntityTypes.ZOMBIE, new BlockPos(1, 2, 1));
-		UseEntityCallback.EVENT.invoker().interact(player, level, InteractionHand.MAIN_HAND, another, null);
-		task.reset();
+		player.setPos(origin.add(17, 0, 0));
 		another.convertTo(EntityTypes.DROWNED, ConversionParams.single(another, false, false), converted -> {});
-		test.assertTrue(task.progress() == 0 && task.binding(0) == null, "Reset retained conversion attribution");
-		player.setShiftKeyDown(false);
+		test.assertTrue(task.progress() == 1, "Conversion beyond 16 blocks was credited");
+		var nearer = (ServerPlayer)test.makeMockServerPlayer(GameType.SURVIVAL);
+		var connection = new Connection(PacketFlow.SERVERBOUND);
+		var channel = new EmbeddedChannel(connection);
+		level.getServer().getPlayerList().placeNewPlayer(
+		    connection, nearer, CommonListenerCookie.createInitial(nearer.getGameProfile(), false));
+		try {
+			var nearestTask =
+			    watch(nearer, "entity_converted", "{\"entity\":\"minecraft:zombie\",\"result\":\"minecraft:drowned\"}");
+			player.setPos(origin.add(4, 0, 0));
+			nearer.setPos(origin.add(2, 0, 0));
+			another = test.spawnWithNoFreeWill(EntityTypes.ZOMBIE, new BlockPos(1, 2, 1));
+			another.convertTo(EntityTypes.DROWNED, ConversionParams.single(another, false, false), converted -> {});
+			test.assertTrue(nearestTask.progress() == 1 && task.progress() == 1,
+			                "Conversion did not credit only the nearest eligible player");
+			watch(nearer, "entity_converted", "{\"entity\":\"minecraft:piglin\"}");
+			another = test.spawnWithNoFreeWill(EntityTypes.ZOMBIE, new BlockPos(1, 2, 1));
+			another.convertTo(EntityTypes.DROWNED, ConversionParams.single(another, false, false), converted -> {});
+			test.assertTrue(task.progress() == 2, "Closer player without a matching goal blocked credit");
+		} finally {
+			DailyQuestData.get(level.getServer()).players.remove(nearer.getUUID());
+			level.getServer().getPlayerList().remove(nearer);
+			channel.finishAndReleaseAll();
+		}
+		var core = test.absolutePos(new BlockPos(2, 4, 2));
+		var reactor = Smp3Blocks.NETHER_REACTOR_CORE;
+		level.setBlockAndUpdate(core, reactor.defaultBlockState());
+		test.assertTrue(QuestStructures.activate(player, core) == InteractionResult.PASS,
+		                "Reactor activated without an active quest");
+		task = watch(player, "reactor_activated", "{}");
+		QuestStructures.activate(player, core);
+		test.assertTrue(task.progress() == 0 && level.getBlockState(core).getValue(NetherReactorCoreBlock.PHASE) == 0,
+		                "Incomplete reactor changed state or progress");
+		String[][] layers = {{"GCG", "CCC", "GCG"}, {"C C", " R ", "C C"}, {" C ", "CCC", " C "}};
+		for (int y = 0; y < 3; y++)
+			for (int z = 0; z < 3; z++)
+				for (int x = 0; x < 3; x++) {
+					var block = switch (layers[y][z].charAt(x)) {
+						case 'G' -> Blocks.GOLD_BLOCK;
+						case 'C' -> Blocks.COBBLESTONE;
+						case 'R' -> reactor;
+						default -> Blocks.AIR;
+					};
+					level.setBlockAndUpdate(core.offset(x - 1, y - 1, z - 1), block.defaultBlockState());
+				}
+		QuestStructures.activate(player, core);
+		QuestStructures.activate(player, core);
+		var activeCore = level.getBlockState(core);
+		test.assertTrue(task.progress() == 1 && activeCore.getValue(NetherReactorCoreBlock.PHASE) == 1 &&
+		                    level.getBlockState(core.below()).is(Blocks.NETHERRACK) &&
+		                    level.getBlockTicks().hasScheduledTick(core, reactor),
+		                "Reactor failed to activate exactly once or schedule completion");
+		activeCore.tick(level, core, level.getRandom());
+		test.assertTrue(level.getBlockState(core).getValue(NetherReactorCoreBlock.PHASE) == 2 &&
+		                    QuestStructures.activate(player, core) == InteractionResult.PASS,
+		                "Finished reactor could activate again");
 		var registry = player.registryAccess();
 		var grants = RewardBundle.objects(JsonParser.parseString("""
 		    [{"type":"loot_table","id":"smp3:quests/shipwreck","rolls":3}]
@@ -144,9 +200,9 @@ final class QuestExpansionChecks {
 	private static QuestDay.Assignment watch(ServerPlayer player, String event, String filters) {
 		var goal = new QuestDefinition.Goal("Event", event, null, JsonParser.parseString(filters).getAsJsonObject(),
 		                                    new JsonPrimitive(100), List.of(), "amount", "any");
-		var definition = new QuestDefinition("event_test", "Event", null, "world", "C",
-		                                     new JsonPrimitive("minecraft:book"), List.of(goal),
-		                                     "all", List.of(), List.of(), null, 1);
+		var definition =
+		    new QuestDefinition("event_test", "Event", null, "world", "C", new JsonPrimitive("minecraft:book"),
+			                    List.of(goal), "all", List.of(), List.of(), null, 1);
 		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
 		Smp3AccountStore.commitReward(player.getUUID(), ItemDelivery.LEDGER_KEY,
 		                              Smp3AccountStore.rewardState(player.getUUID(), ItemDelivery.LEDGER_KEY),

@@ -2,7 +2,6 @@ package club.sjmc.smp3.daily;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -64,7 +63,6 @@ public final class QuestDay {
 		private final int[] goalProgress;
 		private transient List<QuestDefinition.Objective> matchers;
 		private final List<Set<String>> distinct = new ArrayList<>();
-		final List<UUID> bindings = new ArrayList<>();
 
 		Assignment(QuestDefinition definition, int tier, QuestReward base, Set<String> milestones,
 		           RandomGenerator random, ServerPlayer player) {
@@ -76,7 +74,6 @@ public final class QuestDay {
 			this.goalProgress = new int[this.definition.objectives().size()];
 			for (var goal : this.definition.objectives()) {
 				distinct.add(new HashSet<>());
-				bindings.add(null);
 			}
 			this.reward = this.definition.rewards() == null
 			                  ? base
@@ -88,15 +85,24 @@ public final class QuestDay {
 			claimed = false;
 			Arrays.fill(goalProgress, 0);
 			distinct.forEach(Set::clear);
-			Collections.fill(bindings, null);
 		}
 
 		public int goalProgress(int index) { return goalProgress[index]; }
 
 		public Set<String> completedTargets(int index) { return Set.copyOf(distinct.get(index)); }
-		public UUID binding(int index) { return bindings.get(index); }
 
 		boolean tracks(String event) { return definition.objectives().stream().anyMatch(g -> g.event().equals(event)); }
+
+		boolean accepts(QuestDefinition.Event event) {
+			if (complete())
+				return false;
+			for (int i = 0; i < definition.objectives().size(); i++) {
+				var goal = definition.objectives().get(i);
+				if (goalProgress(i) < goal.count() && goal.objective().matches(event))
+					return true;
+			}
+			return false;
+		}
 
 		private boolean update(List<QuestDefinition.Event> events, boolean inventory) {
 			if (complete())
@@ -115,9 +121,6 @@ public final class QuestDay {
 					completed.clear();
 				for (var event : events) {
 					if (!matchers.get(i).matches(event))
-						continue;
-					if (goal.event().equals("entity_converted") && bindings.get(i) != null &&
-					    !event.facts().getOrDefault("subject", Set.of()).contains(bindings.get(i).toString()))
 						continue;
 					if (goal.countBy().equals("distinct")) {
 						for (String identity : goal.identities(event))
@@ -208,10 +211,10 @@ public final class QuestDay {
 		List<QuestDefinition> varied = choices.stream().filter(t -> !categories.contains(t.category())).toList();
 		if (!varied.isEmpty())
 			choices = varied;
-		int total = 0;
+		long total = 0;
 		for (QuestDefinition choice : choices)
 			total += choice.weight();
-		int pick = random.nextInt(total);
+		long pick = random.nextLong(total);
 		for (QuestDefinition choice : choices) {
 			pick -= choice.weight();
 			if (pick < 0)

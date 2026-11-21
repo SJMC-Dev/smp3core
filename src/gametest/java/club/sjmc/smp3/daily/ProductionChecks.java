@@ -43,17 +43,16 @@ import net.minecraft.world.level.storage.TagValueInput;
 
 final class ProductionChecks {
 	static void run(GameTestHelper test, ServerPlayer player, BlockPos pos) {
-		var definition =
-		    new QuestDefinition("production", "Production", null, "crafting", "A",
-		                        new JsonPrimitive("minecraft:iron_ingot"),
-			                    List.of(new QuestDefinition.Goal(
-		                            "Production", "item_crafted", null,
-		                            JsonParser
-		                                .parseString("{\"item\":[\"minecraft:iron_ingot\",\"minecraft:cooked_cod\","
-		                                             + "\"minecraft:netherite_pickaxe\",\"minecraft:potion\"]}")
-		                                .getAsJsonObject(),
-		                            new JsonPrimitive(100), List.of(), "amount", "any")),
-			                    "all", List.of(), List.of(), null, 1);
+		var definition = new QuestDefinition(
+		    "production", "Production", null, "crafting", "A", new JsonPrimitive("minecraft:iron_ingot"),
+		    List.of(new QuestDefinition.Goal(
+		        "Production", "item_crafted", null,
+		        JsonParser
+		            .parseString("{\"item\":[\"minecraft:iron_ingot\",\"minecraft:cooked_cod\","
+		                         + "\"minecraft:netherite_pickaxe\",\"minecraft:potion\"]}")
+		            .getAsJsonObject(),
+		        new JsonPrimitive(100), List.of(), "amount", "any")),
+		    "all", List.of(), List.of(), null, 1);
 		var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
 		DailyQuestModule.current().state(player).assignments.set(0, task);
 		player.getInventory().clearContent();

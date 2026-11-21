@@ -12282,7 +12282,7 @@
       "id": "nether_reactor",
       "name": "被老资历吓哭了",
       "description": "搭建 3×3×3 下界反应器。",
-      "icon": "minecraft:gilded_blackstone",
+      "icon": "smp3:nether_reactor_core",
       "category": "world",
       "difficulty": "A",
       "objectives": [
