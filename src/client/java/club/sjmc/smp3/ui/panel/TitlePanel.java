@@ -191,11 +191,23 @@ public final class TitlePanel extends AbstractPanel {
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return false;
+		if (scrolling.beginDrag(event.x(), event.y(), leftRight + 4))
+			return true;
 		int index = cellAt(event.x(), event.y());
 		if (index < 0)
 			return false;
 		selected = index;
 		return true;
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+		return event.button() == InputConstants.MOUSE_BUTTON_LEFT && scrolling.mouseDragged(event.y());
+	}
+
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		return event.button() == InputConstants.MOUSE_BUTTON_LEFT && scrolling.mouseReleased();
 	}
 
 	private int cellAt(double mouseX, double mouseY) {

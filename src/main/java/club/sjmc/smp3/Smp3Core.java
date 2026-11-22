@@ -23,7 +23,6 @@ import club.sjmc.smp3.sign.SignModule;
 import club.sjmc.smp3.sign.ui.SignCommand;
 import club.sjmc.smp3.time.ServerDates;
 import club.sjmc.smp3.title.TitlePayloads;
-import club.sjmc.smp3.title.ui.TitleCommand;
 import club.sjmc.smp3.ui.HudSettingsPayload;
 import club.sjmc.smp3.watchdog.WatchdogModule;
 import club.sjmc.smp3.watchdog.ui.SmpPerfCommand;
@@ -72,7 +71,6 @@ public final class Smp3Core implements ModInitializer {
 			        .then(ShopCommand.command())
 			        .then(GachaCommand.command())
 			        .then(SignCommand.command())
-			        .then(TitleCommand.command())
 			        .then(MenuCommand.command())
 			        .then(RewardCommand.command())
 			        .then(SmpPerfCommand.command())

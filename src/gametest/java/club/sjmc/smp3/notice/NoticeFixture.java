@@ -25,7 +25,7 @@ public final class NoticeFixture {
                 - 带上花卉和木材。
                 - 与其他玩家商量分工。
 
-                使用 `/smp3 dailyquest` 查看今日任务。
+                打开菜单即可查看今日任务。
                 [活动指南](https://example.com/event)
                 """);
 			Files.writeString(root.resolve("rules.txt"), "尊重其他玩家及其劳动成果。\n\n离开前关闭高频红石设备。");

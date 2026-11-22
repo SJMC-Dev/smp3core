@@ -16,14 +16,6 @@ public final class NoticeCommand {
 
 	public static LiteralArgumentBuilder<CommandSourceStack> command() {
 		return Commands.literal("info")
-		    .executes(context -> {
-			    var source = context.getSource();
-			    if (!NoticeModule.current().open(source.getPlayerOrException())) {
-				    source.sendFailure(Component.literal("请安装 SMP3 客户端以打开服务器手册"));
-				    return 0;
-			    }
-			    return 1;
-		    })
 		    .then(
 		        Commands.literal("edit")
 		            .requires(NoticeCommand::allowed)

@@ -26,14 +26,12 @@ public final class DailyQuestCommand {
 
 	public static void register(LiteralArgumentBuilder<CommandSourceStack> root) {
 		var command = Commands.literal("dailyquest")
-		                  .executes(context -> DailyQuestView.open(context.getSource().getPlayerOrException()) ? 1 : 0)
 		                  .then(Commands.argument("player", EntityArgument.player())
 		                            .requires(DailyQuestCommand::mayReset)
 		                            .then(operation("reset"))
 		                            .then(operation("reroll")))
 		                  .build();
 		root.then(command);
-		root.then(Commands.literal("dailyquests").executes(command.getCommand()).redirect(command));
 	}
 
 	private static LiteralArgumentBuilder<CommandSourceStack> operation(String name) {

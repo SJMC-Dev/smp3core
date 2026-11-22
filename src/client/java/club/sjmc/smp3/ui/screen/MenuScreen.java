@@ -76,6 +76,11 @@ public final class MenuScreen extends Screen implements PanelHost, NoticeWrapHos
 			selectTab(3);
 	}
 
+	/** 登录提示等场景：直接打开菜单并选中公告标签。 */
+	public void openNotices() { selectTab(0); }
+
+	public NoticePanel noticePanel() { return child instanceof NoticePanel panel ? panel : null; }
+
 	@Override
 	protected void init() {
 		panelWidth = Math.min(320, Math.max(200, width - 32 - TAB_ACTIVE_DEPTH));

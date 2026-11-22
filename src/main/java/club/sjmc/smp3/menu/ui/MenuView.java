@@ -17,6 +17,15 @@ public final class MenuView {
 
 	public static void register() {
 		PayloadTypeRegistry.clientboundPlay().register(MenuPayloads.Open.TYPE, MenuPayloads.Open.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(MenuPayloads.Request.TYPE, MenuPayloads.Request.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(MenuPayloads.Request.TYPE, (request, context) -> {
+			try {
+				sendData(context.player());
+			} catch (RuntimeException error) {
+				Smp3Core.LOGGER.error("[SMP3] 菜单数据不可用 player={}", context.player().getUUID(), error);
+				context.player().sendSystemMessage(Component.literal("菜单数据不可用，请联系管理员"));
+			}
+		});
 	}
 
 	public static void open(ServerPlayer player) {
@@ -27,13 +36,17 @@ public final class MenuView {
 		try {
 			player.closeContainer();
 			ServerPlayNetworking.send(player, MenuPayloads.Open.INSTANCE);
-			SignView.refresh(player);
-			TitleView.refresh(player);
-			DailyQuestView.refresh(player);
-			ShopModule.open(player, false);
+			sendData(player);
 		} catch (RuntimeException error) {
 			Smp3Core.LOGGER.error("[SMP3] 菜单数据不可用 player={}", player.getUUID(), error);
 			player.sendSystemMessage(Component.literal("菜单数据不可用，请联系管理员"));
 		}
+	}
+
+	private static void sendData(ServerPlayer player) {
+		SignView.refresh(player);
+		TitleView.refresh(player);
+		DailyQuestView.refresh(player);
+		ShopModule.open(player, false);
 	}
 }

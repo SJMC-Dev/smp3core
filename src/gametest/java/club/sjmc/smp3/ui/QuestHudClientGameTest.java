@@ -28,6 +28,7 @@ import club.sjmc.smp3.notice.NoticePayloads;
 import club.sjmc.smp3.ui.hud.HudLayout;
 import club.sjmc.smp3.ui.panel.NoticePanel;
 import club.sjmc.smp3.ui.screen.HudSettingsScreen;
+import club.sjmc.smp3.ui.screen.MenuScreen;
 import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
 import club.sjmc.smp3.ui.screen.PanelScreen;
 import club.sjmc.smp3.ui.widget.BookText;
@@ -109,15 +110,14 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.runOnClient(client -> {
 				var connection = client.getConnection();
 				var commands = connection.getCommands();
-				for (String root : List.of("smp3 dailyquest", "smp3 dailyquests")) {
-					var suggestions =
-					    commands
-					        .getCompletionSuggestions(commands.parse(root + " ", connection.getSuggestionsProvider()))
-					        .join();
-					if (suggestions.getList().stream().noneMatch(
-					        s -> s.getText().equals(client.player.getName().getString())))
-						throw new AssertionError("Client OP player completion missing: " + root);
-				}
+				String root = "smp3 dailyquest";
+				var suggestions =
+				    commands
+				        .getCompletionSuggestions(commands.parse(root + " ", connection.getSuggestionsProvider()))
+				        .join();
+				if (suggestions.getList().stream().noneMatch(
+				        s -> s.getText().equals(client.player.getName().getString())))
+					throw new AssertionError("Client OP player completion missing: " + root);
 			});
 			context.runOnClient(client -> client.options.guiScale().set(2));
 			context.takeScreenshot("quest-hud-active");
@@ -212,9 +212,11 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				Smp3Client.layout = new HudLayout();
 				Smp3Client.BOOK.clear();
 			});
-			context.getInput().pressKey(options -> options.keyChat);
-			context.getInput().typeChars("/smp3 info");
-			context.getInput().pressKey(InputConstants.KEY_RETURN);
+			context.runOnClient(client -> {
+				var menu = new MenuScreen();
+				client.gui.setScreen(menu);
+				menu.openNotices();
+			});
 			waitForNotice(context);
 			context.takeScreenshot("server-book-empty");
 			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
@@ -501,8 +503,12 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 	}
 
 	private static NoticePanel notice(Minecraft client) {
-		return client.gui.screen() instanceof PanelScreen screen &&
-		       screen.panel() instanceof NoticePanel panel ? panel : null;
+		if (client.gui.screen() instanceof PanelScreen screen &&
+		    screen.panel() instanceof NoticePanel panel)
+			return panel;
+		if (client.gui.screen() instanceof MenuScreen menu)
+			return menu.noticePanel();
+		return null;
 	}
 
 	private static void waitForNotice(ClientGameTestContext context) {

@@ -19,4 +19,16 @@ public final class MenuPayloads {
 			return TYPE;
 		}
 	}
+
+	/** 客户端请求菜单数据（不重新打开界面）。 */
+	public record Request() implements CustomPacketPayload {
+		public static final Request INSTANCE = new Request();
+		public static final Type<Request> TYPE = new Type<>(Identifier.fromNamespaceAndPath("smp3", "menu_request"));
+		public static final StreamCodec<ByteBuf, Request> CODEC = StreamCodec.unit(INSTANCE);
+
+		@Override
+		public Type<Request> type() {
+			return TYPE;
+		}
+	}
 }

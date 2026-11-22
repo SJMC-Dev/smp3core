@@ -183,7 +183,11 @@ public final class Smp3Client implements ClientModInitializer {
 							BOOK.selected = i;
 				}
 				BOOK.pendingOpen = null;
-				client.gui.setScreen(new PanelScreen(new NoticePanel(BOOK, false, required)));
+				var menu = new MenuScreen();
+				client.gui.setScreen(menu);
+				menu.openNotices();
+				if (ClientPlayNetworking.canSend(MenuPayloads.Request.TYPE))
+					ClientPlayNetworking.send(MenuPayloads.Request.INSTANCE);
 			}
 			if (pendingSettings && client.player != null && client.level != null &&
 			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen)) {
