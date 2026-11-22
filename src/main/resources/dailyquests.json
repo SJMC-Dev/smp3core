@@ -46,7 +46,7 @@
       "description": "击败 {count} 只僵尸（或其变种）。",
       "category": "combat",
       "difficulty": "C",
-      "icon": ["minecraft:zombie_head",{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Husk"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Drowned"}}}],
+      "icon": ["minecraft:zombie_head",{"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"e47d9062-311b-46f2-a7ff-0d5559768eb5","name":"MHF_Husk","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMWY2NDNmZGRlZGE1M2JkMjM4ZGU2ZjVjYmFhYzY1ZGVmMGJhYjk1MjQyYzY3ZDM0MDEyZDc3NWNlMDFjYTkzIn19fQ=="}]}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"c7713fcd-0977-4489-8ea2-355d39533fb8","name":"MHF_Drowned","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWFhZGFlOTliOWFhYjA2OWE1Yzk3M2VkYjgxZjAyNGI2ZjNhNDlmMTUzZDFjZTY3YjBiNTIxNGRhYjhhYWFhMCJ9fX0="}]}}}],
       "tiers": [
         {
           "tier": 1,
@@ -246,7 +246,7 @@
       "description": "击败 {count} 只蜘蛛或洞穴蜘蛛。",
       "category": "combat",
       "difficulty": "C",
-      "icon": [{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Spider"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_CaveSpider"}}}],
+      "icon": [{"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"5ad55f34-41b6-4bd2-9c32-18983c635936","name":"MHF_Spider","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjYxYTQ5NTQxYTgzNmFhOGY0Zjc2ZTBkNGNiMmZmMDQ4ODhjNjJmOTQxMWVhMTBjYmFjZjFmMmE1NDQyNDI0MCJ9fX0="}]}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"cab28771-f0cd-4fe7-b129-02c69eba79a5","name":"MHF_CaveSpider","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzdiMDcwNjNhNjg3NGZhM2UyMjU0OGUwMjA2MmJkNzMzYzI1ODg1OTI5ODA5NjI0MTgwYWViYjg1MTU1N2Y2YSJ9fX0="}]}}}],
       "tiers": [
         {
           "tier": 1,
@@ -344,7 +344,7 @@
       "description": "击败 {count} 只苦力怕。",
       "category": "combat",
       "difficulty": "C",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Creeper"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"057b1c47-1321-4863-a6fe-8887f9ec265f","name":"MHF_Creeper","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmE1ZTk1NzM1YTNmMzc3MmIxYjQ4NWUxNTAyODA3YWUzOTZhNzJjNjFiZmQzNmFiNDFmYTcxYmVjMmY2NGFhMiJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 1,
@@ -439,7 +439,7 @@
       "description": "击败 {count} 只史莱姆。",
       "category": "combat",
       "difficulty": "C",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Slime"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"870aba93-40e8-48b3-89c5-32ece00d6630","name":"MHF_Slime","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODZjMjdiMDEzZjFiZjMzNDQ4NjllODFlNWM2MTAwMjdiYzQ1ZWM1Yjc5NTE0ZmRjOTZlMDFkZjFiN2UzYTM4NyJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 1,
@@ -534,7 +534,7 @@
       "description": "击败 {count} 只猪灵、疣猪兽（或二者的变种）。",
       "category": "combat",
       "difficulty": "B",
-      "icon": [{"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2FkN2I1YWViMjIwYzA3OWUzMTljZDcwYWM4ODAwZTgwNzc0YTkzMTNjMjJmMzhlNzdhZmI4OTk5OWU2ZWM4NyJ9fX0="}]}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTY3ZTE4NjAyZTAzMDM1YWQ2ODk2N2NlMDkwMjM1ZDg5OTY2NjNmYjllYTQ3NTc4ZDNhN2ViYmM0MmE1Y2NmOSJ9fX0="}]}}},"minecraft:piglin_head",{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_PigZombie"}}}],
+      "icon": [{"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2FkN2I1YWViMjIwYzA3OWUzMTljZDcwYWM4ODAwZTgwNzc0YTkzMTNjMjJmMzhlNzdhZmI4OTk5OWU2ZWM4NyJ9fX0="}]}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTY3ZTE4NjAyZTAzMDM1YWQ2ODk2N2NlMDkwMjM1ZDg5OTY2NjNmYjllYTQ3NTc4ZDNhN2ViYmM0MmE1Y2NmOSJ9fX0="}]}}},"minecraft:piglin_head",{"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"18a2bb50-334a-4084-9184-2c380251a24b","name":"MHF_PigZombie","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTE2ZDE2N2M1NzQ0ZWQxNGViYzAyZjQ0N2YzMjYxNDA1OTM2MmI3ZDJlY2I4MDhmZjA2MTY1ZDJjMzQzYmVmMiJ9fX0="}]}}}],
       "tiers": [
         {
           "tier": 1,
@@ -635,7 +635,7 @@
       "description": "击败 {count} 只末影人。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Enderman"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"40ffb372-12f6-4678-b3f2-2176bf56dd4b","name":"MHF_Enderman","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMWIwOWEzNzUyNTEwZTkxNGIwYmRjOTA5NmIzOTJiYjM1OWY3YThlOGE5NTY2YTAyZTdmNjZmYWZmOGQ2Zjg5ZSJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 1,
@@ -730,7 +730,7 @@
       "description": "击败 {count} 只岩浆怪。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_LavaSlime"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"0972bdd1-4b86-49fb-9ecc-a353f8491a51","name":"MHF_LavaSlime","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDkwZDYxZThjZTk1MTFhMGEyYjVlYTI3NDJjYjFlZjM2MTMxMzgwZWQ0MTI5ZTFiMTYzY2U4ZmYwMDBkZThlYSJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 1,
@@ -825,7 +825,7 @@
       "description": "击败 {count} 只烈焰人。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Blaze"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"4c38ed11-596a-4fd4-ab1d-26f386c1cbac","name":"MHF_Blaze","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDA2ZTM0MmY5MGVjNTM4YWFhMTU1MmIyMjRmMjY0YTA0MDg0MDkwMmUxMjZkOTFlY2U2MTM5YWE1YjNjN2NjMyJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 1,
@@ -920,7 +920,7 @@
       "description": "击败 {count} 只恶魂。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Ghast"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"063085a6-797f-4785-be1a-21cd7580f752","name":"MHF_Ghast","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGE0ZTQyZWIxNWEwODgxM2E2YTZmNjFmMTBhYTI4ODAxOWZhMGZhZTEwNmEyOTUzZGRiNDZmNzdlZTJkNzdmIn19fQ=="}]}}},
       "tiers": [
         {
           "tier": 1,
@@ -1015,7 +1015,7 @@
       "description": "击败 {count} 只幻翼。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Phantom"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"a90bdfec-fb2d-4af0-9d99-e06cc4c161d4","name":"MHF_Phantom","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjM1ZTA2ODRmZDQ3MTEzYzdkNDdkYzAxMTBjOGFmODZiYTJmNjZhZmRlMGNlOWQ2ZGQ5NWNiZGY1Y2ZkZDkyZCJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 2,
@@ -1155,7 +1155,7 @@
       "description": "击败 {count} 只守卫者。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Guardian"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"15aa0c6b-d165-4fb6-bfbc-6eb5348157dd","name":"MHF_Guardian","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmExMTViYWM5ZWUxMWNmYWY5YzlkNjIzYTM4MjNiMjFjZmJkZGMxYjM3MzRmNzFjZjY3ZmUyYWMwYWVkMTc1YyJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 2,
@@ -1225,7 +1225,7 @@
       "description": "击败 {count} 只旋风人。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Breeze"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"3698a1df-3570-4d70-9299-56b08ea648e3","name":"MHF_Breeze","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWYwNWJmMTk2NDI3YTkyNThiNDc4MjVkMzRhMWY3ZjAyNjc2NmYzYzQ0OTgzNDgxMjhhNGUyMmIyNGJiMjMyNyJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 2,
@@ -1295,7 +1295,7 @@
       "description": "击败 {count} 只嘎枝。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Creaking"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"16e83ef3-eee5-4f0d-aaa3-31b2d1c57708","name":"MHF_Creaking","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmEzOGU2MGM2ZWU4OTJmODQ0YjFmN2ZjZDQ2Y2I0ZGIxYWQyN2ZmYjFjNzY0YTAzYTIyNWRlYmM2NDNhYzVlYyJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 2,
@@ -1365,7 +1365,7 @@
       "description": "击败 {count} 只末影螨。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Endermite"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"3df6a050-b93e-4d8b-8fa4-b5228a797b84","name":"MHF_Endermite","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTczMDEyN2UzYWM3Njc3MTIyNDIyZGYwMDI4ZDllNzM2OGJkMTU3NzM4YzhjM2NkZGVjYzUwMmU4OTZiZTAxYyJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 2,
@@ -1435,7 +1435,7 @@
       "description": "击败 {count} 只潜影贝。",
       "category": "combat",
       "difficulty": "B",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Shulker"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"160f7d8a-c6b0-4fc8-8925-9e9d6c9c57d5","name":"MHF_Shulker","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA4MGRhOWQyZjg5YzNjNDA4MjE3YjBjMjIxMzA5ODU0YjNkMzUxMGQyMzhlYjA2ZDM1ZmMxYTU0MWJiNDBkOCJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 2,
@@ -1505,7 +1505,7 @@
       "description": "击败 {count} 只灾厄村民。",
       "category": "combat",
       "difficulty": "B",
-      "icon": [{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Evoker"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Illager"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Vindicator"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Witch"}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWM3M2UxNmZhMjkyNjg5OWNmMTg0MzQzNjBlMjE0NGY4NGVmMWViOTgxZjk5NjE0ODkxMjE0OGRkODdlMGIyYSJ9fX0="}]}}}],
+      "icon": [{"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"5c29e521-4862-45b8-80de-a223182f40ff","name":"MHF_Evoker","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODA2YWMwMmZkOWRhYzk2NmI3ZTU4MDY3MzZiNmZlYjkwZTJmM2IwNTc3OTY5ZTY3MzI5MWI4MzA3YzFlZjhlNSJ9fX0="}]}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"d91da370-bbfe-421f-ab92-bd327b1d67d6","name":"MHF_Illager","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvM2VmZTgyYjMzM2JjZjBlNWExNzc3NDMzMGQzYjAwNDliNTZlNmFlOGMzMDJmMTU3Y2IyNTNhNDA0M2I1NGM2NiJ9fX0="}]}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"57eef111-d79a-433e-a997-c98e47b3221e","name":"MHF_Vindicator","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjAzYWZiYjg2ZmE0MzRlN2JiY2VmNjhhN2Q3NDRkOGJhZWI2ZTkzNGQ3ZTk1ZWZhYmQyYWU5ZWJlN2YzNDg2OCJ9fX0="}]}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"fef85c49-2fdf-47f8-9132-552046243223","name":"MHF_Witch","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjBhNDY3OTliNmNlNGI3ZTI5YThkZWY5ZjU0ZjMwY2M3MDI1ZTk2MzIxNjI1ZjJhYjQwYTlkNzBiODQzNmIyMSJ9fX0="}]}}},{"id":"minecraft:player_head","components":{"minecraft:profile":{"properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWM3M2UxNmZhMjkyNjg5OWNmMTg0MzQzNjBlMjE0NGY4NGVmMWViOTgxZjk5NjE0ODkxMjE0OGRkODdlMGIyYSJ9fX0="}]}}}],
       "tiers": [
         {
           "tier": 2,
@@ -1698,7 +1698,7 @@
       "description": "击败 {count} 只监守者。",
       "category": "combat",
       "difficulty": "A",
-      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"name":"MHF_Warden"}}},
+      "icon": {"id":"minecraft:player_head","components":{"minecraft:profile":{"id":"a641f833-0c48-42e1-90d6-7d53812948bd","name":"MHF_Warden","properties":[{"name":"textures","value":"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDUyZWE5NDBjNjZmMGY2Zjk5MmYzYzU0ODc1YWNhNzllNDQ4MGMzNTc0N2E2MDU0YzMzYzFhZDQ1ZmI0MDI2NSJ9fX0="}]}}},
       "tiers": [
         {
           "tier": 3,
