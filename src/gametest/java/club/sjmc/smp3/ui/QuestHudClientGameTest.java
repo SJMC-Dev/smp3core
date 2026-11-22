@@ -25,6 +25,8 @@ import club.sjmc.smp3.item.ui.PackGui;
 import club.sjmc.smp3.notice.NoticeFixture;
 import club.sjmc.smp3.notice.NoticeModule;
 import club.sjmc.smp3.notice.NoticePayloads;
+import club.sjmc.smp3.ui.hud.HudLayout;
+import club.sjmc.smp3.ui.screen.HudSettingsScreen;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;

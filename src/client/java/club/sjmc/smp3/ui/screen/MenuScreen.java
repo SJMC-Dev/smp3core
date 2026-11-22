@@ -1,10 +1,19 @@
-package club.sjmc.smp3.ui;
+package club.sjmc.smp3.ui.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.daily.DailyQuestPayloads;
 import club.sjmc.smp3.sign.SignPayloads;
 import club.sjmc.smp3.title.TitlePayloads;
+import club.sjmc.smp3.ui.DailyQuestScreen;
+import club.sjmc.smp3.ui.ServerBookScreen;
+import club.sjmc.smp3.ui.ShopScreen;
+import club.sjmc.smp3.ui.SignScreen;
+import club.sjmc.smp3.ui.Smp3Client;
+import club.sjmc.smp3.ui.TitleScreen;
+import club.sjmc.smp3.ui.themes.PaperStyle;
+import club.sjmc.smp3.ui.widget.PaperButton;
+import club.sjmc.smp3.ui.widget.Rect;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -32,9 +41,9 @@ public final class MenuScreen extends Screen {
 	private static float tooltipScale = 1;
 	private static int tooltipOriginX, tooltipOriginY;
 
-	MenuScreen() { super(Component.literal("菜单")); }
+	public MenuScreen() { super(Component.literal("菜单")); }
 
-	void acceptSign(SignPayloads.State state) {
+	public void acceptSign(SignPayloads.State state) {
 		sign = state;
 		if (selected == 1) {
 			if (child instanceof SignScreen screen)
@@ -44,13 +53,13 @@ public final class MenuScreen extends Screen {
 		}
 	}
 
-	void acceptTitles(TitlePayloads.Catalog catalog) {
+	public void acceptTitles(TitlePayloads.Catalog catalog) {
 		titles = catalog;
 		if (selected == 4)
 			selectTab(4);
 	}
 
-	void acceptQuests(DailyQuestPayloads.Catalog catalog) {
+	public void acceptQuests(DailyQuestPayloads.Catalog catalog) {
 		quests = catalog;
 		if (selected == 2) {
 			if (child instanceof DailyQuestScreen screen)
@@ -60,27 +69,11 @@ public final class MenuScreen extends Screen {
 		}
 	}
 
-	void shopReady() {
+	public void shopReady() {
 		if (selected == 3)
 			selectTab(3);
 	}
 
-	void balancesChanged() {
-		if (child instanceof ShopScreen screen)
-			screen.balancesChanged();
-		else if (child instanceof ServerBookScreen screen)
-			screen.contentChanged();
-	}
-
-	void shopStateChanged() {
-		if (child instanceof ShopScreen screen)
-			screen.stateChanged();
-	}
-
-	void noticeChanged() {
-		if (child instanceof ServerBookScreen screen)
-			screen.contentChanged();
-	}
 
 	@Override
 	protected void init() {
@@ -130,8 +123,12 @@ public final class MenuScreen extends Screen {
 			case 4 -> titles == null ? null : new TitleScreen(titles);
 			default -> null;
 		};
-		if (previous != null && previous != child && !(previous instanceof ShopScreen))
-			previous.removed();
+		if (previous != null && previous != child) {
+			if (previous instanceof ShopScreen shop)
+				shop.detachListeners();
+			else
+				previous.removed();
+		}
 		if (child != null)
 			embedChild(child);
 	}
@@ -209,14 +206,14 @@ public final class MenuScreen extends Screen {
 			int top = tabTop + i * (tabHeight + TAB_GAP);
 			int depth = i == selected ? TAB_ACTIVE_DEPTH : TAB_DEPTH;
 			int left = x - depth;
-			if (mouseX >= left && mouseX < x && mouseY >= top && mouseY < top + tabHeight)
+			if (new Rect(left, top, x - left, tabHeight).contains(mouseX, mouseY))
 				return i;
 		}
 		return -1;
 	}
 
 	private boolean insidePane(double mouseX, double mouseY) {
-		return mouseX >= paneX && mouseX < paneX + paneWidth && mouseY >= paneY && mouseY < paneY + paneHeight;
+		return new Rect(paneX, paneY, paneWidth, paneHeight).contains(mouseX, mouseY);
 	}
 
 	@Override
@@ -236,8 +233,8 @@ public final class MenuScreen extends Screen {
 		                            event.buttonInfo());
 	}
 
-	static int tooltipX(double x) { return (int)Math.round(tooltipOriginX + x * tooltipScale); }
-	static int tooltipY(double y) { return (int)Math.round(tooltipOriginY + y * tooltipScale); }
+	public static int tooltipX(double x) { return (int)Math.round(tooltipOriginX + x * tooltipScale); }
+	public static int tooltipY(double y) { return (int)Math.round(tooltipOriginY + y * tooltipScale); }
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
@@ -280,8 +277,8 @@ public final class MenuScreen extends Screen {
 	public void removed() {
 		if (child != null)
 			child.removed();
-		if (Smp3Client.SHOP.session != 0)
-			Smp3Client.SHOP.close();
+		if (Smp3Client.shop().session != 0)
+			Smp3Client.shop().close();
 	}
 
 	@Override

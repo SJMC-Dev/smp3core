@@ -1,15 +1,17 @@
-package club.sjmc.smp3.ui;
+package club.sjmc.smp3.ui.widget;
+
+import club.sjmc.smp3.ui.themes.PaperStyle;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
-final class PaperButton extends Button {
+public final class PaperButton extends Button {
 	private static final int INK = PaperStyle.INK, MUTED = PaperStyle.MUTED;
 	private final boolean tab;
 
-	PaperButton(int x, int y, int width, String text, boolean tab, Runnable action) {
+	public PaperButton(int x, int y, int width, String text, boolean tab, Runnable action) {
 		super(x, y, width, tab ? 18 : 20, Component.literal(text), button -> action.run(), DEFAULT_NARRATION);
 		this.tab = tab;
 	}

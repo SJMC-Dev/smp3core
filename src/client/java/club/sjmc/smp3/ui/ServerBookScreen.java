@@ -6,6 +6,12 @@ import java.util.stream.IntStream;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.notice.NoticePayloads;
+import club.sjmc.smp3.ui.state.CurrencyState;
+import club.sjmc.smp3.ui.state.ServerBookState;
+import club.sjmc.smp3.ui.themes.PaperStyle;
+import club.sjmc.smp3.ui.widget.BookText;
+import club.sjmc.smp3.ui.widget.PaperButton;
+import club.sjmc.smp3.ui.widget.ScrollView;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -13,13 +19,13 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
-public final class ServerBookScreen extends Screen {
+public final class ServerBookScreen extends Screen implements ServerBookState.Listener, CurrencyState.Listener {
 	private static final int INK = PaperStyle.INK, MUTED = PaperStyle.MUTED;
 	private static final int TWO_COLUMN_WIDTH = 360;
 	private static final float TITLE_SCALE = BookText.TEXT_SCALE * 1.2F;
 	private static final int TITLE_BODY_GAP = 4;
 	private final ServerBookState state = Smp3Client.BOOK;
-	private int x, y, bookWidth, bookHeight, sidebar, bodyTop, bodyBottom, listScroll, textScroll, headerExtra;
+	private int x, y, bookWidth, bookHeight, sidebar, bodyTop, bodyBottom, headerExtra;
 	private boolean narrow, detail, subscribed;
 	private int categoryStart;
 	private NoticePayloads.Body renderedBody;
@@ -27,26 +33,25 @@ public final class ServerBookScreen extends Screen {
 	private BookText.Layout textLayout = BookText.Layout.EMPTY;
 	private List<Integer> entries;
 	private Button acknowledge;
-	private PaperStyle.Scrollbar draggedScrollbar;
-	private boolean draggingList;
+	private final ScrollView listScroll = new ScrollView();
+	private final ScrollView textScroll = new ScrollView();
 	private boolean embedded;
 	private int originX, originY;
-	private double scrollGrab;
 	private long lastFrame = System.nanoTime();
 
-	ServerBookScreen() { this(false); }
-	ServerBookScreen(boolean detail) {
+	public ServerBookScreen() { this(false); }
+	public ServerBookScreen(boolean detail) {
 		super(Component.literal("服务器手册"));
 		this.detail = detail;
 		categoryStart = state.category;
 	}
 
-	void contentChanged() {
+	public void contentChanged() {
 		if (minecraft != null)
 			rebuildWidgets();
 	}
 
-	void embed(int originX, int originY, int width, int height) {
+	public void embed(int originX, int originY, int width, int height) {
 		this.originX = originX;
 		this.originY = originY;
 		this.embedded = true;
@@ -55,13 +60,25 @@ public final class ServerBookScreen extends Screen {
 
 	@Override
 	public void removed() {
+		Smp3Client.book().removeListener(this);
+		Smp3Client.balances().removeListener(this);
 		state.request(NoticePayloads.Action.CLOSE, "", "");
 		subscribed = false;
 	}
 
 	@Override
+	public void noticeCatalogChanged() { contentChanged(); }
+
+	@Override
+	public void noticeBodyChanged() { contentChanged(); }
+
+	@Override
+	public void currencyChanged() { contentChanged(); }
+
+	@Override
 	protected void init() {
-		draggedScrollbar = null;
+		Smp3Client.book().addListener(this);
+		Smp3Client.balances().addListener(this);
 		if (!subscribed) {
 			Smp3Client.BALANCES.clear();
 			state.request(NoticePayloads.Action.OPEN, "", "");
@@ -82,7 +99,7 @@ public final class ServerBookScreen extends Screen {
 		}
 		narrow = !embedded && bookWidth < TWO_COLUMN_WIDTH;
 		sidebar = narrow ? bookWidth - 28 : Math.min(174, bookWidth / 3);
-		headerExtra = embedded ? 0 : bookWidth - 64 < font.width(state.title) + 24 + Smp3Client.BALANCES.width() ? 22 : 0;
+		headerExtra = embedded ? 0 : bookWidth - 64 < font.width(state.title) + 24 + Smp3Client.currencyHud().width() ? 22 : 0;
 		bodyTop = y + (embedded ? 34 : 73 + headerExtra);
 		bodyBottom = y + bookHeight - (embedded ? 8 : 24);
 		entries = IntStream.range(0, state.messages.size())
@@ -93,9 +110,9 @@ public final class ServerBookScreen extends Screen {
 		              .toList();
 		if (!entries.contains(state.selected)) {
 			state.selected = entries.isEmpty() ? -1 : entries.getFirst();
-			textScroll = 0;
+			textScroll.setScroll(0);
 		}
-		listScroll = Math.clamp(listScroll, 0, Math.max(0, entries.size() * 40 - (bodyBottom - bodyTop)));
+		listScroll.layout(bodyTop, bodyBottom, entries.size() * 40);
 		int minTabWidth = font.width("分类") + 12;
 		int tabs = Math.clamp((sidebar - 16) / minTabWidth, 1, 4);
 		if (state.categories.size() > tabs)
@@ -112,8 +129,8 @@ public final class ServerBookScreen extends Screen {
 				var button = new PaperButton(x + 22 + (i - categoryStart) * tabWidth, tabTop,
 				                             tabWidth - 2, label, true, () -> {
 					                             state.category = category;
-					                             listScroll = 0;
-					                             textScroll = 0;
+					                             listScroll.setScroll(0);
+					                             textScroll.setScroll(0);
 					                             rebuildWidgets();
 				                             });
 				button.active = state.category != i;
@@ -179,7 +196,7 @@ public final class ServerBookScreen extends Screen {
 		}
 		if (!embedded) {
 			graphics.text(font, font.plainSubstrByWidth(state.title, bookWidth - 44), x + 22, y + 28, INK, false);
-			Smp3Client.BALANCES.render(graphics, x + bookWidth - 42, y + (headerExtra == 0 ? 22 : 44),
+			Smp3Client.currencyHud().render(graphics, x + bookWidth - 42, y + (headerExtra == 0 ? 22 : 44),
 			                           bookWidth - 64 - (headerExtra == 0 ? font.width(state.title) + 24 : 0),
 			                           seconds);
 			graphics.horizontalLine(x + 20, x + bookWidth - 20, y + 41 + headerExtra, 0xFFB7A17D);
@@ -204,7 +221,7 @@ public final class ServerBookScreen extends Screen {
 		}
 		graphics.enableScissor(left, bodyTop, right, bodyBottom);
 		for (int row = 0; row < entries.size(); row++) {
-			int index = entries.get(row), top = bodyTop + row * 40 - listScroll;
+			int index = entries.get(row), top = bodyTop + row * 40 - listScroll.scroll();
 			var message = state.messages.get(index);
 			boolean selected = index == state.selected;
 			if (selected || mouseX >= left && mouseX < right && mouseY >= top && mouseY < top + 37)
@@ -225,7 +242,7 @@ public final class ServerBookScreen extends Screen {
 			              left + 7, top + 23, MUTED, false);
 		}
 		graphics.disableScissor();
-		PaperStyle.scrollbar(graphics, right - 2, bodyTop, bodyBottom, entries.size() * 40, listScroll);
+		listScroll.render(graphics, right - 2);
 	}
 
 	private void drawMessage(GuiGraphicsExtractor graphics) {
@@ -259,14 +276,14 @@ public final class ServerBookScreen extends Screen {
 			renderedBody = body;
 			renderedWidth = contentWidth();
 			textLayout = BookText.layout(body, font, contentWidth() - 10);
-			textScroll = 0;
+			textScroll.setScroll(0);
 		}
 		state.displayed(state.selected, false);
-		textScroll = Math.clamp(textScroll, 0, Math.max(0, textLayout.height() - (bottom - top)));
+		textScroll.layout(top, bottom, textLayout.height());
 		graphics.enableScissor(left, top, left + contentWidth(), bottom);
-		textLayout.render(graphics, font, left, top, bottom, textScroll);
+		textLayout.render(graphics, font, left, top, bottom, textScroll.scroll());
 		graphics.disableScissor();
-		PaperStyle.scrollbar(graphics, left + contentWidth() - 3, top, bottom, textLayout.height(), textScroll);
+		textScroll.render(graphics, left + contentWidth() - 3);
 	}
 
 	@Override
@@ -274,28 +291,21 @@ public final class ServerBookScreen extends Screen {
 		if (super.mouseClicked(event, doubleClick))
 			return true;
 		if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
-			var listBar = new PaperStyle.Scrollbar(x + sidebar + 5, bodyTop, bodyBottom, entries.size() * 40);
 			int bottom = bodyBottom - (acknowledge.visible ? 30 : 0);
-			var textBar =
-			    new PaperStyle.Scrollbar(contentLeft() + contentWidth() - 3, contentTop() + TITLE_BODY_GAP, bottom,
-			                            textLayout.height());
-			draggingList = (!narrow || !detail) && listBar.contains(event.x(), event.y());
-			if (draggingList || (!narrow || detail) && !entries.isEmpty() && textBar.contains(event.x(), event.y())) {
-				draggedScrollbar = draggingList ? listBar : textBar;
-				int thumb = draggedScrollbar.thumbTop(draggingList ? listScroll : textScroll);
-				scrollGrab = event.y() >= thumb && event.y() < thumb + draggedScrollbar.thumbHeight()
-				                 ? event.y() - thumb
-				                 : draggedScrollbar.thumbHeight() / 2.0;
-				return mouseDragged(event, 0, 0);
-			}
+			textScroll.layout(contentTop() + TITLE_BODY_GAP, bottom, textLayout.height());
+			boolean listDrag = (!narrow || !detail) &&
+			                   listScroll.beginDrag(event.x(), event.y(), x + sidebar + 5);
+			if (listDrag || (!narrow || detail) && !entries.isEmpty() &&
+			                   textScroll.beginDrag(event.x(), event.y(), contentLeft() + contentWidth() - 3))
+				return true;
 		}
 		if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && (!narrow || !detail) && event.x() >= x + 22 &&
 		    event.x() < x + sidebar + 7 && event.y() >= bodyTop && event.y() < bodyBottom) {
-			int row = ((int)event.y() - bodyTop + listScroll) / 40;
+			int row = ((int)event.y() - bodyTop + listScroll.scroll()) / 40;
 			if (row < entries.size()) {
 				state.selected = entries.get(row);
 				state.view(state.selected);
-				textScroll = 0;
+				textScroll.setScroll(0);
 				detail = true;
 				rebuildWidgets();
 				return true;
@@ -306,22 +316,20 @@ public final class ServerBookScreen extends Screen {
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT || draggedScrollbar == null)
+		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return super.mouseDragged(event, dx, dy);
-		int scroll = draggedScrollbar.position(event.y(), scrollGrab);
-		if (draggingList)
-			listScroll = scroll;
-		else
-			textScroll = scroll;
-		return true;
+		if (listScroll.mouseDragged(event.y()) || textScroll.mouseDragged(event.y()))
+			return true;
+		return super.mouseDragged(event, dx, dy);
 	}
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
-		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT || draggedScrollbar == null)
+		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return super.mouseReleased(event);
-		draggedScrollbar = null;
-		return true;
+		if (listScroll.mouseReleased() || textScroll.mouseReleased())
+			return true;
+		return super.mouseReleased(event);
 	}
 
 	@Override
@@ -329,11 +337,10 @@ public final class ServerBookScreen extends Screen {
 		if (mouseY > bodyBottom)
 			return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
 		if ((!narrow || !detail) && mouseY >= bodyTop && mouseX >= x + 22 && mouseX < x + sidebar + 7)
-			listScroll = Math.clamp(listScroll - (int)(vertical * 28), 0,
-			                        Math.max(0, entries.size() * 40 - (bodyBottom - bodyTop)));
+			listScroll.scrollWheel(vertical, 28);
 		else if ((!narrow || detail) && mouseY >= contentTop() + TITLE_BODY_GAP && mouseX >= contentLeft() &&
 		         mouseX < contentLeft() + contentWidth())
-			textScroll = Math.max(0, textScroll - (int)(vertical * 28));
+			textScroll.scrollWheel(vertical, 28);
 		else
 			return false;
 		return true;

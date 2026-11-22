@@ -7,6 +7,10 @@ import java.util.Optional;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.daily.DailyQuestPayloads;
+import club.sjmc.smp3.ui.screen.MenuScreen;
+import club.sjmc.smp3.ui.themes.PaperStyle;
+import club.sjmc.smp3.ui.widget.ScrollView;
+import club.sjmc.smp3.ui.widget.WrappedText;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -25,29 +29,28 @@ public final class DailyQuestScreen extends Screen {
 	private DailyQuestPayloads.Catalog catalog;
 	private List<ItemStack> icons;
 	private boolean embedded;
-	private boolean draggingDetail;
-	private double scrollGrab;
 	private int originX, originY;
 	private int selected;
+	private final ScrollView detailScroll = new ScrollView();
 	private int x, y, panelWidth, panelHeight, split, top, bottom, leftX, leftRight, leftWidth, detailX, detailWidth,
-	    detailTop, detailScroll, detailContentHeight, cardWidth, cardHeight, gridLeft;
+	    detailTop, detailContentHeight, cardWidth, cardHeight, gridLeft;
 
-	DailyQuestScreen(DailyQuestPayloads.Catalog catalog) {
+	public DailyQuestScreen(DailyQuestPayloads.Catalog catalog) {
 		super(Component.literal("每日任务"));
 		this.catalog = catalog;
 		this.icons = icons(catalog);
 	}
 
-	void accept(DailyQuestPayloads.Catalog next) {
+	public void accept(DailyQuestPayloads.Catalog next) {
 		catalog = next;
 		icons = icons(next);
-		detailScroll = 0;
+		detailScroll.setScroll(0);
 		detailContentHeight = 0;
 		if (selected >= catalog.tasks().size())
 			selected = catalog.tasks().isEmpty() ? 0 : catalog.tasks().size() - 1;
 	}
 
-	void embed(int originX, int originY, int width, int height) {
+	public void embed(int originX, int originY, int width, int height) {
 		this.originX = originX;
 		this.originY = originY;
 		this.embedded = true;
@@ -67,7 +70,7 @@ public final class DailyQuestScreen extends Screen {
 
 	@Override
 	protected void init() {
-		draggingDetail = false;
+		detailScroll.mouseReleased();
 		panelWidth = embedded ? width : Math.min(620, width - 32);
 		panelHeight = embedded ? height : Math.min(400, height - 32);
 		x = originX + (width - panelWidth) / 2;
@@ -187,12 +190,11 @@ public final class DailyQuestScreen extends Screen {
 	}
 
 	private void drawDetail(GuiGraphicsExtractor graphics, DailyQuestPayloads.Task task) {
-		int max = Math.max(0, detailContentHeight - (bottom - detailTop));
-		detailScroll = Math.clamp(detailScroll, 0, max);
-		int start = detailTop - detailScroll;
+		detailScroll.layout(detailTop, bottom, detailContentHeight);
+		int start = detailTop - detailScroll.scroll();
 		graphics.enableScissor(detailX, detailTop, detailX + detailWidth, bottom);
 		int nameWidth = Math.max(1, detailWidth);
-		int nameCursor = drawWrapped(graphics, Component.literal(task.name()).withStyle(style -> style.withBold(true)),
+		int nameCursor = WrappedText.draw(graphics, font, Component.literal(task.name()).withStyle(style -> style.withBold(true)),
 		                            detailX, start, nameWidth, PaperStyle.INK);
 		int cursor = nameCursor + 2;
 		String difficulty = "难度 " + task.difficulty() + (task.tier() == 0 ? "" : " · " + task.tier() + "级");
@@ -204,13 +206,13 @@ public final class DailyQuestScreen extends Screen {
 		cursor += font.lineHeight + 5;
 		cursor = heading(graphics, "完成条件", cursor);
 		for (String line : task.conditions())
-			cursor = drawWrapped(graphics, Component.literal(line), detailX, cursor, detailWidth, PaperStyle.MUTED);
+			cursor = WrappedText.draw(graphics, font, Component.literal(line), detailX, cursor, detailWidth, PaperStyle.MUTED);
 		cursor = heading(graphics, "任务奖励", cursor + 2);
 		for (String line : task.rewards())
-			cursor = drawWrapped(graphics, Component.literal(line), detailX, cursor, detailWidth, PaperStyle.MUTED);
+			cursor = WrappedText.draw(graphics, font, Component.literal(line), detailX, cursor, detailWidth, PaperStyle.MUTED);
 		detailContentHeight = cursor - start;
 		graphics.disableScissor();
-		PaperStyle.scrollbar(graphics, detailX + detailWidth - 3, detailTop, bottom, detailContentHeight, detailScroll);
+		detailScroll.render(graphics, detailX + detailWidth - 3);
 	}
 
 	private static int difficultyColor(String difficulty) {
@@ -224,14 +226,6 @@ public final class DailyQuestScreen extends Screen {
 	private int heading(GuiGraphicsExtractor graphics, String text, int cursor) {		graphics.text(font, Component.literal(text).withStyle(style -> style.withBold(true)), detailX, cursor,
 		              PaperStyle.INK, false);
 		return cursor + font.lineHeight + 2;
-	}
-
-	private int drawWrapped(GuiGraphicsExtractor graphics, Component text, int x, int cursor, int width, int color) {
-		for (var line : font.split(text, width)) {
-			graphics.text(font, line, x, cursor, color, false);
-			cursor += font.lineHeight + 2;
-		}
-		return cursor;
 	}
 
 	private boolean insideCard(int slot, double mouseX, double mouseY) {
@@ -257,15 +251,8 @@ public final class DailyQuestScreen extends Screen {
 			return true;
 		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return false;
-		var detailBar = new PaperStyle.Scrollbar(detailX + detailWidth - 3, detailTop, bottom, detailContentHeight);
-		if (detailBar.contains(event.x(), event.y())) {
-			draggingDetail = true;
-			int thumb = detailBar.thumbTop(detailScroll);
-			scrollGrab = event.y() >= thumb && event.y() < thumb + detailBar.thumbHeight()
-			                 ? event.y() - thumb
-			                 : detailBar.thumbHeight() / 2.0;
-			return mouseDragged(event, 0, 0);
-		}
+		if (detailScroll.beginDrag(event.x(), event.y(), detailX + detailWidth - 3))
+			return true;
 		int slot = cardAt(event.x(), event.y());
 		if (slot < 0)
 			return false;
@@ -275,20 +262,19 @@ public final class DailyQuestScreen extends Screen {
 				ClientPlayNetworking.send(new DailyQuestPayloads.Reroll(catalog.date(), slot, task.token()));
 			else {
 				selected = slot;
-				detailScroll = 0;
+				detailScroll.setScroll(0);
 			}
 			return true;
 		}
 		selected = slot;
-		detailScroll = 0;
+		detailScroll.setScroll(0);
 		return true;
 	}
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
 		if (mouseX >= detailX && mouseX < detailX + detailWidth && mouseY >= detailTop && mouseY < bottom) {
-			int max = Math.max(0, detailContentHeight - (bottom - detailTop));
-			detailScroll = Math.clamp(detailScroll - (int)Math.round(vertical * 16), 0, max);
+			detailScroll.scrollWheel(vertical, 16);
 			return true;
 		}
 		return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
@@ -296,18 +282,15 @@ public final class DailyQuestScreen extends Screen {
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-		if (!draggingDetail)
+		if (!detailScroll.mouseDragged(event.y()))
 			return super.mouseDragged(event, dx, dy);
-		var bar = new PaperStyle.Scrollbar(detailX + detailWidth - 3, detailTop, bottom, detailContentHeight);
-		detailScroll = bar.position(event.y(), scrollGrab);
 		return true;
 	}
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
-		if (!draggingDetail)
+		if (!detailScroll.mouseReleased())
 			return super.mouseReleased(event);
-		draggingDetail = false;
 		return true;
 	}
 

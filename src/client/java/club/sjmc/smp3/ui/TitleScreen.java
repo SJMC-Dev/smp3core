@@ -5,6 +5,10 @@ import java.util.List;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.title.TitlePayloads;
+import club.sjmc.smp3.ui.themes.PaperStyle;
+import club.sjmc.smp3.ui.widget.Rect;
+import club.sjmc.smp3.ui.widget.ScrollView;
+import club.sjmc.smp3.ui.widget.WrappedText;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -29,11 +33,12 @@ public final class TitleScreen extends Screen {
 	private final List<List<Component>> descriptions;
 	private boolean embedded;
 	private int originX, originY;
-	private int selected, scroll, scrollMax;
+	private int selected;
 	private int x, y, panelWidth, panelHeight, split, top, bottom, leftX, leftRight, leftWidth, detailX, detailWidth,
 	    cellWidth, columns;
+	private final ScrollView scrolling = new ScrollView();
 
-	TitleScreen(TitlePayloads.Catalog catalog) {
+	public TitleScreen(TitlePayloads.Catalog catalog) {
 		super(Component.literal("称号"));
 		this.catalog = catalog;
 		this.icons = catalog.entries().stream().map(entry -> {
@@ -53,7 +58,7 @@ public final class TitleScreen extends Screen {
 		this.selected = activeIndex();
 	}
 
-	void embed(int originX, int originY, int width, int height) {
+	public void embed(int originX, int originY, int width, int height) {
 		this.originX = originX;
 		this.originY = originY;
 		this.embedded = true;
@@ -105,8 +110,7 @@ public final class TitleScreen extends Screen {
 		bottom = y + panelHeight - 18;
 		columns = Math.max(1, leftWidth / 80);
 		cellWidth = Math.max(1, leftWidth / columns);
-		scrollMax = Math.max(0, rows() * CELL_HEIGHT - (bottom - top));
-		scroll = Math.clamp(scroll, 0, scrollMax);
+		scrolling.layout(top, bottom, rows() * CELL_HEIGHT);
 		if (selected >= catalog.entries().size())
 			selected = catalog.entries().isEmpty() ? -1 : catalog.entries().size() - 1;
 	}
@@ -138,7 +142,7 @@ public final class TitleScreen extends Screen {
 		for (int i = 0; i < catalog.entries().size(); i++) {
 			var entry = catalog.entries().get(i);
 			int left = leftX + i % columns * cellWidth;
-			int cellTop = top + i / columns * CELL_HEIGHT - scroll;
+			int cellTop = top + i / columns * CELL_HEIGHT - scrolling.scroll();
 			if (cellTop + CELL_HEIGHT <= top || cellTop >= bottom)
 				continue;
 			boolean hovered = mouseX >= left && mouseX < left + cellWidth && mouseY >= cellTop &&
@@ -158,16 +162,16 @@ public final class TitleScreen extends Screen {
 				graphics.outline(left, cellTop, cellWidth, CELL_HEIGHT, 0xFF8C4B30);
 		}
 		graphics.disableScissor();
-		PaperStyle.scrollbar(graphics, leftRight + 4, top, bottom, rows() * CELL_HEIGHT, scroll);
+		scrolling.render(graphics, leftRight + 4);
 	}
 
 	private void drawDetail(GuiGraphicsExtractor graphics) {
 		var entry = catalog.entries().get(selected);
 		graphics.enableScissor(detailX, top, detailX + detailWidth, bottom);
 		int nameWidth = Math.max(1, detailWidth);
-		int nameCursor = drawWrapped(
-		    graphics, names.get(selected).copy().withStyle(style -> style.withBold(true)), detailX, top, nameWidth,
-		    entry.obtained() ? PaperStyle.INK : 0x99827058);
+		int nameCursor = WrappedText.draw(
+		    graphics, font, names.get(selected).copy().withStyle(style -> style.withBold(true)), detailX, top, nameWidth,
+		    entry.obtained() ? PaperStyle.INK : 0x99827058, bottom);
 		int cursor = nameCursor + 2;
 		graphics.text(font, entry.obtained() ? "已获得" : "未获得", detailX, cursor, entry.obtained() ? OBTAINED : MISSING,
 		              false);
@@ -177,18 +181,8 @@ public final class TitleScreen extends Screen {
 			cursor += font.lineHeight + 4;
 		}
 		for (Component line : descriptions.get(selected))
-			cursor = drawWrapped(graphics, line, detailX, cursor, detailWidth, PaperStyle.MUTED);
+			cursor = WrappedText.draw(graphics, font, line, detailX, cursor, detailWidth, PaperStyle.MUTED, bottom);
 		graphics.disableScissor();
-	}
-
-	private int drawWrapped(GuiGraphicsExtractor graphics, Component text, int x, int cursor, int width, int color) {
-		for (var line : font.split(text, width)) {
-			if (cursor + font.lineHeight > bottom)
-				break;
-			graphics.text(font, line, x, cursor, color, false);
-			cursor += font.lineHeight + 2;
-		}
-		return cursor;
 	}
 
 	@Override
@@ -205,12 +199,12 @@ public final class TitleScreen extends Screen {
 	}
 
 	private int cellAt(double mouseX, double mouseY) {
-		if (mouseX < leftX || mouseX >= leftRight || mouseY < top || mouseY >= bottom)
+		if (!new Rect(leftX, top, leftRight - leftX, bottom - top).contains(mouseX, mouseY))
 			return -1;
 		int column = (int)((mouseX - leftX) / cellWidth);
 		if (column >= columns)
 			return -1;
-		int row = (int)((mouseY - top + scroll) / CELL_HEIGHT);
+		int row = (int)((mouseY - top + scrolling.scroll()) / CELL_HEIGHT);
 		int index = row * columns + column;
 		return index >= 0 && index < catalog.entries().size() ? index : -1;
 	}
@@ -218,7 +212,7 @@ public final class TitleScreen extends Screen {
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
 		if (mouseX >= leftX && mouseX < leftRight && mouseY >= top && mouseY < bottom) {
-			scroll = Math.clamp(scroll - (int)(vertical * CELL_HEIGHT), 0, scrollMax);
+			scrolling.scrollWheel(vertical, CELL_HEIGHT);
 			return true;
 		}
 		return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);

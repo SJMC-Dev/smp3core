@@ -11,6 +11,8 @@ import java.util.Optional;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.sign.SignPayloads;
+import club.sjmc.smp3.ui.screen.MenuScreen;
+import club.sjmc.smp3.ui.themes.PaperStyle;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
@@ -32,19 +34,19 @@ public final class SignScreen extends Screen {
 	private int originX, originY;
 	private int x, y, panelWidth, panelHeight, cellWidth, cellHeight, gridLeft, gridTop;
 
-	SignScreen(SignPayloads.State state) {
+	public SignScreen(SignPayloads.State state) {
 		super(Component.literal("签到"));
 		this.state = state;
 	}
 
-	void accept(SignPayloads.State next) {
+	public void accept(SignPayloads.State next) {
 		boolean relayout = next.year() != state.year() || next.month() != state.month();
 		state = next;
 		if (relayout && minecraft != null)
 			rebuildWidgets();
 	}
 
-	void embed(int originX, int originY, int width, int height) {
+	public void embed(int originX, int originY, int width, int height) {
 		this.originX = originX;
 		this.originY = originY;
 		this.embedded = true;

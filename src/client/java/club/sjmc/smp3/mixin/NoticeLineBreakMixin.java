@@ -8,8 +8,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import club.sjmc.smp3.ui.NoticeEditorScreen;
 import club.sjmc.smp3.ui.ServerBookScreen;
+import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Style;

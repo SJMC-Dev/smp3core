@@ -1,4 +1,4 @@
-package club.sjmc.smp3.ui;
+package club.sjmc.smp3.ui.screen;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -7,6 +7,10 @@ import java.util.List;
 import club.sjmc.smp3.notice.NoticeCatalog;
 import club.sjmc.smp3.notice.NoticeEditing;
 import club.sjmc.smp3.notice.NoticePayloads;
+import club.sjmc.smp3.ui.ServerBookScreen;
+import club.sjmc.smp3.ui.themes.PaperStyle;
+import club.sjmc.smp3.ui.widget.BookText;
+import club.sjmc.smp3.ui.widget.PaperButton;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -32,7 +36,7 @@ public final class NoticeEditorScreen extends Screen {
 	private int renderedWidth;
 	private boolean renderedMarkdown;
 
-	NoticeEditorScreen(NoticePayloads.Editor payload) {
+	public NoticeEditorScreen(NoticePayloads.Editor payload) {
 		super(Component.literal("编辑公告"));
 		session = payload.session();
 		categories = payload.categories();
@@ -205,7 +209,7 @@ public final class NoticeEditorScreen extends Screen {
 			ClientPlayNetworking.send(new NoticePayloads.Publish(session, i, parts.size(), parts.get(i)));
 	}
 
-	void result(NoticePayloads.Editor payload) {
+	public void result(NoticePayloads.Editor payload) {
 		if (!session.equals(payload.session()))
 			return;
 		publishing = false;

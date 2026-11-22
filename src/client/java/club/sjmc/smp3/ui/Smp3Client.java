@@ -17,6 +17,16 @@ import club.sjmc.smp3.notice.NoticePayloads;
 import club.sjmc.smp3.shop.ShopPayloads;
 import club.sjmc.smp3.sign.SignPayloads;
 import club.sjmc.smp3.title.TitlePayloads;
+import club.sjmc.smp3.ui.hud.CurrencyHud;
+import club.sjmc.smp3.ui.hud.HudLayout;
+import club.sjmc.smp3.ui.hud.NoticeHud;
+import club.sjmc.smp3.ui.hud.QuestHud;
+import club.sjmc.smp3.ui.screen.HudSettingsScreen;
+import club.sjmc.smp3.ui.screen.MenuScreen;
+import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
+import club.sjmc.smp3.ui.state.CurrencyState;
+import club.sjmc.smp3.ui.state.ServerBookState;
+import club.sjmc.smp3.ui.state.ShopState;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -34,9 +44,25 @@ import net.minecraft.resources.Identifier;
 public final class Smp3Client implements ClientModInitializer {
 	static final QuestHud HUD = new QuestHud();
 	static final ServerBookState BOOK = new ServerBookState();
-	static final CurrencyDisplay BALANCES = new CurrencyDisplay();
+	static final NoticeHud NOTICE = new NoticeHud(BOOK);
+	static final CurrencyState BALANCES = new CurrencyState();
+	static final CurrencyHud CURRENCY = new CurrencyHud(BALANCES);
 	static final ShopState SHOP = new ShopState();
 	static HudLayout layout = new HudLayout();
+
+	public static QuestHud hud() { return HUD; }
+
+	public static ServerBookState book() { return BOOK; }
+
+	public static NoticeHud noticeHud() { return NOTICE; }
+
+	public static CurrencyState balances() { return BALANCES; }
+
+	public static CurrencyHud currencyHud() { return CURRENCY; }
+
+	public static ShopState shop() { return SHOP; }
+
+	public static HudLayout layout() { return layout; }
 	private static boolean pendingSettings;
 	private static NoticePayloads.Editor pendingEditor;
 	private static final Path SETTINGS = FabricLoader.getInstance().getConfigDir().resolve("smp3/client.json");
@@ -95,15 +121,8 @@ public final class Smp3Client implements ClientModInitializer {
 			if (client.player != null)
 				client.gui.setScreen(new MenuScreen());
 		});
-		ClientPlayNetworking.registerGlobalReceiver(BalanceSync.Payload.TYPE, (balance, context) -> {
-			BALANCES.accept(balance);
-			if (context.client().gui.screen() instanceof ServerBookScreen screen)
-				screen.contentChanged();
-			else if (context.client().gui.screen() instanceof ShopScreen screen)
-				screen.balancesChanged();
-			else if (context.client().gui.screen() instanceof MenuScreen screen)
-				screen.balancesChanged();
-		});
+		ClientPlayNetworking.registerGlobalReceiver(BalanceSync.Payload.TYPE,
+		                                            (balance, context) -> BALANCES.accept(balance));
 		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("smp3", "main"));
 		KeyMapping toggle = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.quest_hud", InputConstants.UNKNOWN.getValue(), category));
@@ -187,13 +206,13 @@ public final class Smp3Client implements ClientModInitializer {
 		});
 	}
 
-	static void toggleHud() {
+	public static void toggleHud() {
 		HUD.visible = !HUD.visible;
 		HUD.state.setVisible(HUD.visible);
 		savePreferences();
 	}
 
-	static void openBook() { Minecraft.getInstance().gui.setScreen(new ServerBookScreen()); }
+	public static void openBook() { Minecraft.getInstance().gui.setScreen(new ServerBookScreen()); }
 
 	private static void loadPreferences() {
 		if (!Files.exists(SETTINGS))
@@ -211,7 +230,7 @@ public final class Smp3Client implements ClientModInitializer {
 		}
 	}
 
-	static void savePreferences() {
+	public static void savePreferences() {
 		try {
 			Files.createDirectories(SETTINGS.getParent());
 			Files.writeString(SETTINGS, JSON.toJson(new Preferences(HUD.visible, layout)));

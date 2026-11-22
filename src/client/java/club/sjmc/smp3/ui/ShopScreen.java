@@ -11,6 +11,13 @@ import java.util.Set;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.shop.ShopPayloads;
+import club.sjmc.smp3.ui.screen.MenuScreen;
+import club.sjmc.smp3.ui.state.CurrencyState;
+import club.sjmc.smp3.ui.state.ShopState;
+import club.sjmc.smp3.ui.themes.PaperStyle;
+import club.sjmc.smp3.ui.widget.ItemIcon;
+import club.sjmc.smp3.ui.widget.PaperButton;
+import club.sjmc.smp3.ui.widget.ScrollView;
 import club.sjmc.smp3.economy.Smp3Currency;
 
 import net.minecraft.ChatFormatting;
@@ -19,13 +26,11 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-final class ShopScreen extends Screen {
+public final class ShopScreen extends Screen implements ShopState.Listener, CurrencyState.Listener {
 	private static final int GRID_GAP = 0;
 	private static final int NAME_CENTER_OFFSET = 1;
 	private static final int MODAL_HEIGHT = 112;
@@ -33,24 +38,21 @@ final class ShopScreen extends Screen {
 	private final ShopState state = Smp3Client.SHOP;
 	private final Set<String> expanded = new HashSet<>();
 	private final Map<String, String> selections = new HashMap<>();
-	private final ItemStack coinIcon = new ItemStack(Items.IRON_PICKAXE);
-	private final ItemStack stampIcon = new ItemStack(Items.PAPER);
 	private List<String> path = List.of();
 	private record TreeRow(ShopPayloads.Node node, int depth, boolean children) {}
 	private final List<TreeRow> tree = new ArrayList<>();
 	private int x, y, panelWidth, panelHeight, sidebar, contentLeft, contentWidth, bodyTop, bodyBottom, treeTop,
-	    treeBottom, headerExtra, treeScroll, gridScroll, gridMax, gridContent, modalX, modalY, modalWidth;
+	    treeBottom, headerExtra, gridMax, gridContent, modalX, modalY, modalWidth;
+	private final ScrollView treeScroll = new ScrollView();
+	private final ScrollView gridScroll = new ScrollView();
 	private String current = "", quantity = "1";
 	private boolean narrow, modal, embedded;
 	private int originX, originY;
 	private EditBox batches;
 	private PaperButton minus, plus, maximum, confirm;
-	private PaperStyle.Scrollbar draggedScrollbar;
-	private boolean draggingGrid, draggingTree;
-	private double scrollGrab;
 	private long lastFrame = System.nanoTime();
 
-	ShopScreen() { super(Component.literal("商店")); }
+	public ShopScreen() { super(Component.literal("商店")); }
 	void catalogChanged() {
 		expanded.retainAll(state.nodes.keySet());
 		selections.keySet().retainAll(state.nodes.keySet());
@@ -65,7 +67,7 @@ final class ShopScreen extends Screen {
 		selectNode(current, false);
 	}
 
-	void embed(int originX, int originY, int width, int height) {
+	public void embed(int originX, int originY, int width, int height) {
 		this.originX = originX;
 		this.originY = originY;
 		this.embedded = true;
@@ -73,9 +75,8 @@ final class ShopScreen extends Screen {
 	}
 	@Override
 	protected void init() {
-		draggedScrollbar = null;
-		draggingGrid = false;
-		draggingTree = false;
+		Smp3Client.shop().addListener(this);
+		Smp3Client.balances().addListener(this);
 		if (embedded) {
 			x = originX;
 			y = originY;
@@ -101,7 +102,7 @@ final class ShopScreen extends Screen {
 		tree.clear();
 		for (var node : state.children.getOrDefault("", List.of()))
 			appendTree(node, 0);
-		treeScroll = Math.clamp(treeScroll, 0, Math.max(0, tree.size() * TREE_ROW - (treeBottom - treeTop)));
+		treeScroll.layout(treeTop, treeBottom, tree.size() * TREE_ROW);
 		updateGridMetrics();
 		modalWidth = Math.min(230, Math.max(176, contentWidth));
 		modalWidth = Math.min(modalWidth, panelWidth - 32);
@@ -139,9 +140,9 @@ final class ShopScreen extends Screen {
 			state.select(state.selected);
 	}
 	private int headerExtra() {
-		return Smp3Client.BALANCES.width() + 26 > panelWidth - 60 ? 20 : 0;
+		return Smp3Client.currencyHud().width() + 26 > panelWidth - 60 ? 20 : 0;
 	}
-	void balancesChanged() {
+	public void balancesChanged() {
 		if (headerExtra != headerExtra())
 			rebuildWidgets();
 	}
@@ -164,7 +165,7 @@ final class ShopScreen extends Screen {
 		int rows = (count + columns - 1) / columns;
 		gridContent = Math.max(0, rows * (cell + GRID_GAP) - GRID_GAP);
 		gridMax = Math.max(0, gridContent - (bodyBottom - bodyTop));
-		gridScroll = Math.clamp(gridScroll, 0, gridMax);
+		gridScroll.layout(bodyTop, bodyBottom, gridContent);
 	}
 	void selectNode(String id, boolean resetQuantity) {
 		current = id;
@@ -180,7 +181,7 @@ final class ShopScreen extends Screen {
 		state.pending = false;
 		state.message = "";
 		modal = false;
-		gridScroll = 0;
+		gridScroll.setScroll(0);
 		if (resetQuantity)
 			quantity = "1";
 		rebuildWidgets();
@@ -205,7 +206,7 @@ final class ShopScreen extends Screen {
 		if (batches != null)
 			batches.setValue(Integer.toString(count));
 	}
-	void stateChanged() {
+	public void stateChanged() {
 		if (confirm == null || batches == null)
 			return;
 		var entry = state.entries.get(state.selected);
@@ -235,8 +236,24 @@ final class ShopScreen extends Screen {
 	}
 	@Override
 	public void removed() {
+		detachListeners();
 		state.close();
 	}
+
+	@Override
+	public void shopCatalogChanged() { catalogChanged(); }
+
+	@Override
+	public void shopQuoteChanged() { stateChanged(); }
+
+	@Override
+	public void currencyChanged() { balancesChanged(); }
+
+	public void detachListeners() {
+		Smp3Client.shop().removeListener(this);
+		Smp3Client.balances().removeListener(this);
+	}
+
 	@Override
 	public boolean isPauseScreen() {
 		return false;
@@ -253,7 +270,7 @@ final class ShopScreen extends Screen {
 			PaperStyle.frame(graphics, x, y, panelWidth, panelHeight);
 		}
 
-		Smp3Client.BALANCES.render(graphics, x + panelWidth - 30, y + 12 + headerExtra, panelWidth - 60, seconds);
+		Smp3Client.currencyHud().render(graphics, x + panelWidth - 30, y + 12 + headerExtra, panelWidth - 60, seconds);
 		graphics.horizontalLine(x + sidebar + 14, x + panelWidth - 20, bodyTop - 3, PaperStyle.LINE);
 		drawTree(graphics, mouseX, mouseY);
 		drawProducts(graphics, mouseX, mouseY);
@@ -269,7 +286,7 @@ final class ShopScreen extends Screen {
 		graphics.enableScissor(left - 2, treeTop, right, treeBottom);
 		for (int i = 0; i < tree.size(); i++) {
 			TreeRow row = tree.get(i);
-			int top = treeTop + i * TREE_ROW - treeScroll;
+			int top = treeTop + i * TREE_ROW - treeScroll.scroll();
 			if (top + TREE_ROW < treeTop || top >= treeBottom)
 				continue;
 			boolean selected = row.node.id().equals(current);
@@ -286,14 +303,12 @@ final class ShopScreen extends Screen {
 				} else
 					graphics.text(font, ">", left + indent, top + 6, PaperStyle.MUTED, false);
 			}
-			drawSmallIcon(graphics,
-			              new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(row.node.icon()))),
-			              left + indent + 9, top + 4);
+			drawSmallIcon(graphics, ItemIcon.of(row.node.icon()), left + indent + 9, top + 4);
 			drawTreeName(graphics, row.node.name(), left + indent + 22, top + 6,
 			             cellRight - left - indent - 26);
 		}
 		graphics.disableScissor();
-		PaperStyle.scrollbar(graphics, right - 2, treeTop, treeBottom, tree.size() * TREE_ROW, treeScroll);
+		treeScroll.render(graphics, right - 2);
 	}
 
 	private void drawSmallIcon(GuiGraphicsExtractor graphics, ItemStack icon, int x, int y) {
@@ -329,7 +344,8 @@ final class ShopScreen extends Screen {
 		String text = Integer.toString(entry.price());
 		int width = 12 + font.width(text);
 		int left = px + (cell - width) / 2;
-		ItemStack icon = entry.currency().equals("smp3:coffee_stamp") ? stampIcon : coinIcon;
+		ItemStack icon = entry.currency().equals("smp3:coffee_stamp") ? ItemIcon.item(Items.PAPER)
+		                                                              : ItemIcon.item(Items.IRON_PICKAXE);
 		graphics.pose().pushMatrix();
 		graphics.pose().translate(left, py);
 		graphics.pose().scale(10F / 16F, 10F / 16F);
@@ -360,7 +376,7 @@ final class ShopScreen extends Screen {
 		int contentHeight = Math.max(0, rows * (cell + GRID_GAP) - GRID_GAP);
 		gridContent = contentHeight;
 		gridMax = Math.max(0, contentHeight - (bodyBottom - bodyTop));
-		gridScroll = Math.clamp(gridScroll, 0, gridMax);
+		gridScroll.layout(bodyTop, bodyBottom, gridContent);
 		if (size == 0) {
 			graphics.text(font, "暂无商品", contentLeft, bodyTop + 12, PaperStyle.MUTED, false);
 			return;
@@ -369,7 +385,7 @@ final class ShopScreen extends Screen {
 		for (int i = 0; i < size; i++) {
 			int col = i % columns, row = i / columns;
 			int left = contentLeft + col * (cell + GRID_GAP);
-			int top = bodyTop + row * (cell + GRID_GAP) - gridScroll;
+			int top = bodyTop + row * (cell + GRID_GAP) - gridScroll.scroll();
 			if (top + cell < bodyTop || top >= bodyBottom)
 				continue;
 			if (i < folders.size()) {
@@ -377,9 +393,7 @@ final class ShopScreen extends Screen {
 				boolean hovered = mouseX >= left && mouseX < left + cell && mouseY >= top && mouseY < top + cell;
 				if (hovered)
 					graphics.fill(left, top, left + cell, top + cell, 0x227F5936);
-				drawGridIcon(graphics,
-				             new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(child.icon()))),
-				             left + (cell - 32) / 2, top + 6);
+				drawGridIcon(graphics, ItemIcon.of(child.icon()), left + (cell - 32) / 2, top + 6);
 				String name = child.name();
 				drawFittedName(graphics, name, left + cell / 2 + NAME_CENTER_OFFSET, top + 44, cell - 8);
 				continue;
@@ -389,7 +403,7 @@ final class ShopScreen extends Screen {
 			boolean hovered = mouseX >= left && mouseX < left + cell && mouseY >= top && mouseY < top + cell;
 			if (selected || hovered)
 				graphics.fill(left, top, left + cell, top + cell, selected ? 0x447F5936 : 0x227F5936);
-			ItemStack icon = state.icons.get(entry.id());
+			ItemStack icon = ItemIcon.of(entry.icon());
 			int iconX = left + (cell - 32) / 2, iconY = top + 5;
 			ItemStack shown = entry.amount() > 1 && !entry.title() ? icon.copyWithCount(entry.amount()) : icon;
 			drawGridIcon(graphics, shown, iconX, iconY);
@@ -409,7 +423,7 @@ final class ShopScreen extends Screen {
 			}
 		}
 		graphics.disableScissor();
-		PaperStyle.scrollbar(graphics, contentLeft + contentWidth - 2, bodyTop, bodyBottom, contentHeight, gridScroll);
+		gridScroll.render(graphics, contentLeft + contentWidth - 2);
 	}
 	private void drawModal(GuiGraphicsExtractor graphics) {
 		var entry = state.entries.get(state.selected);
@@ -477,32 +491,14 @@ final class ShopScreen extends Screen {
 			}
 			return true;
 		}
-		var gridBar = new PaperStyle.Scrollbar(contentLeft + contentWidth - 2, bodyTop, bodyBottom, gridContent);
-		if (gridBar.contains(event.x(), event.y())) {
-			draggedScrollbar = gridBar;
-			draggingGrid = true;
-			draggingTree = false;
-			int thumb = gridBar.thumbTop(gridScroll);
-			scrollGrab = event.y() >= thumb && event.y() < thumb + gridBar.thumbHeight()
-			                 ? event.y() - thumb
-			                 : gridBar.thumbHeight() / 2.0;
-			return mouseDragged(event, 0, 0);
-		}
+		if (gridScroll.beginDrag(event.x(), event.y(), contentLeft + contentWidth - 2))
+			return true;
 		int treeLeft = x + 20, treeRight = x + 14 + sidebar, treeCellRight = treeRight - 12;
-		var treeBar = new PaperStyle.Scrollbar(treeRight - 2, treeTop, treeBottom, tree.size() * TREE_ROW);
-		if (treeBar.contains(event.x(), event.y())) {
-			draggedScrollbar = treeBar;
-			draggingTree = true;
-			draggingGrid = false;
-			int thumb = treeBar.thumbTop(treeScroll);
-			scrollGrab = event.y() >= thumb && event.y() < thumb + treeBar.thumbHeight()
-			                 ? event.y() - thumb
-			                 : treeBar.thumbHeight() / 2.0;
-			return mouseDragged(event, 0, 0);
-		}
+		if (treeScroll.beginDrag(event.x(), event.y(), treeRight - 2))
+			return true;
 		if (event.x() >= treeLeft && event.x() < treeCellRight && event.y() >= treeTop &&
 		    event.y() < treeBottom) {
-			int row = ((int)event.y() - treeTop + treeScroll) / TREE_ROW;
+			int row = ((int)event.y() - treeTop  + treeScroll.scroll()) / TREE_ROW;
 			if (row < tree.size()) {
 				var selected = tree.get(row);
 				if (selected.children) {
@@ -538,10 +534,10 @@ final class ShopScreen extends Screen {
 			return -1;
 		int cell = cellSize(), columns = gridColumns();
 		int col = (int)((mouseX - contentLeft) / (cell + GRID_GAP));
-		int row = (int)((mouseY - bodyTop + gridScroll) / (cell + GRID_GAP));
+		int row = (int)((mouseY - bodyTop  + gridScroll.scroll()) / (cell + GRID_GAP));
 		if (col >= columns || (mouseX - contentLeft) - col * (cell + GRID_GAP) >= cell)
 			return -1;
-		if ((mouseY - bodyTop + gridScroll) - row * (cell + GRID_GAP) >= cell)
+		if ((mouseY - bodyTop  + gridScroll.scroll()) - row * (cell + GRID_GAP) >= cell)
 			return -1;
 		int index = row * columns + col;
 		return index < childNodes().size() + entries().size() ? index : -1;
@@ -551,36 +547,31 @@ final class ShopScreen extends Screen {
 	}
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT || draggedScrollbar == null)
+		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return super.mouseDragged(event, dx, dy);
-		int scroll = draggedScrollbar.position(event.y(), scrollGrab);
-		if (draggingTree)
-			treeScroll = scroll;
-		else if (draggingGrid)
-			gridScroll = scroll;
-		return true;
+		if (treeScroll.mouseDragged(event.y()) || gridScroll.mouseDragged(event.y()))
+			return true;
+		return super.mouseDragged(event, dx, dy);
 	}
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
-		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT || draggedScrollbar == null)
+		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return super.mouseReleased(event);
-		draggedScrollbar = null;
-		draggingGrid = false;
-		draggingTree = false;
-		return true;
+		if (treeScroll.mouseReleased() || gridScroll.mouseReleased())
+			return true;
+		return super.mouseReleased(event);
 	}
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
 		if (modal)
 			return true;
 		if (mouseX >= x + 18 && mouseX < x + 14 + sidebar && mouseY >= treeTop && mouseY < treeBottom) {
-			treeScroll = Math.clamp(treeScroll - (int)(vertical * TREE_ROW), 0,
-			                        Math.max(0, tree.size() * TREE_ROW - (treeBottom - treeTop)));
+			treeScroll.scrollWheel(vertical, TREE_ROW);
 			return true;
 		}
 		if (mouseX >= contentLeft && mouseX < contentLeft + contentWidth && mouseY >= bodyTop &&
 		    mouseY < bodyBottom) {
-			gridScroll = Math.clamp(gridScroll - (int)(vertical * 24), 0, gridMax);
+			gridScroll.scrollWheel(vertical, 24);
 			return true;
 		}
 		return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
