@@ -1,6 +1,8 @@
 package club.sjmc.smp3.ui.screen;
 
+import club.sjmc.smp3.ui.panel.NoticePanel;
 import club.sjmc.smp3.ui.panel.Panel;
+import club.sjmc.smp3.ui.widget.NoticeWrapHost;
 import club.sjmc.smp3.ui.widget.PanelContext;
 import club.sjmc.smp3.ui.widget.Rect;
 
@@ -14,7 +16,7 @@ import net.minecraft.network.chat.Component;
 /**
  * 把任意 {@link Panel} 作为全屏界面的薄壳。
  */
-public final class PanelScreen extends Screen {
+public final class PanelScreen extends Screen implements NoticeWrapHost {
 	private final Panel panel;
 	private final PanelContext context = PanelContext.fullscreen();
 
@@ -24,6 +26,9 @@ public final class PanelScreen extends Screen {
 	}
 
 	public Panel panel() { return panel; }
+
+	@Override
+	public boolean usesNoticeWrapping() { return panel instanceof NoticePanel; }
 
 	@Override
 	protected void init() {

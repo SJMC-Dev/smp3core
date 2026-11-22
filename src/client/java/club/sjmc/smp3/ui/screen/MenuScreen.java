@@ -5,14 +5,17 @@ import com.mojang.blaze3d.platform.InputConstants;
 import club.sjmc.smp3.daily.DailyQuestPayloads;
 import club.sjmc.smp3.sign.SignPayloads;
 import club.sjmc.smp3.title.TitlePayloads;
-import club.sjmc.smp3.ui.DailyQuestScreen;
-import club.sjmc.smp3.ui.ServerBookScreen;
-import club.sjmc.smp3.ui.ShopScreen;
-import club.sjmc.smp3.ui.SignScreen;
 import club.sjmc.smp3.ui.Smp3Client;
-import club.sjmc.smp3.ui.TitleScreen;
+import club.sjmc.smp3.ui.panel.NoticePanel;
+import club.sjmc.smp3.ui.panel.Panel;
+import club.sjmc.smp3.ui.panel.PanelHost;
+import club.sjmc.smp3.ui.panel.QuestPanel;
+import club.sjmc.smp3.ui.panel.ShopPanel;
+import club.sjmc.smp3.ui.panel.SignPanel;
+import club.sjmc.smp3.ui.panel.TitlePanel;
 import club.sjmc.smp3.ui.themes.PaperStyle;
-import club.sjmc.smp3.ui.widget.PaperButton;
+import club.sjmc.smp3.ui.widget.NoticeWrapHost;
+import club.sjmc.smp3.ui.widget.PanelContext;
 import club.sjmc.smp3.ui.widget.Rect;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -22,9 +25,10 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
-import java.time.LocalDate;
-
-public final class MenuScreen extends Screen {
+/**
+ * 集成菜单：左侧标签，右侧直接嵌入 {@link Panel}。
+ */
+public final class MenuScreen extends Screen implements PanelHost, NoticeWrapHost {
 	private static final String[] TABS = {"公告", "签到", "任务", "商店", "称号"};
 	private static final int TAB_DEPTH = 30;
 	private static final int TAB_ACTIVE_DEPTH = 40;
@@ -34,20 +38,18 @@ public final class MenuScreen extends Screen {
 	private SignPayloads.State sign;
 	private TitlePayloads.Catalog titles;
 	private DailyQuestPayloads.Catalog quests;
-	private Screen child;
+	private Panel child;
 	private int selected = -1;
 	private int x, y, panelWidth, panelHeight, tabTop, tabHeight, paneX, paneY, paneWidth, paneHeight;
-	private float childScale = .5F;
-	private static float tooltipScale = 1;
-	private static int tooltipOriginX, tooltipOriginY;
+	private PanelContext paneContext = PanelContext.fullscreen();
 
 	public MenuScreen() { super(Component.literal("菜单")); }
 
 	public void acceptSign(SignPayloads.State state) {
 		sign = state;
 		if (selected == 1) {
-			if (child instanceof SignScreen screen)
-				screen.accept(state);
+			if (child instanceof SignPanel panel)
+				panel.accept(state);
 			else
 				selectTab(1);
 		}
@@ -62,8 +64,8 @@ public final class MenuScreen extends Screen {
 	public void acceptQuests(DailyQuestPayloads.Catalog catalog) {
 		quests = catalog;
 		if (selected == 2) {
-			if (child instanceof DailyQuestScreen screen)
-				screen.accept(catalog);
+			if (child instanceof QuestPanel panel)
+				panel.accept(catalog);
 			else
 				selectTab(2);
 		}
@@ -73,7 +75,6 @@ public final class MenuScreen extends Screen {
 		if (selected == 3)
 			selectTab(3);
 	}
-
 
 	@Override
 	protected void init() {
@@ -89,54 +90,43 @@ public final class MenuScreen extends Screen {
 		paneY = y + 12;
 		paneWidth = panelWidth - 26;
 		paneHeight = panelHeight - 24;
-		if (child != null)
-			embedChild(child);
-	}
-
-	private static void embed(Screen screen, int x, int y, int width, int height) {
-		if (screen instanceof ServerBookScreen child)
-			child.embed(x, y, width, height);
-		else if (screen instanceof ShopScreen child)
-			child.embed(x, y, width, height);
-		else if (screen instanceof SignScreen child)
-			child.embed(x, y, width, height);
-		else if (screen instanceof DailyQuestScreen child)
-			child.embed(x, y, width, height);
-		else if (screen instanceof TitleScreen child)
-			child.embed(x, y, width, height);
-	}
-
-	private static int signRows() {
-		LocalDate first = LocalDate.now().withDayOfMonth(1);
-		int offset = first.getDayOfWeek().getValue() % 7;
-		return (offset + first.lengthOfMonth() + 6) / 7;
+		paneContext = new PanelContext(paneX - EMBED_INSET, paneY - EMBED_INSET, 1F);
+		layoutChild();
 	}
 
 	private void selectTab(int index) {
 		selected = index;
-		Screen previous = child;
+		Panel previous = child;
 		child = switch (index) {
-			case 0 -> new ServerBookScreen();
-			case 1 -> sign == null ? null : new SignScreen(sign);
-			case 2 -> quests == null ? null : new DailyQuestScreen(quests);
-			case 3 -> new ShopScreen();
-			case 4 -> titles == null ? null : new TitleScreen(titles);
+			case 0 -> new NoticePanel(Smp3Client.book(), true);
+			case 1 -> sign == null ? null : new SignPanel(sign, true);
+			case 2 -> quests == null ? null : new QuestPanel(quests, true);
+			case 3 -> new ShopPanel(Smp3Client.shop(), true);
+			case 4 -> titles == null ? null : new TitlePanel(titles, true);
 			default -> null;
 		};
 		if (previous != null && previous != child) {
-			if (previous instanceof ShopScreen shop)
+			if (previous instanceof ShopPanel shop)
 				shop.detachListeners();
 			else
-				previous.removed();
+				previous.close();
 		}
-		if (child != null)
-			embedChild(child);
+		layoutChild();
 	}
 
-	private void embedChild(Screen screen) {
-		childScale = 1F;
-		embed(screen, 0, 0, paneWidth + EMBED_INSET * 2, paneHeight + EMBED_INSET * 2);
+	private void layoutChild() {
+		if (child != null)
+			child.layout(new Rect(0, 0, paneWidth + EMBED_INSET * 2, paneHeight + EMBED_INSET * 2), paneContext);
 	}
+
+	@Override
+	public PanelContext context() { return paneContext; }
+
+	@Override
+	public void requestClose() { onClose(); }
+
+	@Override
+	public boolean usesNoticeWrapping() { return child instanceof NoticePanel; }
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
@@ -174,17 +164,11 @@ public final class MenuScreen extends Screen {
 			graphics.enableScissor(paneX, paneY, paneX + paneWidth, paneY + paneHeight);
 			graphics.pose().pushMatrix();
 			graphics.pose().translate(paneX - EMBED_INSET, paneY - EMBED_INSET);
-			graphics.pose().scale(childScale, childScale);
 			int virtualMouseX = (int)Math.round(mouseX - paneX + EMBED_INSET);
 			int virtualMouseY = (int)Math.round(mouseY - paneY + EMBED_INSET);
-			tooltipScale = childScale;
-			tooltipOriginX = paneX - EMBED_INSET;
-			tooltipOriginY = paneY - EMBED_INSET;
 			try {
-				child.extractRenderState(graphics, virtualMouseX, virtualMouseY, delta);
+				child.render(graphics, virtualMouseX, virtualMouseY, delta, paneContext);
 			} finally {
-				tooltipScale = 1;
-				tooltipOriginX = tooltipOriginY = 0;
 				graphics.pose().popMatrix();
 				graphics.disableScissor();
 			}
@@ -233,8 +217,10 @@ public final class MenuScreen extends Screen {
 		                            event.buttonInfo());
 	}
 
-	public static int tooltipX(double x) { return (int)Math.round(tooltipOriginX + x * tooltipScale); }
-	public static int tooltipY(double y) { return (int)Math.round(tooltipOriginY + y * tooltipScale); }
+	/** 旧的全屏 Screen 仍在使用；菜单内嵌已改用 PanelContext。 */
+	public static int tooltipX(double x) { return (int)Math.round(x); }
+
+	public static int tooltipY(double y) { return (int)Math.round(y); }
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
@@ -243,8 +229,7 @@ public final class MenuScreen extends Screen {
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-		return child != null ? child.mouseDragged(map(event), dx / childScale, dy / childScale)
-		                     : super.mouseDragged(event, dx, dy);
+		return child != null ? child.mouseDragged(map(event), dx, dy) : super.mouseDragged(event, dx, dy);
 	}
 
 	@Override
@@ -276,15 +261,13 @@ public final class MenuScreen extends Screen {
 	@Override
 	public void removed() {
 		if (child != null)
-			child.removed();
+			child.close();
 		if (Smp3Client.shop().session != 0)
 			Smp3Client.shop().close();
 	}
 
 	@Override
-	public boolean isPauseScreen() {
-		return false;
-	}
+	public boolean isPauseScreen() { return false; }
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {}

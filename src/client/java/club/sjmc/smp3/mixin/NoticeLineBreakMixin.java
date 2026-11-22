@@ -8,8 +8,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import club.sjmc.smp3.ui.ServerBookScreen;
 import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
+import club.sjmc.smp3.ui.widget.NoticeWrapHost;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Style;
@@ -30,7 +30,8 @@ abstract class NoticeLineBreakMixin {
 	@Inject(method = "<init>", at = @At("TAIL"))
 	private void noticeWrapping(CallbackInfo ci) {
 		var screen = Minecraft.getInstance().gui.screen();
-		smp3$notice = screen instanceof NoticeEditorScreen || screen instanceof ServerBookScreen;
+		smp3$notice = screen instanceof NoticeEditorScreen ||
+		              screen instanceof NoticeWrapHost host && host.usesNoticeWrapping();
 	}
 
 	@Inject(method = "accept", at = @At("HEAD"))
