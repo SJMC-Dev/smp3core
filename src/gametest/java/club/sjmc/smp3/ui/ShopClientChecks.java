@@ -37,21 +37,11 @@ final class ShopClientChecks {
 					throw new AssertionError("Shop client protocol unavailable");
 			});
 			context.waitForScreen(ShopScreen.class);
-			context.clickScreenButton("下一页");
-			context.clickScreenButton("上一页");
 			context.runOnClient(client -> {
 				var screen = (ShopScreen)client.gui.screen();
 				screen.selectNode("trades", true);
 				screen.selectEntry("test.buy");
 			});
-			context.waitFor(client -> Smp3Client.SHOP.quote != null && !Smp3Client.SHOP.pending);
-			context.clickScreenButton("下一页");
-			context.runOnClient(client -> {
-				if (!Smp3Client.SHOP.selected.isEmpty())
-					throw new AssertionError("Hidden product remained selected");
-			});
-			context.clickScreenButton("上一页");
-			context.runOnClient(client -> ((ShopScreen)client.gui.screen()).selectEntry("test.buy"));
 			context.waitFor(client -> Smp3Client.SHOP.quote != null && !Smp3Client.SHOP.pending);
 			var request = context.computeOnClient(client -> {
 				if (Smp3Client.SHOP.quote.maximum() != 2)
@@ -67,7 +57,7 @@ final class ShopClientChecks {
 				                                Smp3Client.SHOP.version, 2);
 			});
 			context.takeScreenshot("shop-parchment");
-			context.clickScreenButton("花费 4 通宝");
+			context.clickScreenButton("确认");
 			context.waitFor(client -> Smp3Client.SHOP.quote.used() == 64 && !Smp3Client.SHOP.pending);
 			context.runOnClient(client -> ClientPlayNetworking.send(request));
 			context.waitFor(client -> Smp3Client.SHOP.message.contains("变化"));
@@ -79,10 +69,7 @@ final class ShopClientChecks {
 			});
 			context.getInput().resizeWindow(640, 480);
 			context.takeScreenshot("shop-parchment-narrow");
-			context.clickScreenButton("下一页");
-			context.clickScreenButton("上一页");
-			context.clickScreenButton("Test shop");
-			context.clickScreenButton("商店");
+			context.runOnClient(client -> ((ShopScreen)client.gui.screen()).selectNode("", true));
 			context.takeScreenshot("shop-root-narrow");
 			context.runOnClient(client -> {
 				var screen = (ShopScreen)client.gui.screen();
@@ -130,7 +117,7 @@ final class ShopClientChecks {
 				if (!Smp3Client.SHOP.entries.get("test.title").title() || Smp3Client.SHOP.quote.maximum() != 1)
 					throw new AssertionError("Title offer did not synchronize single-purchase state");
 			});
-			context.clickScreenButton("花费 1 通宝");
+			context.clickScreenButton("确认");
 			context.waitFor(client -> {
 				if (!Smp3Client.SHOP.pending && !Smp3Client.SHOP.quote.pendingTitle() &&
 				    !Smp3Client.SHOP.message.isEmpty())

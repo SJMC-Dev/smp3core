@@ -64,7 +64,9 @@ final class ShopState {
 		message = "";
 		if (!entries.containsKey(selected))
 			selected = "";
-		pendingOpen = true;
+		pendingOpen = payload.open();
+		if (Minecraft.getInstance().gui.screen() instanceof MenuScreen menu)
+			menu.shopReady();
 	}
 	void accept(ShopPayloads.State payload) {
 		if (payload.session() != session || !payload.entry().equals(selected) || payload.version() <= version)
@@ -73,8 +75,11 @@ final class ShopState {
 		quote = payload.quote();
 		message = payload.message();
 		pending = false;
-		if (Minecraft.getInstance().gui.screen() instanceof ShopScreen screen)
-			screen.stateChanged();
+		var screen = Minecraft.getInstance().gui.screen();
+		if (screen instanceof ShopScreen shop)
+			shop.stateChanged();
+		else if (screen instanceof MenuScreen menu)
+			menu.shopStateChanged();
 	}
 	void select(String id) {
 		selected = id;

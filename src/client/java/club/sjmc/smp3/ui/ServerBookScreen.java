@@ -16,6 +16,8 @@ import net.minecraft.network.chat.Component;
 public final class ServerBookScreen extends Screen {
 	private static final int INK = PaperStyle.INK, MUTED = PaperStyle.MUTED;
 	private static final int TWO_COLUMN_WIDTH = 360;
+	private static final float TITLE_SCALE = BookText.TEXT_SCALE * 1.2F;
+	private static final int TITLE_BODY_GAP = 4;
 	private final ServerBookState state = Smp3Client.BOOK;
 	private int x, y, bookWidth, bookHeight, sidebar, bodyTop, bodyBottom, listScroll, textScroll, headerExtra;
 	private boolean narrow, detail, subscribed;
@@ -27,6 +29,8 @@ public final class ServerBookScreen extends Screen {
 	private Button acknowledge;
 	private PaperStyle.Scrollbar draggedScrollbar;
 	private boolean draggingList;
+	private boolean embedded;
+	private int originX, originY;
 	private double scrollGrab;
 	private long lastFrame = System.nanoTime();
 
@@ -40,6 +44,13 @@ public final class ServerBookScreen extends Screen {
 	void contentChanged() {
 		if (minecraft != null)
 			rebuildWidgets();
+	}
+
+	void embed(int originX, int originY, int width, int height) {
+		this.originX = originX;
+		this.originY = originY;
+		this.embedded = true;
+		init(width, height);
 	}
 
 	@Override
@@ -56,17 +67,24 @@ public final class ServerBookScreen extends Screen {
 			state.request(NoticePayloads.Action.OPEN, "", "");
 			subscribed = true;
 		}
-		int horizontalMargin = Math.clamp((width - TWO_COLUMN_WIDTH) / 2, 8, 16);
-		int verticalMargin = Math.clamp((height - 240) / 2, 8, 16);
-		bookWidth = Math.min(600, width - 2 * horizontalMargin);
-		bookHeight = Math.min(354, height - 2 * verticalMargin);
-		x = (width - bookWidth) / 2;
-		y = (height - bookHeight) / 2;
-		narrow = bookWidth < TWO_COLUMN_WIDTH;
+		if (embedded) {
+			bookWidth = width;
+			bookHeight = height;
+			x = originX;
+			y = originY;
+		} else {
+			int horizontalMargin = Math.clamp((width - TWO_COLUMN_WIDTH) / 2, 8, 16);
+			int verticalMargin = Math.clamp((height - 240) / 2, 8, 16);
+			bookWidth = Math.min(600, width - 2 * horizontalMargin);
+			bookHeight = Math.min(354, height - 2 * verticalMargin);
+			x = originX + (width - bookWidth) / 2;
+			y = originY + (height - bookHeight) / 2;
+		}
+		narrow = !embedded && bookWidth < TWO_COLUMN_WIDTH;
 		sidebar = narrow ? bookWidth - 28 : Math.min(174, bookWidth / 3);
-		headerExtra = bookWidth - 64 < font.width(state.title) + 24 + Smp3Client.BALANCES.width() ? 22 : 0;
-		bodyTop = y + 73 + headerExtra;
-		bodyBottom = y + bookHeight - 24;
+		headerExtra = embedded ? 0 : bookWidth - 64 < font.width(state.title) + 24 + Smp3Client.BALANCES.width() ? 22 : 0;
+		bodyTop = y + (embedded ? 34 : 73 + headerExtra);
+		bodyBottom = y + bookHeight - (embedded ? 8 : 24);
 		entries = IntStream.range(0, state.messages.size())
 		              .filter(i
 		                      -> state.category == 0 ||
@@ -82,15 +100,16 @@ public final class ServerBookScreen extends Screen {
 		int tabs = Math.clamp((sidebar - 16) / minTabWidth, 1, 4);
 		if (state.categories.size() > tabs)
 			tabs = Math.clamp((sidebar - 36) / minTabWidth, 1, 4);
-		int tabsPerPage = Math.min(tabs, state.categories.size());
+		int tabsPerPage = Math.min(tabs, Math.max(1, state.categories.size()));
 		int pages = (state.categories.size() + tabsPerPage - 1) / tabsPerPage;
-		categoryStart = Math.min(categoryStart / tabsPerPage, pages - 1) * tabsPerPage;
+		categoryStart = Math.min(categoryStart / tabsPerPage, Math.max(0, pages - 1)) * tabsPerPage;
 		int tabWidth = (sidebar - 16 - (pages > 1 ? 20 : 0)) / tabsPerPage;
+		int tabTop = y + (embedded ? 12 : 46 + headerExtra);
 		if (!narrow || !detail) {
 			for (int i = categoryStart; i < Math.min(state.categories.size(), categoryStart + tabsPerPage); i++) {
 				int category = i;
 				String label = state.categories.get(i).name();
-				var button = new PaperButton(x + 22 + (i - categoryStart) * tabWidth, y + 46 + headerExtra,
+				var button = new PaperButton(x + 22 + (i - categoryStart) * tabWidth, tabTop,
 				                             tabWidth - 2, label, true, () -> {
 					                             state.category = category;
 					                             listScroll = 0;
@@ -101,14 +120,14 @@ public final class ServerBookScreen extends Screen {
 				addRenderableWidget(button);
 			}
 			if (pages > 1)
-				addRenderableWidget(new PaperButton(x + sidebar - 14, y + 46 + headerExtra, 18, "›", true, () -> {
+				addRenderableWidget(new PaperButton(x + sidebar - 14, tabTop, 18, "›", true, () -> {
 					categoryStart = (categoryStart / tabsPerPage + 1) % pages * tabsPerPage;
 					rebuildWidgets();
 				}));
 		}
 
 		if (narrow && detail)
-			addRenderableWidget(new PaperButton(x + 22, y + 46 + headerExtra, 78, "返回目录", false, () -> {
+			addRenderableWidget(new PaperButton(x + 22, tabTop, 78, "返回目录", false, () -> {
 				detail = false;
 				rebuildWidgets();
 			}));
@@ -125,7 +144,20 @@ public final class ServerBookScreen extends Screen {
 
 	private int contentLeft() { return narrow ? x + 26 : x + sidebar + 34; }
 	private int contentWidth() { return x + bookWidth - 28 - contentLeft(); }
-	private int contentTop() { return (narrow ? bodyTop : y + 50 + headerExtra) + 22; }
+	private int contentTop() {
+		if (narrow)
+			return bodyTop;
+		return embedded ? y + 30 : y + 50 + headerExtra + 22;
+	}
+	private static Component boldTitle(String text) { return Component.literal(text).withStyle(style -> style.withBold(true)); }
+	private Component boldTitle(String text, int maxWidth) {
+		if (font.width(boldTitle(text)) <= maxWidth)
+			return boldTitle(text);
+		int end = text.length();
+		while (end > 0 && font.width(boldTitle(text.substring(0, end))) > maxWidth)
+			end--;
+		return boldTitle(text.substring(0, end));
+	}
 
 	private void updateAcknowledgement() {
 		acknowledge.visible =
@@ -141,15 +173,21 @@ public final class ServerBookScreen extends Screen {
 		long now = System.nanoTime();
 		float seconds = Math.min(.05F, (now - lastFrame) / 1e9F);
 		lastFrame = now;
-		graphics.fill(0, 0, width, height, 0x66000000);
-		PaperStyle.frame(graphics, x, y, bookWidth, bookHeight);
-		graphics.text(font, font.plainSubstrByWidth(state.title, bookWidth - 44), x + 22, y + 28, INK, false);
-		Smp3Client.BALANCES.render(graphics, x + bookWidth - 42, y + (headerExtra == 0 ? 22 : 44),
-		                           bookWidth - 64 - (headerExtra == 0 ? font.width(state.title) + 24 : 0), seconds);
-		graphics.horizontalLine(x + 20, x + bookWidth - 20, y + 41 + headerExtra, 0xFFB7A17D);
+		if (!embedded) {
+			graphics.fill(0, 0, width, height, 0x66000000);
+			PaperStyle.frame(graphics, x, y, bookWidth, bookHeight);
+		}
+		if (!embedded) {
+			graphics.text(font, font.plainSubstrByWidth(state.title, bookWidth - 44), x + 22, y + 28, INK, false);
+			Smp3Client.BALANCES.render(graphics, x + bookWidth - 42, y + (headerExtra == 0 ? 22 : 44),
+			                           bookWidth - 64 - (headerExtra == 0 ? font.width(state.title) + 24 : 0),
+			                           seconds);
+			graphics.horizontalLine(x + 20, x + bookWidth - 20, y + 41 + headerExtra, 0xFFB7A17D);
+		}
 		if (!narrow) {
-			graphics.fill(x + sidebar + 14, y + 47 + headerExtra, x + sidebar + 16, bodyBottom, 0x66836B48);
-			graphics.fill(x + sidebar + 16, y + 47 + headerExtra, x + sidebar + 19, bodyBottom, 0x22765A37);
+			int dividerTop = embedded ? y + 12 : y + 47 + headerExtra;
+			graphics.fill(x + sidebar + 14, dividerTop, x + sidebar + 16, bodyBottom, 0x66836B48);
+			graphics.fill(x + sidebar + 16, dividerTop, x + sidebar + 19, bodyBottom, 0x22765A37);
 		}
 		if (!narrow || !detail)
 			drawList(graphics, mouseX, mouseY);
@@ -195,14 +233,21 @@ public final class ServerBookScreen extends Screen {
 			return;
 		var message = state.messages.get(state.selected);
 		int left = contentLeft();
-		int top = contentTop(), bottom = bodyBottom - (message.acknowledgement() ? 30 : 0);
+		int titleTop = contentTop();
+		int top = titleTop + TITLE_BODY_GAP, bottom = bodyBottom - (message.acknowledgement() ? 30 : 0);
 		int dateWidth = font.width(message.date());
 		int headerWidth = (int)(contentWidth() / BookText.TEXT_SCALE);
-		int titleWidth = headerWidth - (dateWidth == 0 ? 0 : dateWidth + 12);
+		int titleWidth = (int)((contentWidth() - (dateWidth == 0 ? 0 : dateWidth + 12)) / TITLE_SCALE);
+		int headerTop = titleTop - 18 + 4;
+		float titleHeight = font.lineHeight * TITLE_SCALE, dateHeight = font.lineHeight * BookText.TEXT_SCALE;
 		graphics.pose().pushMatrix();
-		graphics.pose().translate(left, top - 18);
+		graphics.pose().translate(left, headerTop);
+		graphics.pose().scale(TITLE_SCALE, TITLE_SCALE);
+		graphics.text(font, boldTitle(message.title(), titleWidth), 0, 0, INK, false);
+		graphics.pose().popMatrix();
+		graphics.pose().pushMatrix();
+		graphics.pose().translate(left, headerTop + titleHeight - dateHeight);
 		graphics.pose().scale(BookText.TEXT_SCALE, BookText.TEXT_SCALE);
-		graphics.text(font, font.plainSubstrByWidth(message.title(), titleWidth), 0, 0, INK, false);
 		graphics.text(font, message.date(), headerWidth - dateWidth, 0, MUTED, false);
 		graphics.pose().popMatrix();
 		var body = state.bodies.get(message.id());
@@ -232,7 +277,8 @@ public final class ServerBookScreen extends Screen {
 			var listBar = new PaperStyle.Scrollbar(x + sidebar + 5, bodyTop, bodyBottom, entries.size() * 40);
 			int bottom = bodyBottom - (acknowledge.visible ? 30 : 0);
 			var textBar =
-			    new PaperStyle.Scrollbar(contentLeft() + contentWidth() - 3, contentTop(), bottom, textLayout.height());
+			    new PaperStyle.Scrollbar(contentLeft() + contentWidth() - 3, contentTop() + TITLE_BODY_GAP, bottom,
+			                            textLayout.height());
 			draggingList = (!narrow || !detail) && listBar.contains(event.x(), event.y());
 			if (draggingList || (!narrow || detail) && !entries.isEmpty() && textBar.contains(event.x(), event.y())) {
 				draggedScrollbar = draggingList ? listBar : textBar;
@@ -285,7 +331,7 @@ public final class ServerBookScreen extends Screen {
 		if ((!narrow || !detail) && mouseY >= bodyTop && mouseX >= x + 22 && mouseX < x + sidebar + 7)
 			listScroll = Math.clamp(listScroll - (int)(vertical * 28), 0,
 			                        Math.max(0, entries.size() * 40 - (bodyBottom - bodyTop)));
-		else if ((!narrow || detail) && mouseY >= contentTop() && mouseX >= contentLeft() &&
+		else if ((!narrow || detail) && mouseY >= contentTop() + TITLE_BODY_GAP && mouseX >= contentLeft() &&
 		         mouseX < contentLeft() + contentWidth())
 			textScroll = Math.max(0, textScroll - (int)(vertical * 28));
 		else

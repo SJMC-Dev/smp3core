@@ -9,10 +9,14 @@ import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.Smp3Core;
+import club.sjmc.smp3.daily.DailyQuestPayloads;
 import club.sjmc.smp3.daily.QuestHudPayload;
 import club.sjmc.smp3.economy.BalanceSync;
+import club.sjmc.smp3.menu.MenuPayloads;
 import club.sjmc.smp3.notice.NoticePayloads;
 import club.sjmc.smp3.shop.ShopPayloads;
+import club.sjmc.smp3.sign.SignPayloads;
+import club.sjmc.smp3.title.TitlePayloads;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -61,11 +65,43 @@ public final class Smp3Client implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Catalog.TYPE,
 		                                            (catalog, context) -> BOOK.accept(catalog));
 		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Body.TYPE, (body, context) -> BOOK.accept(body));
+		ClientPlayNetworking.registerGlobalReceiver(SignPayloads.State.TYPE, (state, context) -> {
+			var client = context.client();
+			if (state.open())
+				client.gui.setScreen(new SignScreen(state));
+			else if (client.gui.screen() instanceof MenuScreen menu)
+				menu.acceptSign(state);
+			else if (client.gui.screen() instanceof SignScreen screen)
+				screen.accept(state);
+		});
+		ClientPlayNetworking.registerGlobalReceiver(TitlePayloads.Catalog.TYPE, (catalog, context) -> {
+			var client = context.client();
+			if (catalog.open())
+				client.gui.setScreen(new TitleScreen(catalog));
+			else if (client.gui.screen() instanceof MenuScreen menu)
+				menu.acceptTitles(catalog);
+		});
+		ClientPlayNetworking.registerGlobalReceiver(DailyQuestPayloads.Catalog.TYPE, (catalog, context) -> {
+			var client = context.client();
+			if (catalog.open())
+				client.gui.setScreen(new DailyQuestScreen(catalog));
+			else if (client.gui.screen() instanceof MenuScreen menu)
+				menu.acceptQuests(catalog);
+			else if (client.gui.screen() instanceof DailyQuestScreen screen)
+				screen.accept(catalog);
+		});
+		ClientPlayNetworking.registerGlobalReceiver(MenuPayloads.Open.TYPE, (payload, context) -> {
+			var client = context.client();
+			if (client.player != null)
+				client.gui.setScreen(new MenuScreen());
+		});
 		ClientPlayNetworking.registerGlobalReceiver(BalanceSync.Payload.TYPE, (balance, context) -> {
 			BALANCES.accept(balance);
 			if (context.client().gui.screen() instanceof ServerBookScreen screen)
 				screen.contentChanged();
 			else if (context.client().gui.screen() instanceof ShopScreen screen)
+				screen.balancesChanged();
+			else if (context.client().gui.screen() instanceof MenuScreen screen)
 				screen.balancesChanged();
 		});
 		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("smp3", "main"));
@@ -99,14 +135,19 @@ public final class Smp3Client implements ClientModInitializer {
 		KeyMapping settings = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.hud_settings", InputConstants.UNKNOWN.getValue(), category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			if (SHOP.pendingOpen && client.player != null && client.level != null &&
-			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||
-			     client.gui.screen() instanceof ServerBookScreen || client.gui.screen() instanceof ShopScreen)) {
-				SHOP.pendingOpen = false;
-				if (client.gui.screen() instanceof ShopScreen screen)
-					screen.catalogChanged();
-				else
-					client.gui.setScreen(new ShopScreen());
+			if (SHOP.pendingOpen && client.player != null && client.level != null) {
+				if (client.gui.screen() instanceof MenuScreen menu) {
+					SHOP.pendingOpen = false;
+					menu.shopReady();
+				} else if (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||
+				           client.gui.screen() instanceof ServerBookScreen ||
+				           client.gui.screen() instanceof ShopScreen) {
+					SHOP.pendingOpen = false;
+					if (client.gui.screen() instanceof ShopScreen screen)
+						screen.catalogChanged();
+					else
+						client.gui.setScreen(new ShopScreen());
+				}
 			}
 			if (pendingEditor != null && client.player != null && client.level != null &&
 			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||

@@ -21,7 +21,7 @@ public final class SignCommand {
 				    context.getSource().sendFailure(Component.literal("只有玩家可以使用 /smp3 sign"));
 				    return 0;
 			    }
-			    SignGui.open(player);
+			    SignView.open(player);
 			    return 1;
 		    })
 		    .then(Commands.literal("reload")

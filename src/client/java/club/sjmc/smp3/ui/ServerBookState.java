@@ -67,8 +67,11 @@ final class ServerBookState {
 	}
 
 	private void refreshScreen() {
-		if (Minecraft.getInstance().gui.screen() instanceof ServerBookScreen screen)
-			screen.contentChanged();
+		var screen = Minecraft.getInstance().gui.screen();
+		if (screen instanceof ServerBookScreen book)
+			book.contentChanged();
+		else if (screen instanceof MenuScreen menu)
+			menu.noticeChanged();
 	}
 
 	void request(NoticePayloads.Action action, String id, String revision) {

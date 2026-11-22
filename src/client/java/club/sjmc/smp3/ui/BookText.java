@@ -16,6 +16,7 @@ final class BookText {
 	static final float TEXT_SCALE = .85F;
 	private static final Pattern INLINE = Pattern.compile("\\*\\*(.+?)\\*\\*|`([^`]+)`|\\[([^\\]]+)\\]\\(([^)]+)\\)");
 	private static final Pattern LIST = Pattern.compile("^([ \\t]*)-[ \\t]+");
+	private static final Pattern NUMBERED = Pattern.compile("^([ \\t]*\\d+[.)、])[ \\t]+");
 	private BookText() {}
 
 	static Layout layout(NoticePayloads.Body body, Font font, int width) {
@@ -25,6 +26,7 @@ final class BookText {
 			float scale = TEXT_SCALE;
 			MutableComponent text;
 			if (!body.markdown()) {
+				line = NUMBERED.matcher(line).replaceFirst("$1\u00A0");
 				text = Component.literal(line);
 			} else {
 				boolean heading = line.matches("#{1,4} .*");
@@ -36,8 +38,10 @@ final class BookText {
 						default -> 1.125F;
 					};
 					line = line.substring(line.indexOf(' ') + 1);
-				} else
-					line = LIST.matcher(line).replaceFirst("$1• ");
+				} else {
+					line = LIST.matcher(line).replaceFirst("$1•\u00A0");
+					line = NUMBERED.matcher(line).replaceFirst("$1\u00A0");
+				}
 				text = inline(line);
 				if (heading)
 					text.withStyle(style -> style.withBold(true).withColor(0x6B4326));

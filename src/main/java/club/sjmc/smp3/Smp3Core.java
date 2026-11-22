@@ -6,10 +6,13 @@ import org.slf4j.LoggerFactory;
 import club.sjmc.smp3.config.ServerConfig;
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.ui.DailyQuestCommand;
+import club.sjmc.smp3.daily.ui.DailyQuestView;
 import club.sjmc.smp3.economy.Smp3EconomyProvider;
 import club.sjmc.smp3.gacha.GachaModule;
 import club.sjmc.smp3.gacha.ui.GachaCommand;
 import club.sjmc.smp3.item.Smp3Items;
+import club.sjmc.smp3.menu.ui.MenuCommand;
+import club.sjmc.smp3.menu.ui.MenuView;
 import club.sjmc.smp3.milestone.MilestoneModule;
 import club.sjmc.smp3.milestone.ui.RewardCommand;
 import club.sjmc.smp3.notice.NoticeModule;
@@ -19,6 +22,8 @@ import club.sjmc.smp3.shop.ui.ShopCommand;
 import club.sjmc.smp3.sign.SignModule;
 import club.sjmc.smp3.sign.ui.SignCommand;
 import club.sjmc.smp3.time.ServerDates;
+import club.sjmc.smp3.title.TitlePayloads;
+import club.sjmc.smp3.title.ui.TitleCommand;
 import club.sjmc.smp3.ui.HudSettingsPayload;
 import club.sjmc.smp3.watchdog.WatchdogModule;
 import club.sjmc.smp3.watchdog.ui.SmpPerfCommand;
@@ -53,10 +58,13 @@ public final class Smp3Core implements ModInitializer {
 		Smp3EconomyProvider.register();
 
 		DailyQuestModule.register();
+		DailyQuestView.register();
+		MenuView.register();
 		WatchdogModule.register();
 		NoticeModule.register();
 		GachaModule.register();
 		PayloadTypeRegistry.clientboundPlay().register(HudSettingsPayload.TYPE, HudSettingsPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(TitlePayloads.Catalog.TYPE, TitlePayloads.Catalog.CODEC);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			var root =
@@ -64,6 +72,8 @@ public final class Smp3Core implements ModInitializer {
 			        .then(ShopCommand.command())
 			        .then(GachaCommand.command())
 			        .then(SignCommand.command())
+			        .then(TitleCommand.command())
+			        .then(MenuCommand.command())
 			        .then(RewardCommand.command())
 			        .then(SmpPerfCommand.command())
 			        .then(NoticeCommand.command())

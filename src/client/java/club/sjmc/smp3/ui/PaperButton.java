@@ -17,11 +17,12 @@ final class PaperButton extends Button {
 	@Override
 	protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		boolean selected = tab && !active;
-		boolean highlighted = active && isHoveredOrFocused();
+		boolean hovered = mouseX >= getX() && mouseX < getRight() && mouseY >= getY() && mouseY < getBottom();
+		boolean highlighted = active && (hovered || isHoveredOrFocused());
 		int border = selected || highlighted ? 0xFF8C5D38 : 0xFFB7A17D;
 		graphics.fill(getX(), getY(), getRight(), getBottom(),
 		              selected      ? 0xCCD4BC91
-		              : highlighted ? 0xCCE6D2AA
+		              : highlighted ? 0xDDE8D6B4
 		                            : 0x55EBDDBF);
 		if (tab) {
 			graphics.horizontalLine(getX(), getRight() - 1, getBottom() - 1, border);

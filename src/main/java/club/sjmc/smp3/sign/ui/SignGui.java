@@ -149,7 +149,7 @@ public final class SignGui extends SimpleGui {
 		refresh();
 	}
 
-	private static Component message(SignService.Outcome result) {
+	public static Component message(SignService.Outcome result) {
 		String label = (result.month().isEmpty() ? "累计 " : result.month() + " 月累计 ") + result.days() + " 天";
 		return switch (result.status()) {
 			case DATE_CHANGED -> GuiStyle.text("签到日期已更新，请重新操作", GuiStyle.ACTIVE);

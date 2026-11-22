@@ -26,7 +26,7 @@ public final class DailyQuestCommand {
 
 	public static void register(LiteralArgumentBuilder<CommandSourceStack> root) {
 		var command = Commands.literal("dailyquest")
-		                  .executes(context -> DailyQuestGui.show(context.getSource().getPlayerOrException()) ? 1 : 0)
+		                  .executes(context -> DailyQuestView.open(context.getSource().getPlayerOrException()) ? 1 : 0)
 		                  .then(Commands.argument("player", EntityArgument.player())
 		                            .requires(DailyQuestCommand::mayReset)
 		                            .then(operation("reset"))
