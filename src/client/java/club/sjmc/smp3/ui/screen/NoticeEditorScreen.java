@@ -7,7 +7,8 @@ import java.util.List;
 import club.sjmc.smp3.notice.NoticeCatalog;
 import club.sjmc.smp3.notice.NoticeEditing;
 import club.sjmc.smp3.notice.NoticePayloads;
-import club.sjmc.smp3.ui.ServerBookScreen;
+import club.sjmc.smp3.ui.Smp3Client;
+import club.sjmc.smp3.ui.panel.NoticePanel;
 import club.sjmc.smp3.ui.themes.PaperStyle;
 import club.sjmc.smp3.ui.widget.BookText;
 import club.sjmc.smp3.ui.widget.PaperButton;
@@ -217,7 +218,7 @@ public final class NoticeEditorScreen extends Screen {
 		publishing = false;
 		confirmDelete = false;
 		if (payload.message().isEmpty()) {
-			minecraft.gui.setScreen(new ServerBookScreen());
+			minecraft.gui.setScreen(new PanelScreen(new NoticePanel(Smp3Client.book())));
 		} else {
 			status = payload.message();
 			rebuildWidgets();

@@ -103,8 +103,6 @@ public final class Smp3Client implements ClientModInitializer {
 				client.gui.setScreen(new PanelScreen(new SignPanel(state)));
 			else if (client.gui.screen() instanceof MenuScreen menu)
 				menu.acceptSign(state);
-			else if (client.gui.screen() instanceof SignScreen screen)
-				screen.accept(state);
 		});
 		ClientPlayNetworking.registerGlobalReceiver(TitlePayloads.Catalog.TYPE, (catalog, context) -> {
 			var client = context.client();
@@ -119,8 +117,6 @@ public final class Smp3Client implements ClientModInitializer {
 				client.gui.setScreen(new PanelScreen(new QuestPanel(catalog)));
 			else if (client.gui.screen() instanceof MenuScreen menu)
 				menu.acceptQuests(catalog);
-			else if (client.gui.screen() instanceof DailyQuestScreen screen)
-				screen.accept(catalog);
 		});
 		ClientPlayNetworking.registerGlobalReceiver(MenuPayloads.Open.TYPE, (payload, context) -> {
 			var client = context.client();
@@ -170,8 +166,6 @@ public final class Smp3Client implements ClientModInitializer {
 					if (screen instanceof PanelScreen panelScreen &&
 					    panelScreen.panel() instanceof ShopPanel shop)
 						shop.catalogChanged();
-					else if (screen instanceof ShopScreen shop)
-						shop.catalogChanged();
 					else
 						client.gui.setScreen(new PanelScreen(new ShopPanel(SHOP)));
 				}
@@ -220,14 +214,13 @@ public final class Smp3Client implements ClientModInitializer {
 
 	private static boolean noticeScreenOpen(Minecraft client) {
 		var screen = client.gui.screen();
-		return screen == null || screen instanceof ChatScreen || screen instanceof ServerBookScreen ||
+		return screen == null || screen instanceof ChatScreen ||
 		    screen instanceof PanelScreen panelScreen && panelScreen.panel() instanceof NoticePanel;
 	}
 
 	private static boolean shopScreenOpen(Minecraft client) {
 		var screen = client.gui.screen();
-		return screen == null || screen instanceof ChatScreen || screen instanceof ServerBookScreen ||
-		    screen instanceof ShopScreen ||
+		return screen == null || screen instanceof ChatScreen ||
 		    screen instanceof PanelScreen panelScreen && panelScreen.panel() instanceof ShopPanel;
 	}
 

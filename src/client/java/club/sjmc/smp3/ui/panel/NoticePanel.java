@@ -189,6 +189,24 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 	@Override
 	public void currencyChanged() { contentChanged(); }
 
+	public boolean acknowledgeVisible() { return acknowledge != null && acknowledge.visible; }
+
+	public void acknowledge() {
+		state.displayed(state.selected, true);
+		updateAcknowledgement();
+	}
+
+	public void selectCategory(String name) {
+		for (int i = 0; i < state.categories.size(); i++)
+			if (state.categories.get(i).name().equals(name)) {
+				state.category = i;
+				listScroll.setScroll(0);
+				textScroll.setScroll(0);
+				onLayout();
+				return;
+			}
+	}
+
 	@Override
 	public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, PanelContext context) {
 		long now = System.nanoTime();

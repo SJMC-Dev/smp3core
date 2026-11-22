@@ -216,6 +216,13 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		onLayout();
 	}
 
+	public EditBox quantityInput() { return batches; }
+
+	public void confirmTrade() {
+		state.trade(count());
+		stateChanged();
+	}
+
 	private int count() {
 		try {
 			return Integer.parseInt(quantity);

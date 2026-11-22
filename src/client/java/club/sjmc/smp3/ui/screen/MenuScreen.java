@@ -217,11 +217,6 @@ public final class MenuScreen extends Screen implements PanelHost, NoticeWrapHos
 		                            event.buttonInfo());
 	}
 
-	/** 旧的全屏 Screen 仍在使用；菜单内嵌已改用 PanelContext。 */
-	public static int tooltipX(double x) { return (int)Math.round(x); }
-
-	public static int tooltipY(double y) { return (int)Math.round(y); }
-
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
 		return child != null ? child.mouseReleased(map(event)) : super.mouseReleased(event);
