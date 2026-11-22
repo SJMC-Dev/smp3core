@@ -92,10 +92,12 @@ public final class NoticeEditorScreen extends Screen {
 			String[] tabs = {"信息", "正文", "预览"};
 			for (int i = 0; i < tabs.length; i++) {
 				int selected = i;
-				addRenderableWidget(new PaperButton(left + i * 70, y + 28, 64, tabs[i], true, () -> {
+				PaperButton button = addRenderableWidget(new PaperButton(left + i * 70, y + 28, 64, tabs[i], true, () -> {
 					tab = selected;
 					rebuildWidgets();
-				})).active = tab != i;
+				}));
+				button.setSelected(tab == i);
+				button.active = tab != i;
 			}
 		}
 		if (!narrow || tab == 1)
@@ -267,7 +269,7 @@ public final class NoticeEditorScreen extends Screen {
 			int left = x + 16 + (i % 2) * (half + 8), top = y + (narrow ? 50 : 24) + (i / 2) * 32;
 			graphics.text(font, labels[i], left, top, 0xFF827058, false);
 			graphics.horizontalLine(left, left + (i == 4 ? Math.min(108, (panelWidth - 32) / 3) : half), top + 29,
-			                        0xFFB7A17D);
+			                        PaperStyle.LINE);
 		}
 		if (!narrow || tab == 2) {
 			if (!body.equals(renderedBody) || renderedWidth != previewWidth || renderedMarkdown != markdown) {

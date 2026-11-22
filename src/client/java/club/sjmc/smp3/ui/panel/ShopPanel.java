@@ -51,7 +51,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	private record TreeRow(ShopPayloads.Node node, int depth, boolean children) {}
 	private final List<TreeRow> tree = new ArrayList<>();
 	private int panelX, panelY, panelWidth, panelHeight, sidebar, contentLeft, contentWidth, bodyTop, bodyBottom,
-	    treeTop, treeBottom, headerExtra, gridMax, gridContent, modalX, modalY, modalWidth;
+	    treeTop, treeBottom, headerExtra, gridContent, modalX, modalY, modalWidth;
 	private final ScrollView treeScroll = new ScrollView();
 	private final ScrollView gridScroll = new ScrollView();
 	private String current = "", quantity = "1";
@@ -183,7 +183,6 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		int count = childNodes().size() + entries().size();
 		int rows = (count + columns - 1) / columns;
 		gridContent = Math.max(0, rows * (cell + GRID_GAP) - GRID_GAP);
-		gridMax = Math.max(0, gridContent - (bodyBottom - bodyTop));
 		gridScroll.layout(bodyTop, bodyBottom, gridContent);
 	}
 
@@ -405,7 +404,6 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		int rows = (size + columns - 1) / columns;
 		int contentHeight = Math.max(0, rows * (cell + GRID_GAP) - GRID_GAP);
 		gridContent = contentHeight;
-		gridMax = Math.max(0, contentHeight - (bodyBottom - bodyTop));
 		gridScroll.layout(bodyTop, bodyBottom, gridContent);
 		if (size == 0) {
 			graphics.text(font, "暂无商品", contentLeft, bodyTop + 12, PaperStyle.MUTED, false);

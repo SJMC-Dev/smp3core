@@ -133,6 +133,7 @@ public final class ServerBookScreen extends Screen implements ServerBookState.Li
 					                             textScroll.setScroll(0);
 					                             rebuildWidgets();
 				                             });
+				button.setSelected(state.category == i);
 				button.active = state.category != i;
 				addRenderableWidget(button);
 			}
@@ -199,7 +200,7 @@ public final class ServerBookScreen extends Screen implements ServerBookState.Li
 			Smp3Client.currencyHud().render(graphics, x + bookWidth - 42, y + (headerExtra == 0 ? 22 : 44),
 			                           bookWidth - 64 - (headerExtra == 0 ? font.width(state.title) + 24 : 0),
 			                           seconds);
-			graphics.horizontalLine(x + 20, x + bookWidth - 20, y + 41 + headerExtra, 0xFFB7A17D);
+			graphics.horizontalLine(x + 20, x + bookWidth - 20, y + 41 + headerExtra, PaperStyle.LINE);
 		}
 		if (!narrow) {
 			int dividerTop = embedded ? y + 12 : y + 47 + headerExtra;

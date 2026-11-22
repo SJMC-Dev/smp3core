@@ -117,6 +117,7 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 					                                                textScroll.setScroll(0);
 					                                                onLayout();
 				                                                }));
+				button.setSelected(state.category == i);
 				button.active = state.category != i;
 			}
 			if (pages > 1)
@@ -202,7 +203,7 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 			Smp3Client.currencyHud().render(graphics, panelX + bookWidth - 42, panelY + (headerExtra == 0 ? 22 : 44),
 			                                bookWidth - 64 - (headerExtra == 0 ? font.width(state.title) + 24 : 0),
 			                                seconds);
-			graphics.horizontalLine(panelX + 20, panelX + bookWidth - 20, panelY + 41 + headerExtra, 0xFFB7A17D);
+			graphics.horizontalLine(panelX + 20, panelX + bookWidth - 20, panelY + 41 + headerExtra, PaperStyle.LINE);
 		}
 		if (!narrow) {
 			int dividerTop = embedded ? panelY + 12 : panelY + 47 + headerExtra;

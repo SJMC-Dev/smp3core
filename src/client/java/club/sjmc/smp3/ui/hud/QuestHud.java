@@ -37,7 +37,7 @@ public final class QuestHud {
 	private int noticeWidth() { return Smp3Client.book().unreadCount() > 0 ? Smp3Client.noticeHud().width() : 100; }
 
 	public HudLayout.Box box(int width, int height, boolean editing) {
-		boolean attached = Smp3Client.layout().followQuests && (editing || Smp3Client.book().noticeVisible() ||
+		boolean attached = Smp3Client.layout().followQuests && (editing || Smp3Client.noticeHud().visible() ||
 		                                                      state.hiding() && Smp3Client.book().unreadCount() > 0);
 		return Smp3Client.layout().quests.box(
 		    width, height, Math.max(questWidth(), attached ? noticeWidth() : 0),
@@ -58,7 +58,7 @@ public final class QuestHud {
 		Minecraft client = Minecraft.getInstance();
 		if (visible || state.hiding())
 			state.advance(seconds);
-		if (Smp3Client.book().noticeVisible()) {
+		if (Smp3Client.noticeHud().visible()) {
 			var notice = noticeBox(graphics.guiWidth(), graphics.guiHeight(), false);
 			graphics.pose().pushMatrix();
 			graphics.pose().translate(notice.x(), notice.y());
