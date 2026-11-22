@@ -33,14 +33,10 @@ public final class SignPanel extends AbstractPanel {
 	private static final int FUTURE = DyeColor.LIGHT_GRAY.getFireworkColor() | 0xFF000000;
 	private static final int MISSED = DyeColor.GRAY.getFireworkColor() | 0xFF000000;
 	private SignPayloads.State state;
-	private final boolean embedded;
 	private int panelX, panelY, panelWidth, panelHeight, cellWidth, cellHeight, gridLeft, gridTop;
 
-	public SignPanel(SignPayloads.State state) { this(state, false); }
-
-	public SignPanel(SignPayloads.State state, boolean embedded) {
+	public SignPanel(SignPayloads.State state) {
 		this.state = state;
-		this.embedded = embedded;
 	}
 
 	public void accept(SignPayloads.State next) {
@@ -53,25 +49,14 @@ public final class SignPanel extends AbstractPanel {
 	@Override
 	protected void onLayout() {
 		int rows = rows();
-		if (embedded) {
-			panelWidth = width() - 8;
-			panelHeight = height();
-			panelX = x();
-			panelY = y() + 6;
-		} else {
-			panelWidth = Math.min(320, Math.max(80, width() - 32));
-			int availableHeight = Math.max(rows * 14, height() - 72);
-			cellHeight = Math.max(14, Math.min(30, availableHeight / rows));
-			panelHeight = 54 + rows * cellHeight;
-			panelX = x() + (width() - panelWidth) / 2;
-			panelY = y() + (height() - panelHeight) / 2;
-		}
+		panelWidth = width() - 8;
+		panelHeight = height();
+		panelX = x();
+		panelY = y() + 6;
 		int baseCellWidth = Math.max(1, (panelWidth - 32) / COLUMNS);
 		cellWidth = Math.max(1, Math.round(baseCellWidth * .75F));
-		if (embedded) {
-			int availableHeight = Math.max(rows * 14, height() - 72);
-			cellHeight = Math.max(14, Math.min(30, availableHeight / rows));
-		}
+		int availableHeight = Math.max(rows * 14, height() - 72);
+		cellHeight = Math.max(14, Math.min(30, availableHeight / rows));
 		gridLeft = panelX + (panelWidth - COLUMNS * cellWidth) / 2;
 		gridTop = panelY + 42;
 	}
@@ -89,10 +74,6 @@ public final class SignPanel extends AbstractPanel {
 	@Override
 	public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, PanelContext context) {
 		var font = Minecraft.getInstance().font;
-		if (!embedded) {
-			graphics.fill(x(), y(), right(), bottom(), 0x66000000);
-			PaperStyle.frame(graphics, panelX, panelY, panelWidth, panelHeight);
-		}
 		String month = Month.of(state.month()).getDisplayName(TextStyle.FULL, Locale.ENGLISH);
 		Component title = Component.literal(month).withStyle(style -> style.withBold(true));
 		int titleWidth = Math.round(font.width(title) * MONTH_SCALE);
@@ -137,7 +118,7 @@ public final class SignPanel extends AbstractPanel {
 		if (day == state.today() && !signed) {
 			state.rewards().forEach(reward -> lines.add(Component.literal(reward).withStyle(ChatFormatting.GRAY)));
 			lines.add(Component.literal("左键签到").withStyle(ChatFormatting.YELLOW));
-		} else if (day == state.today() && signed && state.pending()) {
+		} else if (day == state.today() && state.pending()) {
 			lines.add(Component.literal("左键重试奖励").withStyle(ChatFormatting.YELLOW));
 		}
 		graphics.setTooltipForNextFrame(font, lines, Optional.empty(), context.tooltipX(mouseX),

@@ -9,7 +9,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 
 /**
- * 可嵌入菜单或全屏宿主的界面面板。坐标均为面板局部坐标。
+ * 嵌入菜单的界面面板。坐标均为面板局部坐标。
  */
 public interface Panel {
 	void layout(Rect bounds, PanelContext context);

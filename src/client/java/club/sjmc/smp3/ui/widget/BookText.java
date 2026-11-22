@@ -15,7 +15,7 @@ import net.minecraft.util.FormattedCharSequence;
 
 public final class BookText {
 	public static final float TEXT_SCALE = .85F;
-	private static final Pattern INLINE = Pattern.compile("\\*\\*(.+?)\\*\\*|`([^`]+)`|\\[([^\\]]+)\\]\\(([^)]+)\\)");
+	private static final Pattern INLINE = Pattern.compile("\\*\\*(.+?)\\*\\*|`([^`]+)`|\\[([^]]+)]\\(([^)]+)\\)");
 	private static final Pattern LIST = Pattern.compile("^([ \\t]*)-[ \\t]+");
 	private static final Pattern NUMBERED = Pattern.compile("^([ \\t]*\\d+[.)、])[ \\t]+");
 	private BookText() {}

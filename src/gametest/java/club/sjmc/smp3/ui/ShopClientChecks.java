@@ -15,7 +15,7 @@ import club.sjmc.smp3.shop.ShopModule;
 import club.sjmc.smp3.shop.ShopPayloads;
 import club.sjmc.smp3.shop.ShopService;
 import club.sjmc.smp3.ui.panel.ShopPanel;
-import club.sjmc.smp3.ui.screen.PanelScreen;
+import club.sjmc.smp3.ui.screen.MenuScreen;
 
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
@@ -131,8 +131,8 @@ final class ShopClientChecks {
 		}
 	}
 	private static ShopPanel shop(Minecraft client) {
-		return client.gui.screen() instanceof PanelScreen screen &&
-		       screen.panel() instanceof ShopPanel panel ? panel : null;
+		return client.gui.screen() instanceof MenuScreen menu &&
+		       menu.activePanel() instanceof ShopPanel panel ? panel : null;
 	}
 
 	private static void reload(ClientGameTestContext context, TestSingleplayerContext world, boolean valid) {

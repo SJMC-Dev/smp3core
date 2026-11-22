@@ -3,6 +3,7 @@ package club.sjmc.smp3.ui;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.Consumer;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
@@ -21,15 +22,9 @@ import club.sjmc.smp3.ui.hud.CurrencyHud;
 import club.sjmc.smp3.ui.hud.HudLayout;
 import club.sjmc.smp3.ui.hud.NoticeHud;
 import club.sjmc.smp3.ui.hud.QuestHud;
-import club.sjmc.smp3.ui.panel.NoticePanel;
-import club.sjmc.smp3.ui.panel.QuestPanel;
-import club.sjmc.smp3.ui.panel.ShopPanel;
-import club.sjmc.smp3.ui.panel.SignPanel;
-import club.sjmc.smp3.ui.panel.TitlePanel;
 import club.sjmc.smp3.ui.screen.HudSettingsScreen;
 import club.sjmc.smp3.ui.screen.MenuScreen;
 import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
-import club.sjmc.smp3.ui.screen.PanelScreen;
 import club.sjmc.smp3.ui.state.CurrencyState;
 import club.sjmc.smp3.ui.state.ServerBookState;
 import club.sjmc.smp3.ui.state.ShopState;
@@ -100,21 +95,21 @@ public final class Smp3Client implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(SignPayloads.State.TYPE, (state, context) -> {
 			var client = context.client();
 			if (state.open())
-				client.gui.setScreen(new PanelScreen(new SignPanel(state)));
+				openMenu(1, menu -> menu.acceptSign(state));
 			else if (client.gui.screen() instanceof MenuScreen menu)
 				menu.acceptSign(state);
 		});
 		ClientPlayNetworking.registerGlobalReceiver(TitlePayloads.Catalog.TYPE, (catalog, context) -> {
 			var client = context.client();
 			if (catalog.open())
-				client.gui.setScreen(new PanelScreen(new TitlePanel(catalog)));
+				openMenu(4, menu -> menu.acceptTitles(catalog));
 			else if (client.gui.screen() instanceof MenuScreen menu)
 				menu.acceptTitles(catalog);
 		});
 		ClientPlayNetworking.registerGlobalReceiver(DailyQuestPayloads.Catalog.TYPE, (catalog, context) -> {
 			var client = context.client();
 			if (catalog.open())
-				client.gui.setScreen(new PanelScreen(new QuestPanel(catalog)));
+				openMenu(2, menu -> menu.acceptQuests(catalog));
 			else if (client.gui.screen() instanceof MenuScreen menu)
 				menu.acceptQuests(catalog);
 		});
@@ -156,19 +151,12 @@ public final class Smp3Client implements ClientModInitializer {
 		KeyMapping settings = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.hud_settings", InputConstants.UNKNOWN.getValue(), category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			if (SHOP.pendingOpen && client.player != null && client.level != null) {
-				if (client.gui.screen() instanceof MenuScreen menu) {
-					SHOP.pendingOpen = false;
-					menu.shopReady();
-				} else if (shopScreenOpen(client)) {
-					SHOP.pendingOpen = false;
-					var screen = client.gui.screen();
-					if (screen instanceof PanelScreen panelScreen &&
-					    panelScreen.panel() instanceof ShopPanel shop)
-						shop.catalogChanged();
-					else
-						client.gui.setScreen(new PanelScreen(new ShopPanel(SHOP)));
-				}
+			if (SHOP.pendingOpen && client.player != null && client.level != null && shopScreenOpen(client)) {
+				SHOP.pendingOpen = false;
+				if (client.gui.screen() instanceof MenuScreen menu)
+					menu.openTab(3);
+				else
+					openMenu(3, menu -> {});
 			}
 			if (pendingEditor != null && client.player != null && client.level != null && noticeScreenOpen(client)) {
 				client.gui.setScreen(new NoticeEditorScreen(pendingEditor));
@@ -183,11 +171,7 @@ public final class Smp3Client implements ClientModInitializer {
 							BOOK.selected = i;
 				}
 				BOOK.pendingOpen = null;
-				var menu = new MenuScreen();
-				client.gui.setScreen(menu);
-				menu.openNotices();
-				if (ClientPlayNetworking.canSend(MenuPayloads.Request.TYPE))
-					ClientPlayNetworking.send(MenuPayloads.Request.INSTANCE);
+				openMenu(0, menu -> {});
 			}
 			if (pendingSettings && client.player != null && client.level != null &&
 			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen)) {
@@ -214,18 +198,28 @@ public final class Smp3Client implements ClientModInitializer {
 		savePreferences();
 	}
 
-	public static void openBook() { Minecraft.getInstance().gui.setScreen(new PanelScreen(new NoticePanel(BOOK))); }
+	public static void openBook() { openMenu(0, menu -> {}); }
+
+	private static void openMenu(int tab, Consumer<MenuScreen> action) {
+		var client = Minecraft.getInstance();
+		if (client.player == null)
+			return;
+		var menu = new MenuScreen();
+		client.gui.setScreen(menu);
+		menu.openTab(tab);
+		action.accept(menu);
+		if (ClientPlayNetworking.canSend(MenuPayloads.Request.TYPE))
+			ClientPlayNetworking.send(MenuPayloads.Request.INSTANCE);
+	}
 
 	private static boolean noticeScreenOpen(Minecraft client) {
 		var screen = client.gui.screen();
-		return screen == null || screen instanceof ChatScreen ||
-		    screen instanceof PanelScreen panelScreen && panelScreen.panel() instanceof NoticePanel;
+		return screen == null || screen instanceof ChatScreen || screen instanceof MenuScreen;
 	}
 
 	private static boolean shopScreenOpen(Minecraft client) {
 		var screen = client.gui.screen();
-		return screen == null || screen instanceof ChatScreen ||
-		    screen instanceof PanelScreen panelScreen && panelScreen.panel() instanceof ShopPanel;
+		return screen == null || screen instanceof ChatScreen || screen instanceof MenuScreen;
 	}
 
 	private static void loadPreferences() {

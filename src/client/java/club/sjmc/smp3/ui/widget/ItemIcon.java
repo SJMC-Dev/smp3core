@@ -2,6 +2,7 @@ package club.sjmc.smp3.ui.widget;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import com.google.gson.JsonObject;
 
@@ -34,11 +35,11 @@ public final class ItemIcon {
 	}
 
 	public static ItemStack of(JsonObject item) {
-		return BY_JSON.computeIfAbsent(item.toString(), key -> ItemDefinitions.stack(
-		    item, Minecraft.getInstance().getConnection().registryAccess()));
+		return BY_JSON.computeIfAbsent(item.toString(), _ -> ItemDefinitions.stack(
+		    item, Objects.requireNonNull(Minecraft.getInstance().getConnection()).registryAccess()));
 	}
 
 	public static ItemStack item(Item item) {
-		return BY_ITEM.computeIfAbsent(item, key -> new ItemStack(key));
+		return BY_ITEM.computeIfAbsent(item, ItemStack::new);
 	}
 }

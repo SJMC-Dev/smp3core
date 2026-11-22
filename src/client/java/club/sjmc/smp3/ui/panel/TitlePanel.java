@@ -35,17 +35,13 @@ public final class TitlePanel extends AbstractPanel {
 	private final List<ItemStack> icons;
 	private final List<Component> names;
 	private final List<List<Component>> descriptions;
-	private final boolean embedded;
 	private final ScrollView scrolling = new ScrollView();
 	private int selected;
 	private int panelX, panelY, panelWidth, panelHeight, split, top, bottom, leftX, leftRight, leftWidth, detailX,
 	    detailWidth, cellWidth, columns;
 
-	public TitlePanel(TitlePayloads.Catalog catalog) { this(catalog, false); }
-
-	public TitlePanel(TitlePayloads.Catalog catalog, boolean embedded) {
+	public TitlePanel(TitlePayloads.Catalog catalog) {
 		this.catalog = catalog;
-		this.embedded = embedded;
 		this.icons = catalog.entries().stream().map(entry -> {
 			try {
 				var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(entry.item()));
@@ -65,8 +61,8 @@ public final class TitlePanel extends AbstractPanel {
 
 	@Override
 	protected void onLayout() {
-		panelWidth = embedded ? width() : Math.min(620, width() - 32);
-		panelHeight = embedded ? height() : Math.min(380, height() - 32);
+		panelWidth = width();
+		panelHeight = height();
 		panelX = x() + (width() - panelWidth) / 2;
 		panelY = y() + (height() - panelHeight) / 2;
 		split = panelX + panelWidth * 2 / 3;
@@ -92,10 +88,6 @@ public final class TitlePanel extends AbstractPanel {
 	@Override
 	public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, PanelContext context) {
 		var font = Minecraft.getInstance().font;
-		if (!embedded) {
-			graphics.fill(x(), y(), right(), bottom(), 0x66000000);
-			PaperStyle.frame(graphics, panelX, panelY, panelWidth, panelHeight);
-		}
 		graphics.fill(split, top, split + 2, bottom, 0x66836B48);
 		graphics.fill(split + 2, top, split + 5, bottom, 0x22765A37);
 		if (catalog.entries().isEmpty()) {

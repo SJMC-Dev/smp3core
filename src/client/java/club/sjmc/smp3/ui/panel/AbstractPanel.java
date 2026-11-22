@@ -17,7 +17,7 @@ import net.minecraft.client.input.MouseButtonEvent;
  */
 public abstract class AbstractPanel implements Panel {
 	protected Rect bounds = new Rect(0, 0, 0, 0);
-	protected PanelContext context = PanelContext.fullscreen();
+	protected PanelContext context = new PanelContext(0, 0, 1F);
 	protected final List<AbstractWidget> widgets = new ArrayList<>();
 
 	@Override

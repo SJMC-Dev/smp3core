@@ -64,7 +64,7 @@ public final class ShopState {
 		entries.clear();
 		for (var node : view.nodes()) {
 			nodes.put(node.id(), node);
-			children.computeIfAbsent(node.parent(), id -> new ArrayList<>()).add(node);
+			children.computeIfAbsent(node.parent(), _ -> new ArrayList<>()).add(node);
 			for (var entry : node.entries())
 				entries.put(entry.id(), entry);
 		}

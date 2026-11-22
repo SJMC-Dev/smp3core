@@ -10,7 +10,6 @@ import java.util.Set;
 
 import com.mojang.blaze3d.platform.InputConstants;
 
-import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.shop.ShopPayloads;
 import club.sjmc.smp3.ui.Smp3Client;
 import club.sjmc.smp3.ui.state.CurrencyState;
@@ -44,7 +43,6 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	private static final int MODAL_HEIGHT = 112;
 	private static final int TREE_ROW = 20;
 	private final ShopState state;
-	private final boolean embedded;
 	private final Set<String> expanded = new HashSet<>();
 	private final Map<String, String> selections = new HashMap<>();
 	private List<String> path = List.of();
@@ -60,11 +58,8 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	private PaperButton minus, plus, maximum, confirm;
 	private long lastFrame = System.nanoTime();
 
-	public ShopPanel(ShopState state) { this(state, false); }
-
-	public ShopPanel(ShopState state, boolean embedded) {
+	public ShopPanel(ShopState state) {
 		this.state = state;
-		this.embedded = embedded;
 	}
 
 	public void catalogChanged() {
@@ -87,19 +82,10 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		state.addListener(this);
 		Smp3Client.balances().addListener(this);
 		var font = font();
-		if (embedded) {
-			panelX = x();
-			panelY = y();
-			panelWidth = width();
-			panelHeight = height();
-		} else {
-			int localX = Math.max(6, (width() - 650) / 2);
-			int localY = Math.max(6, (height() - 390) / 2);
-			panelX = x() + localX;
-			panelY = y() + localY;
-			panelWidth = width() - 2 * localX;
-			panelHeight = height() - 2 * localY;
-		}
+		panelX = x();
+		panelY = y();
+		panelWidth = width();
+		panelHeight = height();
 		narrow = panelWidth < 440;
 		sidebar = Math.max(72, panelWidth / 3 - 14);
 		contentLeft = panelX + sidebar + 24;
@@ -288,13 +274,8 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 
 	@Override
 	public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, PanelContext context) {
-		var font = font();
 		float seconds = Math.min(.05F, (System.nanoTime() - lastFrame) / 1e9F);
 		lastFrame = System.nanoTime();
-		if (!embedded) {
-			graphics.fill(x(), y(), right(), bottom(), 0x66000000);
-			PaperStyle.frame(graphics, panelX, panelY, panelWidth, panelHeight);
-		}
 		Smp3Client.currencyHud().render(graphics, panelX + panelWidth - 30, panelY + 12 + headerExtra,
 		                                panelWidth - 60, seconds);
 		graphics.horizontalLine(panelX + sidebar + 14, panelX + panelWidth - 20, bodyTop - 3, PaperStyle.LINE);
@@ -409,8 +390,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		int size = folders.size() + entries.size();
 		int cell = cellSize(), columns = gridColumns();
 		int rows = (size + columns - 1) / columns;
-		int contentHeight = Math.max(0, rows * (cell + GRID_GAP) - GRID_GAP);
-		gridContent = contentHeight;
+        gridContent = Math.max(0, rows * (cell + GRID_GAP) - GRID_GAP);
 		gridScroll.layout(bodyTop, bodyBottom, gridContent);
 		if (size == 0) {
 			graphics.text(font, "暂无商品", contentLeft, bodyTop + 12, PaperStyle.MUTED, false);
@@ -510,12 +490,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		String period = quote.weekly() ? "本周" : "今日";
 		if (count() > quote.maximum())
 			return period + "最多还能交易 " + quote.maximum() + " 批";
-		if (quote.maximum() == 0)
-			return quote.limit() >= 0 && quote.limit() - quote.used() < entry.amount()
-			           ? period + "额度不足一批"
-			       : entry.buy() && quote.balance() < Smp3Currency.rawUnits(count() * entry.price()) ? "余额不足"
-			                                                                                           : "符合要求的物品不足";
-		return entry.title() ? "解锁后可在称号菜单中佩戴" : "共 " + (long)count() * entry.amount() + " 个";
+        return entry.title() ? "解锁后可在称号菜单中佩戴" : "共 " + (long)count() * entry.amount() + " 个";
 	}
 
 	@Override

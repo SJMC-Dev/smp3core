@@ -29,18 +29,14 @@ public final class QuestPanel extends AbstractPanel {
 	private static final int PENDING = 0xFF8A5A22;
 	private DailyQuestPayloads.Catalog catalog;
 	private List<ItemStack> icons;
-	private final boolean embedded;
 	private int selected;
 	private final ScrollView detailScroll = new ScrollView();
 	private int panelX, panelY, panelWidth, panelHeight, split, top, bottom, leftX, leftRight, leftWidth, detailX,
 	    detailWidth, detailTop, detailContentHeight, cardWidth, cardHeight, gridLeft;
 
-	public QuestPanel(DailyQuestPayloads.Catalog catalog) { this(catalog, false); }
-
-	public QuestPanel(DailyQuestPayloads.Catalog catalog, boolean embedded) {
+	public QuestPanel(DailyQuestPayloads.Catalog catalog) {
 		this.catalog = catalog;
 		this.icons = icons(catalog);
-		this.embedded = embedded;
 	}
 
 	public void accept(DailyQuestPayloads.Catalog next) {
@@ -59,8 +55,8 @@ public final class QuestPanel extends AbstractPanel {
 	@Override
 	protected void onLayout() {
 		detailScroll.mouseReleased();
-		panelWidth = embedded ? width() : Math.min(620, width() - 32);
-		panelHeight = embedded ? height() : Math.min(400, height() - 32);
+		panelWidth = width();
+		panelHeight = height();
 		panelX = x() + (width() - panelWidth) / 2;
 		panelY = y() + (height() - panelHeight) / 2;
 		split = panelX + panelWidth * 11 / 20 - 4;
@@ -84,10 +80,6 @@ public final class QuestPanel extends AbstractPanel {
 	@Override
 	public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, PanelContext context) {
 		var font = Minecraft.getInstance().font;
-		if (!embedded) {
-			graphics.fill(x(), y(), right(), bottom(), 0x66000000);
-			PaperStyle.frame(graphics, panelX, panelY, panelWidth, panelHeight);
-		}
 		graphics.fill(split, top, split + 2, bottom, 0x66836B48);
 		graphics.fill(split + 2, top, split + 5, bottom, 0x22765A37);
 		if (catalog.tasks().isEmpty()) {

@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.NotNull;
 
 public final class HudSettingsScreen extends Screen {
 	private HudLayout.Placement dragging;
@@ -90,7 +91,7 @@ public final class HudSettingsScreen extends Screen {
 	}
 
 	@Override
-	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+	public boolean mouseClicked(@NotNull MouseButtonEvent event, boolean doubleClick) {
 		if (super.mouseClicked(event, doubleClick))
 			return true;
 		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
@@ -113,7 +114,7 @@ public final class HudSettingsScreen extends Screen {
 	}
 
 	@Override
-	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+	public boolean mouseDragged(@NotNull MouseButtonEvent event, double dx, double dy) {
 		if (dragging == null)
 			return super.mouseDragged(event, dx, dy);
 		dragging.move(event.x() - grabX, event.y() - grabY, dragBox, width, height);
@@ -121,7 +122,7 @@ public final class HudSettingsScreen extends Screen {
 	}
 
 	@Override
-	public boolean mouseReleased(MouseButtonEvent event) {
+	public boolean mouseReleased(@NotNull MouseButtonEvent event) {
 		if (dragging == null)
 			return super.mouseReleased(event);
 		dragging = null;
@@ -134,7 +135,7 @@ public final class HudSettingsScreen extends Screen {
 		return false;
 	}
 	@Override
-	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {}
+	public void extractBackground(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {}
 
 	private static String text(String key) { return Component.translatable(key).getString(); }
 }

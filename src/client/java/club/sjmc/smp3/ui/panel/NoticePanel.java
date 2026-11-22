@@ -27,31 +27,20 @@ import net.minecraft.network.chat.Component;
  */
 public final class NoticePanel extends AbstractPanel implements ServerBookState.Listener, CurrencyState.Listener {
 	private static final int INK = PaperStyle.INK, MUTED = PaperStyle.MUTED;
-	private static final int TWO_COLUMN_WIDTH = 360;
 	private static final float TITLE_SCALE = BookText.TEXT_SCALE * 1.2F;
 	private static final int TITLE_BODY_GAP = 4;
 	private final ServerBookState state;
-	private final boolean embedded;
-	private boolean detail;
 	private boolean subscribed;
-	private int panelX, panelY, bookWidth, bookHeight, sidebar, bodyTop, bodyBottom, headerExtra, categoryStart;
-	private boolean narrow;
+	private int panelX, panelY, bookWidth, bookHeight, sidebar, bodyTop, bodyBottom, categoryStart;
 	private NoticePayloads.Body renderedBody;
 	private int renderedWidth;
 	private BookText.Layout textLayout = BookText.Layout.EMPTY;
 	private List<Integer> entries = List.of();
 	private PaperButton acknowledge;
 	private final ScrollView listScroll = new ScrollView(), textScroll = new ScrollView();
-	private long lastFrame = System.nanoTime();
 
-	public NoticePanel(ServerBookState state) { this(state, false, false); }
-
-	public NoticePanel(ServerBookState state, boolean embedded) { this(state, embedded, false); }
-
-	public NoticePanel(ServerBookState state, boolean embedded, boolean detail) {
+	public NoticePanel(ServerBookState state) {
 		this.state = state;
-		this.embedded = embedded;
-		this.detail = detail;
 		this.categoryStart = state.category;
 		state.addListener(this);
 		Smp3Client.balances().addListener(this);
@@ -66,26 +55,13 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 			state.request(NoticePayloads.Action.OPEN, "", "");
 			subscribed = true;
 		}
-		if (embedded) {
-			bookWidth = width();
-			bookHeight = height();
-			panelX = x();
-			panelY = y();
-		} else {
-			int horizontalMargin = Math.clamp((width() - TWO_COLUMN_WIDTH) / 2, 8, 16);
-			int verticalMargin = Math.clamp((height() - 240) / 2, 8, 16);
-			bookWidth = Math.min(600, width() - 2 * horizontalMargin);
-			bookHeight = Math.min(354, height() - 2 * verticalMargin);
-			panelX = x() + (width() - bookWidth) / 2;
-			panelY = y() + (height() - bookHeight) / 2;
-		}
-		narrow = !embedded && bookWidth < TWO_COLUMN_WIDTH;
-		sidebar = narrow ? bookWidth - 28 : Math.min(174, bookWidth / 3);
-		headerExtra =
-		    embedded ? 0
-		             : bookWidth - 64 < font.width(state.title) + 24 + Smp3Client.currencyHud().width() ? 22 : 0;
-		bodyTop = panelY + (embedded ? 34 : 73 + headerExtra);
-		bodyBottom = panelY + bookHeight - (embedded ? 8 : 24);
+		bookWidth = width();
+		bookHeight = height();
+		panelX = x();
+		panelY = y();
+		sidebar = Math.min(174, bookWidth / 3);
+		bodyTop = panelY + 34;
+		bodyBottom = panelY + bookHeight - 8;
 		entries = IntStream.range(0, state.messages.size())
 		              .filter(i
 		                      -> state.category == 0 ||
@@ -105,30 +81,23 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 		int pages = (state.categories.size() + tabsPerPage - 1) / tabsPerPage;
 		categoryStart = Math.min(categoryStart / tabsPerPage, Math.max(0, pages - 1)) * tabsPerPage;
 		int tabWidth = (sidebar - 16 - (pages > 1 ? 20 : 0)) / tabsPerPage;
-		int tabTop = panelY + (embedded ? 12 : 46 + headerExtra);
-		if (!narrow || !detail) {
-			for (int i = categoryStart; i < Math.min(state.categories.size(), categoryStart + tabsPerPage); i++) {
-				int category = i;
-				String label = state.categories.get(i).name();
-				PaperButton button = addWidget(new PaperButton(panelX + 22 + (i - categoryStart) * tabWidth, tabTop,
-				                                                tabWidth - 2, label, true, () -> {
-					                                                state.category = category;
-					                                                listScroll.setScroll(0);
-					                                                textScroll.setScroll(0);
-					                                                onLayout();
-				                                                }));
-				button.setSelected(state.category == i);
-				button.active = state.category != i;
-			}
-			if (pages > 1)
-				addWidget(new PaperButton(panelX + sidebar - 14, tabTop, 18, "›", true, () -> {
-					categoryStart = (categoryStart / tabsPerPage + 1) % pages * tabsPerPage;
-					onLayout();
-				}));
+		int tabTop = panelY + 12;
+		for (int i = categoryStart; i < Math.min(state.categories.size(), categoryStart + tabsPerPage); i++) {
+			int category = i;
+			String label = state.categories.get(i).name();
+			PaperButton button = addWidget(new PaperButton(panelX + 22 + (i - categoryStart) * tabWidth, tabTop,
+			                                                tabWidth - 2, label, true, () -> {
+				                                                state.category = category;
+				                                                listScroll.setScroll(0);
+				                                                textScroll.setScroll(0);
+				                                                onLayout();
+			                                                }));
+			button.setSelected(state.category == i);
+			button.active = state.category != i;
 		}
-		if (narrow && detail)
-			addWidget(new PaperButton(panelX + 22, tabTop, 78, "返回目录", false, () -> {
-				detail = false;
+		if (pages > 1)
+			addWidget(new PaperButton(panelX + sidebar - 14, tabTop, 18, "›", true, () -> {
+				categoryStart = (categoryStart / tabsPerPage + 1) % pages * tabsPerPage;
 				onLayout();
 			}));
 		acknowledge = addWidget(new PaperButton(contentLeft(), bodyBottom - 22, Math.min(134, contentWidth()),
@@ -136,20 +105,16 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 			                                        state.displayed(state.selected, true);
 			                                        updateAcknowledgement();
 		                                        }));
-		if (!entries.isEmpty() && (!narrow || detail))
+		if (!entries.isEmpty())
 			state.view(state.selected);
 		updateAcknowledgement();
 	}
 
-	private int contentLeft() { return narrow ? panelX + 26 : panelX + sidebar + 34; }
+	private int contentLeft() { return panelX + sidebar + 34; }
 
 	private int contentWidth() { return panelX + bookWidth - 28 - contentLeft(); }
 
-	private int contentTop() {
-		if (narrow)
-			return bodyTop;
-		return embedded ? panelY + 30 : panelY + 50 + headerExtra + 22;
-	}
+	private int contentTop() { return panelY + 30; }
 
 	private static Component boldTitle(String text) {
 		return Component.literal(text).withStyle(style -> style.withBold(true));
@@ -168,7 +133,7 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 	private void updateAcknowledgement() {
 		if (acknowledge == null || entries.isEmpty() || state.selected < 0)
 			return;
-		acknowledge.visible = (!narrow || detail) && state.messages.get(state.selected).acknowledgement();
+		acknowledge.visible = state.messages.get(state.selected).acknowledgement();
 		acknowledge.active = state.unread(state.selected) &&
 		                     state.bodies.containsKey(state.messages.get(state.selected).id());
 		acknowledge.setMessage(
@@ -209,29 +174,11 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 
 	@Override
 	public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, PanelContext context) {
-		long now = System.nanoTime();
-		float seconds = Math.min(.05F, (now - lastFrame) / 1e9F);
-		lastFrame = now;
-		var font = Minecraft.getInstance().font;
-		if (!embedded) {
-			graphics.fill(x(), y(), right(), bottom(), 0x66000000);
-			PaperStyle.frame(graphics, panelX, panelY, bookWidth, bookHeight);
-			graphics.text(font, font.plainSubstrByWidth(state.title, bookWidth - 44), panelX + 22, panelY + 28, INK,
-			              false);
-			Smp3Client.currencyHud().render(graphics, panelX + bookWidth - 42, panelY + (headerExtra == 0 ? 22 : 44),
-			                                bookWidth - 64 - (headerExtra == 0 ? font.width(state.title) + 24 : 0),
-			                                seconds);
-			graphics.horizontalLine(panelX + 20, panelX + bookWidth - 20, panelY + 41 + headerExtra, PaperStyle.LINE);
-		}
-		if (!narrow) {
-			int dividerTop = embedded ? panelY + 12 : panelY + 47 + headerExtra;
-			graphics.fill(panelX + sidebar + 14, dividerTop, panelX + sidebar + 16, bodyBottom, 0x66836B48);
-			graphics.fill(panelX + sidebar + 16, dividerTop, panelX + sidebar + 19, bodyBottom, 0x22765A37);
-		}
-		if (!narrow || !detail)
-			drawList(graphics, mouseX, mouseY);
-		if (!narrow || detail)
-			drawMessage(graphics);
+		int dividerTop = panelY + 12;
+		graphics.fill(panelX + sidebar + 14, dividerTop, panelX + sidebar + 16, bodyBottom, 0x66836B48);
+		graphics.fill(panelX + sidebar + 16, dividerTop, panelX + sidebar + 19, bodyBottom, 0x22765A37);
+		drawList(graphics, mouseX, mouseY);
+		drawMessage(graphics);
 		renderWidgets(graphics, mouseX, mouseY, delta);
 	}
 
@@ -318,18 +265,17 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 			return false;
 		int bottom = bodyBottom - (acknowledge.visible ? 30 : 0);
 		textScroll.layout(contentTop() + TITLE_BODY_GAP, bottom, textLayout.height());
-		boolean listDrag = (!narrow || !detail) && listScroll.beginDrag(event.x(), event.y(), panelX + sidebar + 5);
-		if (listDrag || (!narrow || detail) && !entries.isEmpty() &&
+		boolean listDrag = listScroll.beginDrag(event.x(), event.y(), panelX + sidebar + 5);
+		if (listDrag || !entries.isEmpty() &&
 		                   textScroll.beginDrag(event.x(), event.y(), contentLeft() + contentWidth() - 3))
 			return true;
-		if ((!narrow || !detail) && event.x() >= panelX + 22 && event.x() < panelX + sidebar + 7 &&
+		if (event.x() >= panelX + 22 && event.x() < panelX + sidebar + 7 &&
 		    event.y() >= bodyTop && event.y() < bodyBottom) {
 			int row = ((int)event.y() - bodyTop + listScroll.scroll()) / 40;
 			if (row < entries.size()) {
 				state.selected = entries.get(row);
 				state.view(state.selected);
 				textScroll.setScroll(0);
-				detail = true;
 				onLayout();
 				return true;
 			}
@@ -359,9 +305,9 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
 		if (mouseY > bodyBottom)
 			return false;
-		if ((!narrow || !detail) && mouseY >= bodyTop && mouseX >= panelX + 22 && mouseX < panelX + sidebar + 7)
+		if (mouseY >= bodyTop && mouseX >= panelX + 22 && mouseX < panelX + sidebar + 7)
 			listScroll.scrollWheel(vertical, 28);
-		else if ((!narrow || detail) && mouseY >= contentTop() + TITLE_BODY_GAP && mouseX >= contentLeft() &&
+		else if (mouseY >= contentTop() + TITLE_BODY_GAP && mouseX >= contentLeft() &&
 		         mouseX < contentLeft() + contentWidth())
 			textScroll.scrollWheel(vertical, 28);
 		else

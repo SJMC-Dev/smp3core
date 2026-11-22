@@ -13,7 +13,7 @@ public final class PaperButton extends Button {
 	private boolean selected;
 
 	public PaperButton(int x, int y, int width, String text, boolean tab, Runnable action) {
-		super(x, y, width, tab ? 18 : 20, Component.literal(text), button -> action.run(), DEFAULT_NARRATION);
+		super(x, y, width, tab ? 18 : 20, Component.literal(text), _ -> action.run(), DEFAULT_NARRATION);
 		this.tab = tab;
 	}
 

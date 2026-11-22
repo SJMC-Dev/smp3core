@@ -30,7 +30,6 @@ import club.sjmc.smp3.ui.panel.NoticePanel;
 import club.sjmc.smp3.ui.screen.HudSettingsScreen;
 import club.sjmc.smp3.ui.screen.MenuScreen;
 import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
-import club.sjmc.smp3.ui.screen.PanelScreen;
 import club.sjmc.smp3.ui.widget.BookText;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -413,7 +412,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("hud-notice");
 			context.runOnClient(client -> {
 				Smp3Client.BOOK.selected = 2;
-				client.gui.setScreen(new PanelScreen(new NoticePanel(Smp3Client.book())));
+				openNoticePanel(client);
 			});
 			context.waitFor(client -> !Smp3Client.BOOK.unread(2) && Smp3Client.BALANCES.coins.value == 12450);
 			context.takeScreenshot("server-book");
@@ -427,7 +426,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("server-book-balances");
 			context.runOnClient(client -> {
 				Smp3Client.BOOK.selected = 1;
-				client.gui.setScreen(new PanelScreen(new NoticePanel(Smp3Client.book())));
+				openNoticePanel(client);
 			});
 			context.waitTicks(2);
 			context.takeScreenshot("server-book-rules");
@@ -435,7 +434,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.runOnClient(client -> {
 				client.options.guiScale().set(0);
 				client.resizeGui();
-				client.gui.setScreen(new PanelScreen(new NoticePanel(Smp3Client.book())));
+				openNoticePanel(client);
 			});
 			context.waitTicks(3);
 			context.takeScreenshot("server-book-laptop");
@@ -446,7 +445,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				client.resizeGui();
 			});
 			context.getInput().resizeWindow(640, 480);
-			context.runOnClient(client -> client.gui.setScreen(new PanelScreen(new NoticePanel(Smp3Client.book()))));
+			context.runOnClient(QuestHudClientGameTest::openNoticePanel);
 			context.waitTicks(3);
 			context.takeScreenshot("server-book-narrow");
 			context.runOnClient(client -> notice(client).selectCategory("帮助"));
@@ -503,12 +502,13 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 	}
 
 	private static NoticePanel notice(Minecraft client) {
-		if (client.gui.screen() instanceof PanelScreen screen &&
-		    screen.panel() instanceof NoticePanel panel)
-			return panel;
-		if (client.gui.screen() instanceof MenuScreen menu)
-			return menu.noticePanel();
-		return null;
+		return client.gui.screen() instanceof MenuScreen menu ? menu.noticePanel() : null;
+	}
+
+	private static void openNoticePanel(Minecraft client) {
+		var menu = new MenuScreen();
+		client.gui.setScreen(menu);
+		menu.openNotices();
 	}
 
 	private static void waitForNotice(ClientGameTestContext context) {
