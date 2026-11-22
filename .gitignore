@@ -55,9 +55,6 @@ FIXME
 docs/stage*
 *.session
 
-# 本地预览（独立子仓库）
-tmp/
-
 
 
 

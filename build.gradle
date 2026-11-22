@@ -1,8 +1,5 @@
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
-	// Remold：JVM 热重载 agent。agent 版本由 gradle.properties 的 remold.version 决定，
-	// 升级时请与这里的插件版本保持一致。
-	id 'io.github.i-hope1.remold' version '0.2.8'
 }
 
 version = project.mod_version
@@ -10,11 +7,6 @@ group = project.maven_group
 
 base {
 	archivesName = project.archives_base_name
-}
-
-remold {
-	// 默认从 JBR_HOME 或 -Djbr.home 解析 JetBrains Runtime；未配置时使用当前 JDK。
-	// 其余选项（jbrPath、fileShakeMs、debug 等）见 Remold 的 gradle-plugin/README.md。
 }
 
 loom {
