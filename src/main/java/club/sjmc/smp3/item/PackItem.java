@@ -29,6 +29,7 @@ public final class PackItem extends Item {
 	public boolean choice() { return choice; }
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
+		// 物品右键界面有意保留在服务端 GUI，不进入 MenuScreen，见 README 的“界面结构”。
 		if (player instanceof ServerPlayer serverPlayer)
 			PackGui.open(serverPlayer, hand);
 		return InteractionResult.SUCCESS;

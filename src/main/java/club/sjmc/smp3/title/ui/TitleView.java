@@ -20,6 +20,7 @@ public final class TitleView {
 
 	public static void open(ServerPlayer player) {
 		if (!ServerPlayNetworking.canSend(player, TitlePayloads.Catalog.TYPE)) {
+			// 旧客户端兼容：新客户端统一走 MenuScreen 的称号面板，最低客户端版本提升后删除。
 			openFujiMenu(player);
 			return;
 		}

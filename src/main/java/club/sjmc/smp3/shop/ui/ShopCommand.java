@@ -8,9 +8,6 @@ import club.sjmc.smp3.shop.ShopModule;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permission;
-import net.minecraft.server.permissions.PermissionLevel;
 
 public final class ShopCommand {
 
@@ -19,12 +16,7 @@ public final class ShopCommand {
 	public static LiteralArgumentBuilder<CommandSourceStack> command() {
 		return Commands.literal("shop")
 		    .then(Commands.literal("reload")
-		              .requires(source
-		                        -> source.getEntity() == null ||
-		                               source.permissions().hasPermission(
-		                                   new Permission.HasCommandLevel(PermissionLevel.GAMEMASTERS)) ||
-		                               source.getEntity() instanceof ServerPlayer player &&
-		                                   Permissions.has(player, "smp.shop.admin", true))
+		              .requires(source -> Permissions.isAdmin(source, "smp.shop.admin"))
 		              .executes(context -> {
 			              var source = context.getSource();
 			              if (!ShopModule.reload(message

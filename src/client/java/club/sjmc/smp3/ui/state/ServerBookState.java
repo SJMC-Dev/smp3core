@@ -10,7 +10,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import club.sjmc.smp3.notice.NoticeCatalog;
 import club.sjmc.smp3.notice.NoticePayloads;
-import club.sjmc.smp3.ui.Smp3Client;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
@@ -130,7 +129,4 @@ public final class ServerBookState {
 				count++;
 		return count;
 	}
-
-	public boolean noticeVisible() { return Smp3Client.hud().visible && unreadCount() > 0; }
-
 }

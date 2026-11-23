@@ -57,8 +57,16 @@ public final class ShopState {
 		incoming.append(payload.text());
 		if (++part != total)
 			return;
-		var view = ShopPayloads.JSON.fromJson(incoming.toString(), ShopPayloads.View.class);
+		ShopPayloads.View view;
+		try {
+			view = ShopPayloads.JSON.fromJson(incoming.toString(), ShopPayloads.View.class);
+		} catch (RuntimeException error) {
+			incoming.setLength(0);
+			return;
+		}
 		incoming.setLength(0);
+		if (view == null || view.nodes() == null)
+			return;
 		nodes.clear();
 		children.clear();
 		entries.clear();

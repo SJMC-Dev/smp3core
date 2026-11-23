@@ -121,8 +121,8 @@ public final class SignPanel extends AbstractPanel {
 		} else if (day == state.today() && state.pending()) {
 			lines.add(Component.literal("左键重试奖励").withStyle(ChatFormatting.YELLOW));
 		}
-		graphics.setTooltipForNextFrame(font, lines, Optional.empty(), context.tooltipX(mouseX),
-		                                context.tooltipY(mouseY));
+		graphics.setTooltipForNextFrame(font, lines, Optional.empty(), context.toScreenX(mouseX),
+		                                context.toScreenY(mouseY));
 	}
 
 	private String status(int day) {

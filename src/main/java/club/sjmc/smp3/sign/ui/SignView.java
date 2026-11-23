@@ -12,6 +12,7 @@ public final class SignView {
 
 	public static void open(ServerPlayer player) {
 		if (!ServerPlayNetworking.canSend(player, SignPayloads.State.TYPE)) {
+			// 旧客户端兼容：新客户端统一走 MenuScreen 的签到面板，最低客户端版本提升后删除。
 			SignGui.open(player);
 			return;
 		}

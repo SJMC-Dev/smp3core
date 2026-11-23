@@ -39,9 +39,10 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	private TitlePayloads.Catalog titles;
 	private DailyQuestPayloads.Catalog quests;
 	private Panel child;
+	private boolean childCaptured;
 	private int selected = -1;
 	private int x, y, panelWidth, panelHeight, tabTop, tabHeight, paneX, paneY, paneWidth, paneHeight;
-	private PanelContext paneContext = new PanelContext(0, 0, 1F);
+	private PanelContext paneContext = new PanelContext(0, 0);
 
 	public MenuScreen() { super(Component.literal("菜单")); }
 
@@ -57,7 +58,11 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 
 	public void acceptTitles(TitlePayloads.Catalog catalog) {
 		titles = catalog;
-		if (selected == 4)
+		if (selected != 4)
+			return;
+		if (child instanceof TitlePanel panel)
+			panel.accept(catalog);
+		else
 			selectTab(4);
 	}
 
@@ -71,12 +76,15 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 		}
 	}
 
+	/** 客户端 GameTest 钩子，生产路径不直接调用。 */
 	public void openNotices() { openTab(0); }
 
 	public void openTab(int index) { selectTab(index); }
 
+	/** 客户端 GameTest 钩子，生产路径不直接调用。 */
 	public NoticePanel noticePanel() { return child instanceof NoticePanel panel ? panel : null; }
 
+	/** 客户端 GameTest 钩子，生产路径不直接调用。 */
 	public Panel activePanel() { return child; }
 
 	@Override
@@ -93,12 +101,13 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 		paneY = y + 12;
 		paneWidth = panelWidth - 26;
 		paneHeight = panelHeight - 24;
-		paneContext = new PanelContext(paneX - EMBED_INSET, paneY - EMBED_INSET, 1F);
+		paneContext = new PanelContext(paneX - EMBED_INSET, paneY - EMBED_INSET);
 		layoutChild();
 	}
 
 	private void selectTab(int index) {
 		selected = index;
+		childCaptured = false;
 		Panel previous = child;
 		child = switch (index) {
 			case 0 -> new NoticePanel(Smp3Client.book());
@@ -203,10 +212,13 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 			return true;
 		int tab = tabAt(event.x(), event.y());
 		if (tab >= 0) {
+			childCaptured = false;
 			selectTab(tab);
 			return true;
 		}
-		return child != null && insidePane(event.x(), event.y()) && child.mouseClicked(map(event), doubleClick);
+		childCaptured =
+		    child != null && insidePane(event.x(), event.y()) && child.mouseClicked(map(event), doubleClick);
+		return childCaptured;
 	}
 
 	private MouseButtonEvent map(MouseButtonEvent event) {
@@ -216,12 +228,18 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 
 	@Override
 	public boolean mouseReleased(@NotNull MouseButtonEvent event) {
-		return child != null ? child.mouseReleased(map(event)) : super.mouseReleased(event);
+		if (child == null)
+			return super.mouseReleased(event);
+		boolean captured = childCaptured || insidePane(event.x(), event.y());
+		childCaptured = false;
+		return captured ? child.mouseReleased(map(event)) : super.mouseReleased(event);
 	}
 
 	@Override
 	public boolean mouseDragged(@NotNull MouseButtonEvent event, double dx, double dy) {
-		return child != null ? child.mouseDragged(map(event), dx, dy) : super.mouseDragged(event, dx, dy);
+		if (child != null && (childCaptured || insidePane(event.x(), event.y())))
+			return child.mouseDragged(map(event), dx, dy);
+		return super.mouseDragged(event, dx, dy);
 	}
 
 	@Override
@@ -252,6 +270,7 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 
 	@Override
 	public void removed() {
+		childCaptured = false;
 		if (child != null)
 			child.close();
 		if (Smp3Client.shop().session != 0)

@@ -20,8 +20,11 @@ public final class NoticeHud {
 
 	private String title() {
 		int first = 0;
-		while (!state.unread(first) || !state.messages.get(first).notifyUnread())
+		while (first < state.messages.size() &&
+		       (!state.unread(first) || !state.messages.get(first).notifyUnread()))
 			first++;
+		if (first >= state.messages.size())
+			return "";
 		var font = Minecraft.getInstance().font;
 		String title = state.messages.get(first).title();
 		return font.width(title) <= 80 ? title : font.plainSubstrByWidth(title, 80 - font.width("…")) + "…";

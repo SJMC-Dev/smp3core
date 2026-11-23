@@ -132,8 +132,8 @@ public final class QuestPanel extends AbstractPanel {
 				lines.add(Component.literal("剩余更换次数：" + catalog.remaining() + " / " + catalog.limit()));
 				if (!task.rerollAvailable())
 					lines.add(Component.literal(catalog.remaining() == 0 ? "今日刷新次数已用完" : "没有可替换的同难度任务"));
-				graphics.setTooltipForNextFrame(font, lines, Optional.empty(), context.tooltipX(mouseX),
-				                                context.tooltipY(mouseY));
+				graphics.setTooltipForNextFrame(font, lines, Optional.empty(), context.toScreenX(mouseX),
+				                                context.toScreenY(mouseY));
 			}
 		}
 	}

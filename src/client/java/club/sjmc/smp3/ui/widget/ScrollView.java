@@ -54,8 +54,6 @@ public final class ScrollView {
 		return true;
 	}
 
-	public boolean dragging() { return dragging; }
-
 	public void render(GuiGraphicsExtractor graphics, int barX) {
 		PaperStyle.scrollbar(graphics, barX, top, bottom, content, scroll);
 	}

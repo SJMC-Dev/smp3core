@@ -151,18 +151,18 @@ public final class Smp3Client implements ClientModInitializer {
 		KeyMapping settings = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.hud_settings", InputConstants.UNKNOWN.getValue(), category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			if (SHOP.pendingOpen && client.player != null && client.level != null && shopScreenOpen(client)) {
+			if (SHOP.pendingOpen && client.player != null && client.level != null && canOpenMenu(client)) {
 				SHOP.pendingOpen = false;
 				if (client.gui.screen() instanceof MenuScreen menu)
 					menu.openTab(3);
 				else
 					openMenu(3, menu -> {});
 			}
-			if (pendingEditor != null && client.player != null && client.level != null && noticeScreenOpen(client)) {
+			if (pendingEditor != null && client.player != null && client.level != null && canOpenMenu(client)) {
 				client.gui.setScreen(new NoticeEditorScreen(pendingEditor));
 				pendingEditor = null;
 			}
-			if (BOOK.pendingOpen != null && client.player != null && client.level != null && noticeScreenOpen(client)) {
+			if (BOOK.pendingOpen != null && client.player != null && client.level != null && canOpenMenu(client)) {
 				boolean required = !BOOK.pendingOpen.equals("*");
 				if (required) {
 					BOOK.category = 0;
@@ -212,12 +212,7 @@ public final class Smp3Client implements ClientModInitializer {
 			ClientPlayNetworking.send(MenuPayloads.Request.INSTANCE);
 	}
 
-	private static boolean noticeScreenOpen(Minecraft client) {
-		var screen = client.gui.screen();
-		return screen == null || screen instanceof ChatScreen || screen instanceof MenuScreen;
-	}
-
-	private static boolean shopScreenOpen(Minecraft client) {
+	private static boolean canOpenMenu(Minecraft client) {
 		var screen = client.gui.screen();
 		return screen == null || screen instanceof ChatScreen || screen instanceof MenuScreen;
 	}

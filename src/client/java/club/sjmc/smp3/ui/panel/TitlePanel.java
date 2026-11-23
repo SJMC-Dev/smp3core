@@ -31,10 +31,10 @@ public final class TitlePanel extends AbstractPanel {
 	private static final int OBTAINED = 0xFF55FF55;
 	private static final int MISSING = 0xFFAAAAAA;
 	private static final int ACTIVE = 0xFFFFAA00;
-	private final TitlePayloads.Catalog catalog;
-	private final List<ItemStack> icons;
-	private final List<Component> names;
-	private final List<List<Component>> descriptions;
+	private TitlePayloads.Catalog catalog;
+	private List<ItemStack> icons;
+	private List<Component> names;
+	private List<List<Component>> descriptions;
 	private final ScrollView scrolling = new ScrollView();
 	private int selected;
 	private int panelX, panelY, panelWidth, panelHeight, split, top, bottom, leftX, leftRight, leftWidth, detailX,
@@ -42,6 +42,21 @@ public final class TitlePanel extends AbstractPanel {
 
 	public TitlePanel(TitlePayloads.Catalog catalog) {
 		this.catalog = catalog;
+		rebuild();
+		this.selected = activeIndex();
+	}
+
+	public void accept(TitlePayloads.Catalog next) {
+		String previous =
+		    selected >= 0 && selected < catalog.entries().size() ? catalog.entries().get(selected).id() : "";
+		catalog = next;
+		rebuild();
+		int index = indexOf(previous);
+		selected = index >= 0 ? index : activeIndex();
+		onLayout();
+	}
+
+	private void rebuild() {
 		this.icons = catalog.entries().stream().map(entry -> {
 			try {
 				var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(entry.item()));
@@ -56,7 +71,6 @@ public final class TitlePanel extends AbstractPanel {
 		        .stream()
 		        .map(entry -> entry.description().stream().map(TitlePanel::readable).toList())
 		        .toList();
-		this.selected = activeIndex();
 	}
 
 	@Override
@@ -148,6 +162,13 @@ public final class TitlePanel extends AbstractPanel {
 		for (Component line : descriptions.get(selected))
 			cursor = WrappedText.draw(graphics, font, line, detailX, cursor, detailWidth, PaperStyle.MUTED, bottom);
 		graphics.disableScissor();
+	}
+
+	private int indexOf(String id) {
+		for (int i = 0; i < catalog.entries().size(); i++)
+			if (catalog.entries().get(i).id().equals(id))
+				return i;
+		return -1;
 	}
 
 	private int activeIndex() {

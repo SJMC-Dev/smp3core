@@ -60,6 +60,8 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 
 	public ShopPanel(ShopState state) {
 		this.state = state;
+		state.addListener(this);
+		Smp3Client.balances().addListener(this);
 	}
 
 	public void catalogChanged() {
@@ -79,8 +81,6 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	@Override
 	protected void onLayout() {
 		clearWidgets();
-		state.addListener(this);
-		Smp3Client.balances().addListener(this);
 		var font = font();
 		panelX = x();
 		panelY = y();
@@ -172,6 +172,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		gridScroll.layout(bodyTop, bodyBottom, gridContent);
 	}
 
+	/** 目录选择入口，同时作为客户端 GameTest 钩子。 */
 	public void selectNode(String id, boolean resetQuantity) {
 		current = id;
 		var ancestors = new ArrayList<String>();
@@ -194,6 +195,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 			state.select("");
 	}
 
+	/** 商品选择入口，同时作为客户端 GameTest 钩子。 */
 	public void selectEntry(String id) {
 		selections.put(current, id);
 		quantity = "1";
@@ -202,8 +204,10 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		onLayout();
 	}
 
+	/** 客户端 GameTest 钩子，生产路径不直接调用。 */
 	public EditBox quantityInput() { return batches; }
 
+	/** 客户端 GameTest 钩子，生产路径不直接调用。 */
 	public void confirmTrade() {
 		state.trade(count());
 		stateChanged();
@@ -390,7 +394,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		int size = folders.size() + entries.size();
 		int cell = cellSize(), columns = gridColumns();
 		int rows = (size + columns - 1) / columns;
-        gridContent = Math.max(0, rows * (cell + GRID_GAP) - GRID_GAP);
+		gridContent = Math.max(0, rows * (cell + GRID_GAP) - GRID_GAP);
 		gridScroll.layout(bodyTop, bodyBottom, gridContent);
 		if (size == 0) {
 			graphics.text(font, "暂无商品", contentLeft, bodyTop + 12, PaperStyle.MUTED, false);
@@ -433,8 +437,8 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 				                                          : "出售物品")
 				              .withStyle(ChatFormatting.GRAY));
 				lines.add(Component.literal(entry.availability()).withStyle(ChatFormatting.GRAY));
-				graphics.setTooltipForNextFrame(font, lines, Optional.empty(), context.tooltipX(mouseX),
-				                                context.tooltipY(mouseY));
+				graphics.setTooltipForNextFrame(font, lines, Optional.empty(), context.toScreenX(mouseX),
+				                                context.toScreenY(mouseY));
 			}
 		}
 		graphics.disableScissor();
@@ -490,7 +494,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		String period = quote.weekly() ? "本周" : "今日";
 		if (count() > quote.maximum())
 			return period + "最多还能交易 " + quote.maximum() + " 批";
-        return entry.title() ? "解锁后可在称号菜单中佩戴" : "共 " + (long)count() * entry.amount() + " 个";
+		return entry.title() ? "解锁后可在称号菜单中佩戴" : "共 " + (long)count() * entry.amount() + " 个";
 	}
 
 	@Override

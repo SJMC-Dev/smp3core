@@ -29,8 +29,10 @@ public final class DailyQuestView {
 	}
 
 	public static boolean open(ServerPlayer player) {
-		if (!ServerPlayNetworking.canSend(player, DailyQuestPayloads.Catalog.TYPE))
+		if (!ServerPlayNetworking.canSend(player, DailyQuestPayloads.Catalog.TYPE)) {
+			// 旧客户端兼容：新客户端统一走 MenuScreen 的任务面板，最低客户端版本提升后删除。
 			return DailyQuestGui.show(player);
+		}
 		try {
 			var catalog = build(player, true);
 			if (catalog == null) {

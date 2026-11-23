@@ -17,13 +17,11 @@ import net.minecraft.client.input.MouseButtonEvent;
  */
 public abstract class AbstractPanel implements Panel {
 	protected Rect bounds = new Rect(0, 0, 0, 0);
-	protected PanelContext context = new PanelContext(0, 0, 1F);
 	protected final List<AbstractWidget> widgets = new ArrayList<>();
 
 	@Override
 	public void layout(Rect bounds, PanelContext context) {
 		this.bounds = bounds;
-		this.context = context;
 		onLayout();
 	}
 

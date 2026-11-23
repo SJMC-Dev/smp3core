@@ -11,6 +11,4 @@ public record Rect(int x, int y, int width, int height) {
 	public boolean contains(double mouseX, double mouseY) {
 		return mouseX >= x && mouseX < right() && mouseY >= y && mouseY < bottom();
 	}
-
-	public boolean isEmpty() { return width <= 0 || height <= 0; }
 }

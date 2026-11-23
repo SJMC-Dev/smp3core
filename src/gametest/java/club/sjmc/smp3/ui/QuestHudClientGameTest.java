@@ -359,7 +359,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			waitForNotice(context);
 			context.waitFor(client
 			                -> Smp3Client.BOOK.messages.isEmpty() && Smp3Client.BOOK.unreadCount() == 0 &&
-			                       !Smp3Client.BOOK.noticeVisible());
+			                       !Smp3Client.noticeHud().visible());
 			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
 			context.waitFor(client -> client.gui.screen() == null);
 			world.getServer().runOnServer(server -> NoticeFixture.join(world.getConnection().getServerPlayer()));
@@ -524,9 +524,9 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			KeyMapping.resetMapping();
 		});
 		context.getInput().pressKey(InputConstants.KEY_J);
-		context.waitFor(client -> !Smp3Client.HUD.visible && !Smp3Client.BOOK.noticeVisible());
+		context.waitFor(client -> !Smp3Client.HUD.visible && !Smp3Client.noticeHud().visible());
 		context.getInput().pressKey(InputConstants.KEY_J);
-		context.waitFor(client -> Smp3Client.HUD.visible && Smp3Client.BOOK.noticeVisible());
+		context.waitFor(client -> Smp3Client.HUD.visible && Smp3Client.noticeHud().visible());
 		context.runOnClient(client -> {
 			KeyMapping.get("key.smp3.quest_hud").setKey(InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_K));
 			KeyMapping.resetMapping();

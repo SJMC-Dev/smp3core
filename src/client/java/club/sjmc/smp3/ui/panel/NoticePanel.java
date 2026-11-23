@@ -154,8 +154,10 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 	@Override
 	public void currencyChanged() { contentChanged(); }
 
+	/** 客户端 GameTest 钩子，生产路径不直接调用。 */
 	public boolean acknowledgeVisible() { return acknowledge != null && acknowledge.visible; }
 
+	/** 客户端 GameTest 钩子，生产路径不直接调用。 */
 	public void acknowledge() {
 		state.displayed(state.selected, true);
 		updateAcknowledgement();

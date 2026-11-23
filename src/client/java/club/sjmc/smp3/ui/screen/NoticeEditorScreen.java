@@ -1,9 +1,11 @@
 package club.sjmc.smp3.ui.screen;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.notice.NoticeCatalog;
 import club.sjmc.smp3.notice.NoticeEditing;
 import club.sjmc.smp3.notice.NoticePayloads;
@@ -25,6 +27,7 @@ public final class NoticeEditorScreen extends Screen {
 	private final String session;
 	private final List<NoticeCatalog.Category> categories;
 	private final NoticeEditing.Draft original;
+	private final boolean draftValid;
 	private final String[] fields;
 	private String body, status = "";
 	private boolean markdown, pinned, notify, acknowledgement, publishing, discard, confirmDelete;
@@ -40,7 +43,9 @@ public final class NoticeEditorScreen extends Screen {
 		super(Component.literal("编辑公告"));
 		session = payload.session();
 		categories = payload.categories();
-		original = NoticeEditing.JSON.fromJson(payload.draft(), NoticeEditing.Draft.class);
+		var parsed = parseDraft(payload);
+		draftValid = parsed != null;
+		original = draftValid ? parsed : blankDraft(payload);
 		fields = new String[] {original.id(), original.title(), original.category(), original.categoryName(),
 		                       original.date()};
 		body = original.body();
@@ -48,6 +53,28 @@ public final class NoticeEditorScreen extends Screen {
 		pinned = original.pinned();
 		notify = original.notifyUnread();
 		acknowledgement = original.acknowledgement();
+		if (!draftValid)
+			status = "公告数据未加载，无法发布";
+	}
+
+	private static NoticeEditing.Draft parseDraft(NoticePayloads.Editor payload) {
+		try {
+			var parsed = NoticeEditing.JSON.fromJson(payload.draft(), NoticeEditing.Draft.class);
+			if (parsed != null && parsed.id() != null && parsed.title() != null && parsed.category() != null &&
+			    parsed.categoryName() != null && parsed.date() != null && parsed.body() != null)
+				return parsed;
+			Smp3Core.LOGGER.error("[SMP3] 公告编辑器草稿不完整 session={}", payload.session());
+		} catch (RuntimeException error) {
+			Smp3Core.LOGGER.error("[SMP3] 公告编辑器草稿解析失败 session={}", payload.session(), error);
+		}
+		return null;
+	}
+
+	private static NoticeEditing.Draft blankDraft(NoticePayloads.Editor payload) {
+		var category = payload.categories().isEmpty() ? new NoticeCatalog.Category("news", "公告")
+		                                              : payload.categories().getFirst();
+		return new NoticeEditing.Draft("", "", category.id(), category.name(), LocalDate.now().toString(), "", true,
+		                               false, true, false);
 	}
 
 	private NoticeEditing.Draft draft() {
@@ -191,6 +218,11 @@ public final class NoticeEditorScreen extends Screen {
 	}
 
 	private void publish() {
+		if (!draftValid) {
+			status = "公告数据未加载，请关闭后重试";
+			rebuildWidgets();
+			return;
+		}
 		if (body.getBytes(StandardCharsets.UTF_8).length > 32768) {
 			status = "正文超过 32768 UTF-8 字节，请缩短内容";
 			return;
