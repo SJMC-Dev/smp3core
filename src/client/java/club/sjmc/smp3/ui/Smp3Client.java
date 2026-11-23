@@ -28,6 +28,7 @@ import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
 import club.sjmc.smp3.ui.state.CurrencyState;
 import club.sjmc.smp3.ui.state.ServerBookState;
 import club.sjmc.smp3.ui.state.ShopState;
+import club.sjmc.smp3.ui.widget.ItemIcon;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -115,7 +116,7 @@ public final class Smp3Client implements ClientModInitializer {
 		});
 		ClientPlayNetworking.registerGlobalReceiver(MenuPayloads.Open.TYPE, (payload, context) -> {
 			var client = context.client();
-			if (client.player != null)
+			if (client.player != null && !(client.gui.screen() instanceof MenuScreen))
 				client.gui.setScreen(new MenuScreen());
 		});
 		ClientPlayNetworking.registerGlobalReceiver(BalanceSync.Payload.TYPE,
@@ -126,6 +127,9 @@ public final class Smp3Client implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(QuestHudPayload.TYPE, (snapshot, context) -> {
 			int before = HUD.state.rows.size();
 			HUD.state.accept(snapshot, HUD.visible);
+			if (context.client().gui.screen() instanceof MenuScreen &&
+			    ClientPlayNetworking.canSend(DailyQuestPayloads.Request.TYPE))
+				ClientPlayNetworking.send(DailyQuestPayloads.Request.INSTANCE);
 			if (snapshot.diagnostic())
 				Smp3Core.LOGGER.info(
 				    "[SMP3 HUD] client snapshot date={} entries={} unclaimed={} visible={} rowsBefore={} rowsAfter={}",
@@ -138,6 +142,7 @@ public final class Smp3Client implements ClientModInitializer {
 				ClientPlayNetworking.send(QuestHudPayload.Request.INSTANCE);
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			ItemIcon.clear();
 			HUD.state.clear();
 			BOOK.clear();
 			BALANCES.clear();
@@ -198,14 +203,17 @@ public final class Smp3Client implements ClientModInitializer {
 		savePreferences();
 	}
 
-	public static void openBook() { openMenu(0, menu -> {}); }
+	public static void openBook() {
+		openMenu(0, menu -> {});
+	}
 
 	private static void openMenu(int tab, Consumer<MenuScreen> action) {
 		var client = Minecraft.getInstance();
 		if (client.player == null)
 			return;
-		var menu = new MenuScreen();
-		client.gui.setScreen(menu);
+		var menu = client.gui.screen() instanceof MenuScreen existing ? existing : new MenuScreen();
+		if (client.gui.screen() != menu)
+			client.gui.setScreen(menu);
 		menu.openTab(tab);
 		action.accept(menu);
 		if (ClientPlayNetworking.canSend(MenuPayloads.Request.TYPE))

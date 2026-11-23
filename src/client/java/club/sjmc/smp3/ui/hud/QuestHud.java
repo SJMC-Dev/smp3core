@@ -1,8 +1,6 @@
 package club.sjmc.smp3.ui.hud;
 
-import java.util.List;
-
-import club.sjmc.smp3.daily.QuestDefinition;
+import club.sjmc.smp3.ui.widget.ItemIcon;
 import club.sjmc.smp3.ui.Smp3Client;
 import club.sjmc.smp3.ui.state.QuestHudState;
 import club.sjmc.smp3.ui.state.ServerBookState;
@@ -11,7 +9,6 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.world.item.ItemStack;
 
 public final class QuestHud {
 	public final QuestHudState state = new QuestHudState();
@@ -38,7 +35,7 @@ public final class QuestHud {
 
 	public HudLayout.Box box(int width, int height, boolean editing) {
 		boolean attached = Smp3Client.layout().followQuests && (editing || Smp3Client.noticeHud().visible() ||
-		                                                      state.hiding() && Smp3Client.book().unreadCount() > 0);
+		                                                        state.hiding() && Smp3Client.book().unreadCount() > 0);
 		return Smp3Client.layout().quests.box(
 		    width, height, Math.max(questWidth(), attached ? noticeWidth() : 0),
 		    Math.max(20, questHeight(editing) + (attached ? ServerBookState.NOTICE_HEIGHT + 4 : 0)));
@@ -91,19 +88,13 @@ public final class QuestHud {
 			}
 			var icons = row.entry.icons();
 			if (!icons.isEmpty())
-				graphics.item(icon(icons), left + 22, y + 2);
+				graphics.item(ItemIcon.frame(icons), left + 22, y + 2);
 			String ratio = ratio(row);
 			graphics.text(client.font, ratio, left + width - 4 - client.font.width(ratio), y + 6, color);
 			y += 22;
 		}
 		graphics.disableScissor();
 		graphics.pose().popMatrix();
-	}
-
-	private static ItemStack icon(List<ItemStack> icons) {
-		var level = Minecraft.getInstance().level;
-		int frame = level == null ? 0 : (int)(level.getGameTime() / QuestDefinition.ICON_CYCLE_TICKS);
-		return icons.get(Math.floorMod(frame, icons.size()));
 	}
 
 	private static String ratio(QuestHudState.Row row) { return row.entry.progress() + "/" + row.entry.target(); }

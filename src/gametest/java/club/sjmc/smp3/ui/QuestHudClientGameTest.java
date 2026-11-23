@@ -16,6 +16,7 @@ import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.QuestDefinition;
 import club.sjmc.smp3.daily.QuestHudPayload;
 import club.sjmc.smp3.daily.ui.DailyQuestGui;
+import club.sjmc.smp3.daily.ui.DailyQuestView;
 import club.sjmc.smp3.daily.ui.QuestRewardsGui;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
@@ -27,6 +28,7 @@ import club.sjmc.smp3.notice.NoticeModule;
 import club.sjmc.smp3.notice.NoticePayloads;
 import club.sjmc.smp3.ui.hud.HudLayout;
 import club.sjmc.smp3.ui.panel.NoticePanel;
+import club.sjmc.smp3.ui.panel.QuestPanel;
 import club.sjmc.smp3.ui.screen.HudSettingsScreen;
 import club.sjmc.smp3.ui.screen.MenuScreen;
 import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
@@ -51,8 +53,27 @@ import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.item.ItemStack;
 
 public final class QuestHudClientGameTest implements FabricClientGameTest {
+	private static boolean matchesHud(List<QuestHudPayload.Entry> expected) {
+		var rows = Smp3Client.HUD.state.rows;
+		if (rows.size() != expected.size())
+			return false;
+		for (int i = 0; i < rows.size(); i++) {
+			var actual = rows.get(i).entry;
+			var entry = expected.get(i);
+			if (!actual.token().equals(entry.token()) || actual.progress() != entry.progress() ||
+			    actual.target() != entry.target() || actual.claimed() != entry.claimed() ||
+			    actual.icons().size() != entry.icons().size())
+				return false;
+			for (int j = 0; j < entry.icons().size(); j++)
+				if (!ItemStack.matches(actual.icons().get(j), entry.icons().get(j)))
+					return false;
+		}
+		return true;
+	}
+
 	@Override
 	public void runTest(ClientGameTestContext context) {
 		TestWorldSave save;
@@ -77,8 +98,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 					client.getConnection().sendCommand("smp3 hud");
 				});
 				context.waitForScreen(HudSettingsScreen.class);
-				context.waitFor(
-				    client -> Smp3Client.HUD.state.rows.stream().map(row -> row.entry).toList().equals(expectedRows));
+				context.waitFor(client -> matchesHud(expectedRows));
 				context.runOnClient(client -> {
 					if (Smp3Client.HUD.visible != visible)
 						throw new AssertionError("HUD refresh changed the visibility preference");
@@ -86,8 +106,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 					Smp3Client.HUD.state.clear();
 					ClientPlayNetworking.send(QuestHudPayload.Request.INSTANCE);
 				});
-				context.waitFor(
-				    client -> Smp3Client.HUD.state.rows.stream().map(row -> row.entry).toList().equals(expectedRows));
+				context.waitFor(client -> matchesHud(expectedRows));
 				context.runOnClient(client -> {
 					if (Smp3Client.HUD.visible != visible || client.gui.screen() != null)
 						throw new AssertionError("HUD snapshot request changed client preferences or opened a screen");
@@ -111,8 +130,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				var commands = connection.getCommands();
 				String root = "smp3 dailyquest";
 				var suggestions =
-				    commands
-				        .getCompletionSuggestions(commands.parse(root + " ", connection.getSuggestionsProvider()))
+				    commands.getCompletionSuggestions(commands.parse(root + " ", connection.getSuggestionsProvider()))
 				        .join();
 				if (suggestions.getList().stream().noneMatch(
 				        s -> s.getText().equals(client.player.getName().getString())))
@@ -122,6 +140,10 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("quest-hud-active");
 			ShopClientChecks.run(context, world);
 			String token = context.computeOnClient(client -> Smp3Client.HUD.state.rows.getFirst().entry.token());
+			world.getServer().runOnServer(server -> DailyQuestView.open(world.getConnection().getServerPlayer()));
+			context.waitFor(
+			    client -> client.gui.screen() instanceof MenuScreen menu && menu.activePanel() instanceof QuestPanel);
+			context.takeScreenshot("quest-panel");
 
 			world.getServer().runOnServer(server -> DailyQuestGui.show(world.getConnection().getServerPlayer()));
 			context.waitForScreen(AbstractContainerScreen.class);
@@ -450,10 +472,16 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("server-book-narrow");
 			context.runOnClient(client -> notice(client).selectCategory("帮助"));
 			context.waitTicks(2);
+			context.runOnClient(client -> {
+				if (notice(client).acknowledgeVisible())
+					throw new AssertionError("Empty category exposes an acknowledgement action");
+			});
 			context.takeScreenshot("server-book-empty-category");
 			context.runOnClient(client -> notice(client).selectCategory("服规"));
-			context.getInput().setCursorPos(80, 290);
-			context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+			context.runOnClient(client -> {
+				Smp3Client.BOOK.selected = 1;
+				notice(client).contentChanged();
+			});
 			context.waitFor(client -> notice(client) != null && notice(client).acknowledgeVisible());
 			context.takeScreenshot("server-book-narrow-detail");
 			context.runOnClient(client -> notice(client).acknowledge());

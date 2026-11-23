@@ -21,9 +21,8 @@ public final class SignPayloads {
 		public static final Type<State> TYPE = new Type<>(Identifier.fromNamespaceAndPath("smp3", "sign_state"));
 		public static final StreamCodec<ByteBuf, State> CODEC = StreamCodec.composite(
 		    ByteBufCodecs.VAR_INT, State::year, ByteBufCodecs.VAR_INT, State::month, ByteBufCodecs.VAR_INT,
-		    State::today, ByteBufCodecs.VAR_INT, State::signedMask, ByteBufCodecs.BOOL, State::open,
-		    ByteBufCodecs.BOOL, State::pending, ByteBufCodecs.stringUtf8(64).apply(ByteBufCodecs.list(8)),
-		    State::rewards, State::new);
+		    State::today, ByteBufCodecs.VAR_INT, State::signedMask, ByteBufCodecs.BOOL, State::open, ByteBufCodecs.BOOL,
+		    State::pending, ByteBufCodecs.stringUtf8(64).apply(ByteBufCodecs.list(8)), State::rewards, State::new);
 
 		public static State current(ServerPlayer player, boolean open) {
 			LocalDate date = ServerDates.today();
@@ -33,15 +32,14 @@ public final class SignPayloads {
 				if (data.isMonthSigned(day))
 					mask |= 1 << (day - 1);
 			int nextStreak = data.lastSignEpochDay() == date.minusDays(1).toEpochDay() ? data.streak() + 1 : 1;
-			List<String> rewards =
-			    data.isMonthSigned(date.getDayOfMonth())
-			        ? List.of()
-			        : SignModule.config()
-			              .dailyRewards(nextStreak)
-			              .entrySet()
-			              .stream()
-			              .map(entry -> entry.getKey().name().getString() + " x " + entry.getValue())
-			              .toList();
+			List<String> rewards = data.isMonthSigned(date.getDayOfMonth())
+			                           ? List.of()
+			                           : SignModule.config()
+			                                 .dailyRewards(nextStreak)
+			                                 .entrySet()
+			                                 .stream()
+			                                 .map(entry -> entry.getKey().name().getString() + " x " + entry.getValue())
+			                                 .toList();
 			return new State(date.getYear(), date.getMonthValue(), date.getDayOfMonth(), mask, open,
 			                 data.hasPendingRewards(), rewards);
 		}
@@ -56,9 +54,9 @@ public final class SignPayloads {
 
 	public record Request(int year, int month, int day) implements CustomPacketPayload {
 		public static final Type<Request> TYPE = new Type<>(Identifier.fromNamespaceAndPath("smp3", "sign_request"));
-		public static final StreamCodec<ByteBuf, Request> CODEC = StreamCodec.composite(
-		    ByteBufCodecs.VAR_INT, Request::year, ByteBufCodecs.VAR_INT, Request::month, ByteBufCodecs.VAR_INT,
-		    Request::day, Request::new);
+		public static final StreamCodec<ByteBuf, Request> CODEC =
+		    StreamCodec.composite(ByteBufCodecs.VAR_INT, Request::year, ByteBufCodecs.VAR_INT, Request::month,
+			                      ByteBufCodecs.VAR_INT, Request::day, Request::new);
 
 		@Override
 		public Type<Request> type() {

@@ -119,10 +119,11 @@ public final class NoticeEditorScreen extends Screen {
 			String[] tabs = {"信息", "正文", "预览"};
 			for (int i = 0; i < tabs.length; i++) {
 				int selected = i;
-				PaperButton button = addRenderableWidget(new PaperButton(left + i * 70, y + 28, 64, tabs[i], true, () -> {
-					tab = selected;
-					rebuildWidgets();
-				}));
+				PaperButton button =
+				    addRenderableWidget(new PaperButton(left + i * 70, y + 28, 64, tabs[i], true, () -> {
+					    tab = selected;
+					    rebuildWidgets();
+				    }));
 				button.setSelected(tab == i);
 				button.active = tab != i;
 			}

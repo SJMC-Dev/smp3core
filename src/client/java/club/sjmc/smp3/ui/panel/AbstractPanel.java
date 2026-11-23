@@ -54,35 +54,38 @@ public abstract class AbstractPanel implements Panel {
 
 	protected boolean mouseClickedWidgets(MouseButtonEvent event, boolean doubleClick) {
 		for (var widget : List.copyOf(widgets))
-			if (widget.visible && widget.mouseClicked(event, doubleClick))
+			if (widget.visible && widget.mouseClicked(event, doubleClick)) {
+				widgets.forEach(child -> child.setFocused(child == widget));
 				return true;
+			}
+		widgets.forEach(widget -> widget.setFocused(false));
 		return false;
 	}
 
 	protected boolean mouseReleasedWidgets(MouseButtonEvent event) {
 		for (var widget : List.copyOf(widgets))
-			if (widget.visible && widget.mouseReleased(event))
+			if (widget.visible && widget.isFocused() && widget.mouseReleased(event))
 				return true;
 		return false;
 	}
 
 	protected boolean mouseDraggedWidgets(MouseButtonEvent event, double dx, double dy) {
 		for (var widget : List.copyOf(widgets))
-			if (widget.visible && widget.mouseDragged(event, dx, dy))
+			if (widget.visible && widget.isFocused() && widget.mouseDragged(event, dx, dy))
 				return true;
 		return false;
 	}
 
 	protected boolean keyPressedWidgets(KeyEvent event) {
 		for (var widget : List.copyOf(widgets))
-			if (widget.visible && widget.keyPressed(event))
+			if (widget.visible && widget.isFocused() && widget.keyPressed(event))
 				return true;
 		return false;
 	}
 
 	protected boolean charTypedWidgets(CharacterEvent event) {
 		for (var widget : List.copyOf(widgets))
-			if (widget.visible && widget.charTyped(event))
+			if (widget.visible && widget.isFocused() && widget.charTyped(event))
 				return true;
 		return false;
 	}

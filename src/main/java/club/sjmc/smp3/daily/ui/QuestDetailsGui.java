@@ -3,13 +3,10 @@ package club.sjmc.smp3.daily.ui;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.gson.JsonPrimitive;
 import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.daily.QuestDay;
-import club.sjmc.smp3.daily.QuestDefinition;
-import club.sjmc.smp3.daily.QuestField;
 import club.sjmc.smp3.ui.GuiStyle;
 
 import net.minecraft.network.chat.Component;
@@ -25,35 +22,8 @@ final class QuestDetailsGui extends SimpleGui {
 	QuestDetailsGui(ServerPlayer player, QuestDay.Assignment task) {
 		super(MenuType.GENERIC_9x3, player, false);
 		title = task.definition.name();
-		add("任务说明", "目标：" + (task.definition.completion().equals("any") ? "任选一项" : "全部完成"),
-		    QuestText.lore(task));
-		for (int i = 0; i < task.definition.objectives().size(); i++) {
-			var goal = task.definition.objectives().get(i);
-			String progress = goal.name() + " (" + task.goalProgress(i) + "/" + goal.count() + ")";
-			if (goal.countBy().equals("distinct")) {
-				for (String target : QuestDefinition.values(goal.target().values())
-				                         .stream()
-				                         .map(id -> QuestDefinition.identity(goal.target().field(), id))
-				                         .distinct()
-				                         .toList()) {
-					boolean done = task.completedTargets(i).contains(target);
-					add(progress, done ? "已完成" : "未完成",
-					    QuestText.condition(goal.target().field(), new JsonPrimitive(target)));
-				}
-			}
-			if (goal.event().equals("entity_converted"))
-				add(progress, "转化归属",
-				    List.of(GuiStyle.text("计入16格内最近的、持有对应未完成任务的玩家", GuiStyle.MUTED)));
-
-			goal.objective().conditions().entrySet().forEach(condition -> {
-				if (goal.countBy().equals("distinct") && condition.getKey().equals(goal.target().field()))
-					return;
-				String label = QuestField.find(condition.getKey()).label();
-				if (condition.getValue().isJsonArray() && condition.getValue().getAsJsonArray().size() > 1)
-					label += "（任选其一）";
-				add(progress, label, QuestText.condition(condition.getKey(), condition.getValue()));
-			});
-		}
+		for (var detail : QuestText.details(task))
+			add(detail.name(), detail.label(), detail.lines());
 		refresh();
 	}
 

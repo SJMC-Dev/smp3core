@@ -33,18 +33,18 @@ public final class HudSettingsScreen extends Screen {
 			                                    Smp3Client.toggleHud();
 			                                    rebuildWidgets();
 		                                    }));
-		addRenderableWidget(
-		    new PaperButton(panelX + 152, panelY + 38, 134,
-			                text(Smp3Client.layout().followQuests ? "smp3.hud.detach" : "smp3.hud.attach"), false, () -> {
-			                    if (Smp3Client.layout().followQuests) {
-				                    var notice = Smp3Client.hud().noticeBox(width, height, true);
-				                    Smp3Client.layout().notices.scale = Smp3Client.layout().quests.scale;
-				                    Smp3Client.layout().notices.move(notice.x(), notice.y(), notice, width, height);
-			                    }
-			                    Smp3Client.layout().followQuests = !Smp3Client.layout().followQuests;
-			                    Smp3Client.savePreferences();
-			                    rebuildWidgets();
-		                    }));
+		addRenderableWidget(new PaperButton(
+		    panelX + 152, panelY + 38, 134,
+		    text(Smp3Client.layout().followQuests ? "smp3.hud.detach" : "smp3.hud.attach"), false, () -> {
+			    if (Smp3Client.layout().followQuests) {
+				    var notice = Smp3Client.hud().noticeBox(width, height, true);
+				    Smp3Client.layout().notices.scale = Smp3Client.layout().quests.scale;
+				    Smp3Client.layout().notices.move(notice.x(), notice.y(), notice, width, height);
+			    }
+			    Smp3Client.layout().followQuests = !Smp3Client.layout().followQuests;
+			    Smp3Client.savePreferences();
+			    rebuildWidgets();
+		    }));
 		addRenderableWidget(
 		    new PaperButton(panelX + 10, panelY + 64, 134, text("smp3.hud.bindings"), false,
 			                () -> minecraft.gui.setScreen(new KeyBindsScreen(this, minecraft.options))));

@@ -22,7 +22,10 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContex
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.MouseButtonInfo;
 
 final class ShopClientChecks {
 	static void run(ClientGameTestContext context, TestSingleplayerContext world) {
@@ -50,7 +53,15 @@ final class ShopClientChecks {
 				if (Smp3Client.SHOP.quote.maximum() != 2)
 					throw new AssertionError("Wrong maximum batch count");
 				var input = shop(client).quantityInput();
-				input.setValue("2");
+				var panel = shop(client);
+				panel.mouseClicked(new MouseButtonEvent(input.getX() + input.getWidth() / 2.0, input.getY() + 2,
+				                                        new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)),
+				                   false);
+				panel.keyPressed(new KeyEvent(InputConstants.KEY_A, 'a', InputConstants.MOD_CONTROL));
+				panel.charTyped(new CharacterEvent('2'));
+				if (!input.getValue().equals("2"))
+					throw new AssertionError("Quantity input did not accept keyboard editing after a click: value=" +
+					                         input.getValue() + " focused=" + input.isFocused());
 				return new ShopPayloads.Request(Smp3Client.SHOP.session, ShopPayloads.Action.TRADE, "test.buy",
 				                                Smp3Client.SHOP.version, 2);
 			});
@@ -131,8 +142,8 @@ final class ShopClientChecks {
 		}
 	}
 	private static ShopPanel shop(Minecraft client) {
-		return client.gui.screen() instanceof MenuScreen menu &&
-		       menu.activePanel() instanceof ShopPanel panel ? panel : null;
+		return client.gui.screen() instanceof MenuScreen menu && menu.activePanel() instanceof ShopPanel panel ? panel
+		                                                                                                       : null;
 	}
 
 	private static void reload(ClientGameTestContext context, TestSingleplayerContext world, boolean valid) {

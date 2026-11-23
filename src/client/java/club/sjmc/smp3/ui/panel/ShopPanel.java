@@ -122,10 +122,10 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 			stateChanged();
 		});
 		addWidget(batches);
-		plus = addWidget(
-		    new PaperButton(controlsLeft + 74, controls, 22, "+", false, () -> changeQuantity(count() + 1)));
+		plus =
+		    addWidget(new PaperButton(controlsLeft + 74, controls, 22, "+", false, () -> changeQuantity(count() + 1)));
 		maximum = addWidget(new PaperButton(controlsLeft + 100, controls, 40, "最大", false,
-		                                     () -> changeQuantity(state.quote == null ? 0 : state.quote.maximum())));
+		                                    () -> changeQuantity(state.quote == null ? 0 : state.quote.maximum())));
 		confirm = addWidget(new PaperButton(modalX + modalWidth - 60, modalY + 81, 40, "确认", false, () -> {
 			state.trade(count());
 			stateChanged();
@@ -231,8 +231,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 			return;
 		var entry = state.entries.get(state.selected);
 		boolean visible = modal && entry != null;
-		if (visible && !state.pending &&
-		    ("购买成功".equals(state.message) || "出售成功".equals(state.message))) {
+		if (visible && !state.pending && ("购买成功".equals(state.message) || "出售成功".equals(state.message))) {
 			modal = false;
 			onLayout();
 			return;
@@ -257,13 +256,19 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	}
 
 	@Override
-	public void shopCatalogChanged() { catalogChanged(); }
+	public void shopCatalogChanged() {
+		catalogChanged();
+	}
 
 	@Override
-	public void shopQuoteChanged() { stateChanged(); }
+	public void shopQuoteChanged() {
+		stateChanged();
+	}
 
 	@Override
-	public void currencyChanged() { balancesChanged(); }
+	public void currencyChanged() {
+		balancesChanged();
+	}
 
 	public void detachListeners() {
 		state.removeListener(this);
@@ -280,8 +285,8 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, PanelContext context) {
 		float seconds = Math.min(.05F, (System.nanoTime() - lastFrame) / 1e9F);
 		lastFrame = System.nanoTime();
-		Smp3Client.currencyHud().render(graphics, panelX + panelWidth - 30, panelY + 12 + headerExtra,
-		                                panelWidth - 60, seconds);
+		Smp3Client.currencyHud().render(graphics, panelX + panelWidth - 30, panelY + 12 + headerExtra, panelWidth - 60,
+		                                seconds);
 		graphics.horizontalLine(panelX + sidebar + 14, panelX + panelWidth - 20, bodyTop - 3, PaperStyle.LINE);
 		drawTree(graphics, mouseX, mouseY);
 		drawProducts(graphics, mouseX, mouseY, context);
@@ -317,8 +322,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 					graphics.text(font, ">", left + indent, top + 6, PaperStyle.MUTED, false);
 			}
 			drawSmallIcon(graphics, ItemIcon.of(row.node.icon()), left + indent + 9, top + 4);
-			drawTreeName(graphics, row.node.name(), left + indent + 22, top + 6,
-			             cellRight - left - indent - 26);
+			drawTreeName(graphics, row.node.name(), left + indent + 22, top + 6, cellRight - left - indent - 26);
 		}
 		graphics.disableScissor();
 		treeScroll.render(graphics, right - 2);
@@ -456,10 +460,12 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		var quote = state.quote;
 		boolean pending = state.pending || quote == null;
 		String period = quote != null && quote.weekly() ? "本周" : "今日";
-		String header = pending           ? period + "还可交易 …"
+		String header = pending             ? period + "还可交易 …"
 		                : quote.owned() < 0 ? "账户暂不可用"
 		                                    : period + "还可交易 " + quote.maximum() + " 批";
-		graphics.text(font, Component.literal(font.plainSubstrByWidth(header, modalWidth - 28)).withStyle(style -> style.withBold(true)),
+		graphics.text(font,
+		              Component.literal(font.plainSubstrByWidth(header, modalWidth - 28))
+		                  .withStyle(style -> style.withBold(true)),
 		              modalX + 14, modalY + 12, PaperStyle.INK, false);
 		graphics.text(font, entry.buy() ? "购买批数" : "出售批数", modalX + 14, modalY + 30, PaperStyle.MUTED, false);
 		graphics.horizontalLine(modalX + 14, modalX + modalWidth - 14, modalY + 25, PaperStyle.LINE);
@@ -474,8 +480,8 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		if (!message.isEmpty()) {
 			boolean info = message.startsWith("共 ") || message.startsWith("解锁后") || message.startsWith("正在") ||
 			               message.contains("成功");
-			graphics.text(font, font.plainSubstrByWidth(message, modalWidth - 28), modalX + 14, modalY + 88,
-			              info ? PaperStyle.INK : 0xFFAD4434, false);
+			graphics.text(font, font.plainSubstrByWidth(message, confirm.getX() - modalX - 20), modalX + 14,
+			              modalY + 88, info ? PaperStyle.INK : 0xFFAD4434, false);
 		}
 	}
 
@@ -515,8 +521,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		int treeLeft = panelX + 20, treeRight = panelX + 14 + sidebar, treeCellRight = treeRight - 12;
 		if (treeScroll.beginDrag(event.x(), event.y(), treeRight - 2))
 			return true;
-		if (event.x() >= treeLeft && event.x() < treeCellRight && event.y() >= treeTop &&
-		    event.y() < treeBottom) {
+		if (event.x() >= treeLeft && event.x() < treeCellRight && event.y() >= treeTop && event.y() < treeBottom) {
 			int row = ((int)event.y() - treeTop + treeScroll.scroll()) / TREE_ROW;
 			if (row < tree.size()) {
 				var selected = tree.get(row);
@@ -589,13 +594,11 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
 		if (modal)
 			return true;
-		if (mouseX >= panelX + 18 && mouseX < panelX + 14 + sidebar && mouseY >= treeTop &&
-		    mouseY < treeBottom) {
+		if (mouseX >= panelX + 18 && mouseX < panelX + 14 + sidebar && mouseY >= treeTop && mouseY < treeBottom) {
 			treeScroll.scrollWheel(vertical, TREE_ROW);
 			return true;
 		}
-		if (mouseX >= contentLeft && mouseX < contentLeft + contentWidth && mouseY >= bodyTop &&
-		    mouseY < bodyBottom) {
+		if (mouseX >= contentLeft && mouseX < contentLeft + contentWidth && mouseY >= bodyTop && mouseY < bodyBottom) {
 			gridScroll.scrollWheel(vertical, 24);
 			return true;
 		}
@@ -603,8 +606,12 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	}
 
 	@Override
-	public boolean keyPressed(KeyEvent event) { return keyPressedWidgets(event); }
+	public boolean keyPressed(KeyEvent event) {
+		return keyPressedWidgets(event);
+	}
 
 	@Override
-	public boolean charTyped(CharacterEvent event) { return charTypedWidgets(event); }
+	public boolean charTyped(CharacterEvent event) {
+		return charTypedWidgets(event);
+	}
 }

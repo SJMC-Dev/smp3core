@@ -14,7 +14,6 @@ import club.sjmc.smp3.ui.GuiStyle;
 
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -22,8 +21,13 @@ public final class DailyQuestView {
 	private DailyQuestView() {}
 
 	public static void register() {
-		PayloadTypeRegistry.clientboundPlay().register(DailyQuestPayloads.Catalog.TYPE, DailyQuestPayloads.Catalog.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DailyQuestPayloads.Catalog.TYPE,
+		                                               DailyQuestPayloads.Catalog.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(DailyQuestPayloads.Reroll.TYPE, DailyQuestPayloads.Reroll.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(DailyQuestPayloads.Request.TYPE,
+		                                               DailyQuestPayloads.Request.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(DailyQuestPayloads.Request.TYPE,
+		                                            (request, context) -> refresh(context.player()));
 		ServerPlayNetworking.registerGlobalReceiver(DailyQuestPayloads.Reroll.TYPE,
 		                                            (request, context) -> reroll(context.player(), request));
 	}
@@ -86,42 +90,39 @@ public final class DailyQuestView {
 		List<DailyQuestPayloads.Task> tasks = new ArrayList<>();
 		for (int slot = 0; slot < Math.min(4, day.assignments().size()); slot++) {
 			QuestDay.Assignment task = day.assignments().get(slot);
-			var icon = task.definition.iconStacks(player.registryAccess()).getFirst();
+			var icons = task.definition.iconStacks(player.registryAccess());
 			tasks.add(new DailyQuestPayloads.Task(
-			    task.token, limit(task.definition.name(), 128), task.definition.difficulty(), task.tier(),
-			    limit(BuiltInRegistries.ITEM.getKey(icon.getItem()).toString(), 128), task.progress(), task.target,
-			    task.complete(), task.claimed(), day.canReroll(slot, service.config), conditions(task),
-			    rewards(task, player)));
+			    task.token, limit(task.definition.name(), 128), task.definition.difficulty(), task.tier(), icons,
+			    task.progress(), task.target, task.complete(), task.claimed(), day.canReroll(slot, service.config),
+			    conditions(task), rewards(task, player)));
 		}
 		return new DailyQuestPayloads.Catalog(day.date, day.remaining(service.config),
 		                                      service.config.dailyRerollLimit(), open, List.copyOf(tasks));
 	}
 
-	private static List<String> conditions(QuestDay.Assignment task) {
-		List<String> lines = new ArrayList<>();
-		lines.add("目标：" + (task.definition.completion().equals("any") ? "任选一项" : "全部完成"));
-		for (int i = 0; i < task.definition.objectives().size(); i++) {
-			var goal = task.definition.objectives().get(i);
-			lines.add(goal.name() + " (" + task.goalProgress(i) + "/" + goal.count() + ")");
+	private static List<Component> conditions(QuestDay.Assignment task) {
+		List<Component> lines = new ArrayList<>();
+		for (var detail : QuestText.details(task)) {
+			lines.add(Component.literal(detail.name() + "：" + detail.label()));
+			lines.addAll(detail.lines());
 		}
-		QuestText.lore(task).stream().map(Component::getString).map(line -> limit(line, 256)).forEach(lines::add);
-		return lines.stream().limit(32).toList();
+		return lines;
 	}
 
-	private static List<String> rewards(QuestDay.Assignment task, ServerPlayer player) {
-		List<String> lines = new ArrayList<>();
+	private static List<Component> rewards(QuestDay.Assignment task, ServerPlayer player) {
+		List<Component> lines = new ArrayList<>();
 		var reward = task.reward;
 		if (reward.tongbao() > 0)
-			lines.add("通宝 x " + reward.tongbao());
+			lines.add(Component.literal("通宝 x " + reward.tongbao()));
 		if (reward.coffeeStamp() > 0)
-			lines.add("咖啡印章 x " + reward.coffeeStamp());
+			lines.add(Component.literal("咖啡印章 x " + reward.coffeeStamp()));
 		for (var item : reward.items()) {
 			var stack = ItemDefinitions.stack(item, player.registryAccess());
-			lines.add(stack.getHoverName().getString() + " x " + stack.getCount());
+			lines.add(stack.getHoverName().copy().append(" x " + stack.getCount()));
 		}
 		for (var effect : reward.effects())
-			lines.add(limit(RewardBundle.description(effect, player.registryAccess()).getString(), 256));
-		return lines.stream().limit(32).toList();
+			lines.add(RewardBundle.description(effect, player.registryAccess()));
+		return lines;
 	}
 
 	private static String limit(String value, int max) {

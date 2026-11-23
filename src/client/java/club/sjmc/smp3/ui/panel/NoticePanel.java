@@ -85,13 +85,13 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 		for (int i = categoryStart; i < Math.min(state.categories.size(), categoryStart + tabsPerPage); i++) {
 			int category = i;
 			String label = state.categories.get(i).name();
-			PaperButton button = addWidget(new PaperButton(panelX + 22 + (i - categoryStart) * tabWidth, tabTop,
-			                                                tabWidth - 2, label, true, () -> {
-				                                                state.category = category;
-				                                                listScroll.setScroll(0);
-				                                                textScroll.setScroll(0);
-				                                                onLayout();
-			                                                }));
+			PaperButton button = addWidget(
+			    new PaperButton(panelX + 22 + (i - categoryStart) * tabWidth, tabTop, tabWidth - 2, label, true, () -> {
+				    state.category = category;
+				    listScroll.setScroll(0);
+				    textScroll.setScroll(0);
+				    onLayout();
+			    }));
 			button.setSelected(state.category == i);
 			button.active = state.category != i;
 		}
@@ -131,11 +131,14 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 	}
 
 	private void updateAcknowledgement() {
-		if (acknowledge == null || entries.isEmpty() || state.selected < 0)
+		if (acknowledge == null)
 			return;
-		acknowledge.visible = state.messages.get(state.selected).acknowledgement();
-		acknowledge.active = state.unread(state.selected) &&
-		                     state.bodies.containsKey(state.messages.get(state.selected).id());
+		acknowledge.visible =
+		    !entries.isEmpty() && state.selected >= 0 && state.messages.get(state.selected).acknowledgement();
+		if (!acknowledge.visible)
+			return;
+		acknowledge.active =
+		    state.unread(state.selected) && state.bodies.containsKey(state.messages.get(state.selected).id());
 		acknowledge.setMessage(
 		    Component.literal(state.selected >= 0 && !state.unread(state.selected) ? "已确认" : "我已阅读并确认"));
 	}
@@ -146,13 +149,19 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 	}
 
 	@Override
-	public void noticeCatalogChanged() { contentChanged(); }
+	public void noticeCatalogChanged() {
+		contentChanged();
+	}
 
 	@Override
-	public void noticeBodyChanged() { contentChanged(); }
+	public void noticeBodyChanged() {
+		contentChanged();
+	}
 
 	@Override
-	public void currencyChanged() { contentChanged(); }
+	public void currencyChanged() {
+		contentChanged();
+	}
 
 	/** 客户端 GameTest 钩子，生产路径不直接调用。 */
 	public boolean acknowledgeVisible() { return acknowledge != null && acknowledge.visible; }
@@ -268,11 +277,11 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 		int bottom = bodyBottom - (acknowledge.visible ? 30 : 0);
 		textScroll.layout(contentTop() + TITLE_BODY_GAP, bottom, textLayout.height());
 		boolean listDrag = listScroll.beginDrag(event.x(), event.y(), panelX + sidebar + 5);
-		if (listDrag || !entries.isEmpty() &&
-		                   textScroll.beginDrag(event.x(), event.y(), contentLeft() + contentWidth() - 3))
+		if (listDrag ||
+		    !entries.isEmpty() && textScroll.beginDrag(event.x(), event.y(), contentLeft() + contentWidth() - 3))
 			return true;
-		if (event.x() >= panelX + 22 && event.x() < panelX + sidebar + 7 &&
-		    event.y() >= bodyTop && event.y() < bodyBottom) {
+		if (event.x() >= panelX + 22 && event.x() < panelX + sidebar + 7 && event.y() >= bodyTop &&
+		    event.y() < bodyBottom) {
 			int row = ((int)event.y() - bodyTop + listScroll.scroll()) / 40;
 			if (row < entries.size()) {
 				state.selected = entries.get(row);
@@ -318,10 +327,14 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 	}
 
 	@Override
-	public boolean keyPressed(KeyEvent event) { return keyPressedWidgets(event); }
+	public boolean keyPressed(KeyEvent event) {
+		return keyPressedWidgets(event);
+	}
 
 	@Override
-	public boolean charTyped(CharacterEvent event) { return charTypedWidgets(event); }
+	public boolean charTyped(CharacterEvent event) {
+		return charTypedWidgets(event);
+	}
 
 	@Override
 	public void close() {

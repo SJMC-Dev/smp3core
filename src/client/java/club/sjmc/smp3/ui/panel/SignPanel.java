@@ -35,9 +35,7 @@ public final class SignPanel extends AbstractPanel {
 	private SignPayloads.State state;
 	private int panelX, panelY, panelWidth, panelHeight, cellWidth, cellHeight, gridLeft, gridTop;
 
-	public SignPanel(SignPayloads.State state) {
-		this.state = state;
-	}
+	public SignPanel(SignPayloads.State state) { this.state = state; }
 
 	public void accept(SignPayloads.State next) {
 		boolean relayout = next.year() != state.year() || next.month() != state.month();
@@ -88,8 +86,7 @@ public final class SignPanel extends AbstractPanel {
 			int index = offset + day - 1;
 			int left = gridLeft + index % COLUMNS * cellWidth;
 			int top = gridTop + index / COLUMNS * cellHeight;
-			boolean hovered = mouseX >= left && mouseX < left + cellWidth && mouseY >= top &&
-			                  mouseY < top + cellHeight;
+			boolean hovered = mouseX >= left && mouseX < left + cellWidth && mouseY >= top && mouseY < top + cellHeight;
 			if (day == state.today() && hovered)
 				graphics.fill(left + 2, top + 2, left + cellWidth - 2, top + cellHeight - 2, 0x227F5936);
 			String number = Integer.toString(day);

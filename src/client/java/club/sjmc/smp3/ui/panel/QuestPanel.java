@@ -28,28 +28,23 @@ public final class QuestPanel extends AbstractPanel {
 	private static final int DONE = 0xFF3B6B3B;
 	private static final int PENDING = 0xFF8A5A22;
 	private DailyQuestPayloads.Catalog catalog;
-	private List<ItemStack> icons;
 	private int selected;
 	private final ScrollView detailScroll = new ScrollView();
 	private int panelX, panelY, panelWidth, panelHeight, split, top, bottom, leftX, leftRight, leftWidth, detailX,
 	    detailWidth, detailTop, detailContentHeight, cardWidth, cardHeight, gridLeft;
 
-	public QuestPanel(DailyQuestPayloads.Catalog catalog) {
-		this.catalog = catalog;
-		this.icons = icons(catalog);
-	}
+	public QuestPanel(DailyQuestPayloads.Catalog catalog) { this.catalog = catalog; }
 
 	public void accept(DailyQuestPayloads.Catalog next) {
+		boolean sameTask = selected < catalog.tasks().size() && selected < next.tasks().size() &&
+		                   catalog.tasks().get(selected).token().equals(next.tasks().get(selected).token());
 		catalog = next;
-		icons = icons(next);
-		detailScroll.setScroll(0);
-		detailContentHeight = 0;
+		if (!sameTask) {
+			detailScroll.setScroll(0);
+			detailContentHeight = 0;
+		}
 		if (selected >= catalog.tasks().size())
 			selected = catalog.tasks().isEmpty() ? 0 : catalog.tasks().size() - 1;
-	}
-
-	private static List<ItemStack> icons(DailyQuestPayloads.Catalog catalog) {
-		return catalog.tasks().stream().map(task -> ItemIcon.of(task.icon())).toList();
 	}
 
 	@Override
@@ -98,16 +93,13 @@ public final class QuestPanel extends AbstractPanel {
 		int left = cardLeft(slot), cardTop = cardTop(slot);
 		boolean selectedCard = slot == selected;
 		boolean hovered = insideCard(slot, mouseX, mouseY);
-		graphics.fill(left, cardTop, left + cardWidth, cardTop + cardHeight,
-		              selectedCard ? 0x55EBDDBF : 0x22EBDDBF);
+		graphics.fill(left, cardTop, left + cardWidth, cardTop + cardHeight, selectedCard ? 0x55EBDDBF : 0x22EBDDBF);
 		drawCardBorder(graphics, left, cardTop, cardWidth, cardHeight, selectedCard, hovered);
-		graphics.fill(left + 4, cardTop + 2, left + 7, cardTop + cardHeight - 2,
-		              difficultyColor(task.difficulty()));
-		float iconScale =
-		    Math.min(3F, Math.max(1F, Math.min((cardWidth - 8) / 16F, cardHeight * .45F / 16F)));
+		graphics.fill(left + 4, cardTop + 2, left + 7, cardTop + cardHeight - 2, difficultyColor(task.difficulty()));
+		float iconScale = Math.min(3F, Math.max(1F, Math.min((cardWidth - 8) / 16F, cardHeight * .45F / 16F)));
 		int iconSize = Math.round(16 * iconScale);
 		int iconX = left + cardWidth / 2 - iconSize / 2, iconY = cardTop + cardHeight * 2 / 5 - iconSize / 2 - 2;
-		drawIcon(graphics, icons.get(slot), iconX, iconY, iconScale);
+		drawIcon(graphics, ItemIcon.frame(task.icons()), iconX, iconY, iconScale);
 		String progress = task.progress() + " / " + task.target();
 		int progressY = iconY + iconSize + 8;
 		String progressLabel = font.plainSubstrByWidth(progress, Math.max(1, cardWidth - 10));
@@ -125,13 +117,13 @@ public final class QuestPanel extends AbstractPanel {
 			graphics.text(font, check, 0, 0, 0xFF3B8C3B, false);
 			graphics.pose().popMatrix();
 		} else {
-			drawRerollIcon(graphics, rerollX, rerollY,
-			               catalog.remaining() == 0 ? 0xFFAD4434 : PaperStyle.INK);
+			drawRerollIcon(graphics, rerollX, rerollY, catalog.remaining() == 0 ? 0xFFAD4434 : PaperStyle.INK);
 			if (mouseX >= rerollX && mouseX < rerollX + 16 && mouseY >= rerollY && mouseY < rerollY + 16) {
 				List<Component> lines = new ArrayList<>();
 				lines.add(Component.literal("剩余更换次数：" + catalog.remaining() + " / " + catalog.limit()));
 				if (!task.rerollAvailable())
-					lines.add(Component.literal(catalog.remaining() == 0 ? "今日刷新次数已用完" : "没有可替换的同难度任务"));
+					lines.add(
+					    Component.literal(catalog.remaining() == 0 ? "今日刷新次数已用完" : "没有可替换的同难度任务"));
 				graphics.setTooltipForNextFrame(font, lines, Optional.empty(), context.toScreenX(mouseX),
 				                                context.toScreenY(mouseY));
 			}
@@ -179,23 +171,26 @@ public final class QuestPanel extends AbstractPanel {
 		int start = detailTop - detailScroll.scroll();
 		graphics.enableScissor(detailX, detailTop, detailX + detailWidth, bottom);
 		int nameWidth = Math.max(1, detailWidth);
-		int nameCursor = WrappedText.draw(
-		    graphics, font, Component.literal(task.name()).withStyle(style -> style.withBold(true)), detailX, start,
-		    nameWidth, PaperStyle.INK);
+		int nameCursor =
+		    WrappedText.draw(graphics, font, Component.literal(task.name()).withStyle(style -> style.withBold(true)),
+			                 detailX, start, nameWidth, PaperStyle.INK);
 		int cursor = nameCursor + 2;
 		String difficulty = "难度 " + task.difficulty() + (task.tier() == 0 ? "" : " · " + task.tier() + "级");
 		graphics.text(font, difficulty, detailX, cursor, difficultyColor(task.difficulty()), false);
 		cursor += font.lineHeight + 2;
 		String status = task.claimed() ? "奖励已结算" : task.complete() ? "已完成，奖励待发放" : "未完成";
-		graphics.text(font, status, detailX, cursor, task.claimed() ? DONE : task.complete() ? PENDING : PaperStyle.MUTED,
+		graphics.text(font, status, detailX, cursor,
+		              task.claimed()    ? DONE
+		              : task.complete() ? PENDING
+		                                : PaperStyle.MUTED,
 		              false);
 		cursor += font.lineHeight + 5;
 		cursor = heading(graphics, "完成条件", cursor);
-		for (String line : task.conditions())
-			cursor = WrappedText.draw(graphics, font, Component.literal(line), detailX, cursor, detailWidth, PaperStyle.MUTED);
+		for (Component line : task.conditions())
+			cursor = WrappedText.draw(graphics, font, line, detailX, cursor, detailWidth, PaperStyle.MUTED);
 		cursor = heading(graphics, "任务奖励", cursor + 2);
-		for (String line : task.rewards())
-			cursor = WrappedText.draw(graphics, font, Component.literal(line), detailX, cursor, detailWidth, PaperStyle.MUTED);
+		for (Component line : task.rewards())
+			cursor = WrappedText.draw(graphics, font, line, detailX, cursor, detailWidth, PaperStyle.MUTED);
 		detailContentHeight = cursor - start;
 		graphics.disableScissor();
 		detailScroll.render(graphics, detailX + detailWidth - 3);

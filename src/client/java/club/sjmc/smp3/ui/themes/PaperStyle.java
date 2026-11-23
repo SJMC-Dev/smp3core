@@ -9,15 +9,13 @@ public final class PaperStyle {
 
 	public static void frame(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
 		graphics.fill(x + PaperTheme.FRAME_SHADOW_X, y + PaperTheme.FRAME_SHADOW_Y,
-		              x + width + PaperTheme.FRAME_SHADOW_X, y + height + PaperTheme.FRAME_SHADOW_Y,
-		              PaperTheme.SHADOW);
+		              x + width + PaperTheme.FRAME_SHADOW_X, y + height + PaperTheme.FRAME_SHADOW_Y, PaperTheme.SHADOW);
 		graphics.fillGradient(x, y, x + width, y + height, PaperTheme.FRAME_TOP, PaperTheme.FRAME_BOTTOM);
-		graphics.outline(x + PaperTheme.FRAME_BORDER, y + PaperTheme.FRAME_BORDER,
-		                 width - 2 * PaperTheme.FRAME_BORDER, height - 2 * PaperTheme.FRAME_BORDER,
-		                 PaperTheme.FRAME_OUTLINE);
+		graphics.outline(x + PaperTheme.FRAME_BORDER, y + PaperTheme.FRAME_BORDER, width - 2 * PaperTheme.FRAME_BORDER,
+		                 height - 2 * PaperTheme.FRAME_BORDER, PaperTheme.FRAME_OUTLINE);
 		graphics.fill(x + PaperTheme.FRAME_SPINE_X, y + PaperTheme.FRAME_SPINE_WIDTH,
-		              x + PaperTheme.FRAME_SPINE_X + PaperTheme.FRAME_SPINE_WIDTH, y + height - PaperTheme.FRAME_SPINE_WIDTH,
-		              PaperTheme.SPINE);
+		              x + PaperTheme.FRAME_SPINE_X + PaperTheme.FRAME_SPINE_WIDTH,
+		              y + height - PaperTheme.FRAME_SPINE_WIDTH, PaperTheme.SPINE);
 		graphics.blit(RenderPipelines.GUI_TEXTURED, PaperTheme.BOOK_TEXTURE, x + PaperTheme.FRAME_TEXT_X,
 		              y + PaperTheme.FRAME_TEXT_Y, PaperTheme.BOOK_TEXTURE_U, PaperTheme.BOOK_TEXTURE_V,
 		              width - PaperTheme.FRAME_TEXT_INSET_X, height - PaperTheme.FRAME_TEXT_INSET_Y,
@@ -38,9 +36,8 @@ public final class PaperStyle {
 		public int range() { return bottom > top ? Math.max(0, content - (bottom - top)) : 0; }
 
 		public int thumbHeight() {
-			return Math.min(bottom - top,
-			                Math.max(PaperTheme.SCROLLBAR_MIN_THUMB,
-			                         (bottom - top) * (bottom - top) / Math.max(1, content)));
+			return Math.min(bottom - top, Math.max(PaperTheme.SCROLLBAR_MIN_THUMB,
+			                                       (bottom - top) * (bottom - top) / Math.max(1, content)));
 		}
 
 		public int thumbTop(int scroll) {

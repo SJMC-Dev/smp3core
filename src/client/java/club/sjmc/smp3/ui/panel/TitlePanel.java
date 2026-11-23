@@ -57,20 +57,22 @@ public final class TitlePanel extends AbstractPanel {
 	}
 
 	private void rebuild() {
-		this.icons = catalog.entries().stream().map(entry -> {
-			try {
-				var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(entry.item()));
-				return new ItemStack(item == Items.AIR ? Items.NAME_TAG : item);
-			} catch (RuntimeException error) {
-				return new ItemStack(Items.NAME_TAG);
-			}
-		}).toList();
+		this.icons = catalog.entries()
+		                 .stream()
+		                 .map(entry -> {
+			                 try {
+				                 var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(entry.item()));
+				                 return new ItemStack(item == Items.AIR ? Items.NAME_TAG : item);
+			                 } catch (RuntimeException error) {
+				                 return new ItemStack(Items.NAME_TAG);
+			                 }
+		                 })
+		                 .toList();
 		this.names = catalog.entries().stream().map(entry -> readable(entry.name())).toList();
-		this.descriptions =
-		    catalog.entries()
-		        .stream()
-		        .map(entry -> entry.description().stream().map(TitlePanel::readable).toList())
-		        .toList();
+		this.descriptions = catalog.entries()
+		                        .stream()
+		                        .map(entry -> entry.description().stream().map(TitlePanel::readable).toList())
+		                        .toList();
 	}
 
 	@Override
@@ -121,8 +123,8 @@ public final class TitlePanel extends AbstractPanel {
 			int cellTop = top + i / columns * CELL_HEIGHT - scrolling.scroll();
 			if (cellTop + CELL_HEIGHT <= top || cellTop >= bottom)
 				continue;
-			boolean hovered = mouseX >= left && mouseX < left + cellWidth && mouseY >= cellTop &&
-			                  mouseY < cellTop + CELL_HEIGHT;
+			boolean hovered =
+			    mouseX >= left && mouseX < left + cellWidth && mouseY >= cellTop && mouseY < cellTop + CELL_HEIGHT;
 			if (i == selected || hovered)
 				graphics.fill(left, cellTop, left + cellWidth, cellTop + CELL_HEIGHT,
 				              i == selected ? 0x447F5936 : 0x227F5936);
@@ -148,9 +150,9 @@ public final class TitlePanel extends AbstractPanel {
 		var entry = catalog.entries().get(selected);
 		graphics.enableScissor(detailX, top, detailX + detailWidth, bottom);
 		int nameWidth = Math.max(1, detailWidth);
-		int nameCursor = WrappedText.draw(
-		    graphics, font, names.get(selected).copy().withStyle(style -> style.withBold(true)), detailX, top,
-		    nameWidth, entry.obtained() ? PaperStyle.INK : 0x99827058, bottom);
+		int nameCursor =
+		    WrappedText.draw(graphics, font, names.get(selected).copy().withStyle(style -> style.withBold(true)),
+			                 detailX, top, nameWidth, entry.obtained() ? PaperStyle.INK : 0x99827058, bottom);
 		int cursor = nameCursor + 2;
 		graphics.text(font, entry.obtained() ? "已获得" : "未获得", detailX, cursor,
 		              entry.obtained() ? OBTAINED : MISSING, false);

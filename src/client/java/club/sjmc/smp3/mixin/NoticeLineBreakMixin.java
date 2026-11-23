@@ -30,8 +30,8 @@ abstract class NoticeLineBreakMixin {
 	@Inject(method = "<init>", at = @At("TAIL"))
 	private void noticeWrapping(CallbackInfo ci) {
 		var screen = Minecraft.getInstance().gui.screen();
-		smp3$notice = screen instanceof NoticeEditorScreen ||
-		              screen instanceof NoticeWrapHost host && host.usesNoticeWrapping();
+		smp3$notice =
+		    screen instanceof NoticeEditorScreen || screen instanceof NoticeWrapHost host && host.usesNoticeWrapping();
 	}
 
 	@Inject(method = "accept", at = @At("HEAD"))

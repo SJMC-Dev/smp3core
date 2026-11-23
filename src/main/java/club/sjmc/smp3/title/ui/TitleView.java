@@ -36,23 +36,24 @@ public final class TitleView {
 		try {
 			var titles = TitleService.getAllTitles();
 			var obtained =
-			    TitleService.getObtainedTitles(player)
-			        .stream()
-			        .map(TitleDescriptor::getId)
-			        .collect(Collectors.toSet());
+			    TitleService.getObtainedTitles(player).stream().map(TitleDescriptor::getId).collect(Collectors.toSet());
 			String active = TitleService.getActiveTitle(player).map(TitleDescriptor::getId).orElse("");
-			var entries = titles.stream().limit(256).map(title -> {
-				var stack = title.toItemStack();
-				var lore = TextHelper.getTextListByValue(player, title.getLore()).stream().limit(8).toList();
-				return new TitlePayloads.Entry(limit(title.getId(), 128),
-				                               limit(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString(), 128),
-				                               TextHelper.getTextByValue(player, title.getDisplayName()), lore,
-				                               obtained.contains(title.getId()));
-			}).toList();
+			var entries = titles.stream()
+			                  .limit(256)
+			                  .map(title -> {
+				                  var stack = title.toItemStack();
+				                  var lore =
+				                      TextHelper.getTextListByValue(player, title.getLore()).stream().limit(8).toList();
+				                  return new TitlePayloads.Entry(
+				                      limit(title.getId(), 128),
+				                      limit(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString(), 128),
+				                      TextHelper.getTextByValue(player, title.getDisplayName()), lore,
+				                      obtained.contains(title.getId()));
+			                  })
+			                  .toList();
 			if (open)
 				player.closeContainer();
-			ServerPlayNetworking.send(player,
-			                          new TitlePayloads.Catalog(entries, limit(active, 128), open));
+			ServerPlayNetworking.send(player, new TitlePayloads.Catalog(entries, limit(active, 128), open));
 		} catch (RuntimeException | LinkageError error) {
 			Smp3Core.LOGGER.error("[SMP3] 称号数据不可用 player={}", player.getUUID(), error);
 			player.sendSystemMessage(Component.literal("称号数据不可用，请联系管理员"));

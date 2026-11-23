@@ -20,8 +20,7 @@ public final class NoticeHud {
 
 	private String title() {
 		int first = 0;
-		while (first < state.messages.size() &&
-		       (!state.unread(first) || !state.messages.get(first).notifyUnread()))
+		while (first < state.messages.size() && (!state.unread(first) || !state.messages.get(first).notifyUnread()))
 			first++;
 		if (first >= state.messages.size())
 			return "";

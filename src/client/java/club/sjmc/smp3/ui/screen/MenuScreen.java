@@ -106,6 +106,8 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	}
 
 	private void selectTab(int index) {
+		if (selected == index && child != null)
+			return;
 		selected = index;
 		childCaptured = false;
 		Panel previous = child;
@@ -132,7 +134,9 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	}
 
 	@Override
-	public boolean usesNoticeWrapping() { return child instanceof NoticePanel; }
+	public boolean usesNoticeWrapping() {
+		return child instanceof NoticePanel;
+	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
@@ -144,10 +148,8 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 			int depth = active ? TAB_ACTIVE_DEPTH : TAB_DEPTH;
 			int left = x - depth;
 			int right = x + (active ? 9 : 1);
-			boolean hovered = !active && mouseX >= left && mouseX < right && mouseY >= top &&
-			                  mouseY < top + tabHeight;
-			graphics.fill(left, top, right, top + tabHeight,
-			              active ? 0xFFF2E7CF : hovered ? 0xDDE0C9A2 : 0xCCB39B7D);
+			boolean hovered = !active && mouseX >= left && mouseX < right && mouseY >= top && mouseY < top + tabHeight;
+			graphics.fill(left, top, right, top + tabHeight, active ? 0xFFF2E7CF : hovered ? 0xDDE0C9A2 : 0xCCB39B7D);
 			int edge = active ? 0xAA8C5B38 : 0x66836B48;
 			int glow = active ? 0x448C5B38 : 0x22765A37;
 			graphics.fill(left, top, right, top + 1, edge);
@@ -159,8 +161,8 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 			graphics.fill(right - 1, top, right, top + tabHeight, edge);
 			graphics.fill(right - 2, top, right - 1, top + tabHeight, glow);
 			String label = TABS[i];
-			graphics.text(font, label, left + (depth - font.width(label)) / 2,
-			              top + (tabHeight - font.lineHeight) / 2, active ? PaperStyle.INK : TAB_DIM, false);
+			graphics.text(font, label, left + (depth - font.width(label)) / 2, top + (tabHeight - font.lineHeight) / 2,
+			              active ? PaperStyle.INK : TAB_DIM, false);
 		}
 		if (selected < 0) {
 			drawCentered(graphics, "选中左侧标签以打开对应界面", PaperStyle.MUTED);
@@ -246,7 +248,7 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
 		if (child != null && insidePane(mouseX, mouseY))
 			return child.mouseScrolled(mouseX - paneX + EMBED_INSET, mouseY - paneY + EMBED_INSET, horizontal,
-			                          vertical);
+			                           vertical);
 		return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
 	}
 
@@ -278,7 +280,9 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	}
 
 	@Override
-	public boolean isPauseScreen() { return false; }
+	public boolean isPauseScreen() {
+		return false;
+	}
 
 	@Override
 	public void extractBackground(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {}

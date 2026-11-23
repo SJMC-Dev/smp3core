@@ -21,13 +21,12 @@ public final class ShopPayloads {
 	public record Node(String id, String parent, String name, String icon, List<Entry> entries) {}
 	public record View(List<Node> nodes) {}
 
-	public record Catalog(long session, int part, int total, String text, boolean open)
-	    implements CustomPacketPayload {
+	public record Catalog(long session, int part, int total, String text, boolean open) implements CustomPacketPayload {
 		public static final Type<Catalog> TYPE = new Type<>(Identifier.fromNamespaceAndPath("smp3", "shop_catalog"));
-		public static final StreamCodec<ByteBuf, Catalog> CODEC = StreamCodec.composite(
-		    ByteBufCodecs.VAR_LONG, Catalog::session, ByteBufCodecs.VAR_INT, Catalog::part, ByteBufCodecs.VAR_INT,
-		    Catalog::total, ByteBufCodecs.stringUtf8(PART_SIZE), Catalog::text, ByteBufCodecs.BOOL, Catalog::open,
-		    Catalog::new);
+		public static final StreamCodec<ByteBuf, Catalog> CODEC =
+		    StreamCodec.composite(ByteBufCodecs.VAR_LONG, Catalog::session, ByteBufCodecs.VAR_INT, Catalog::part,
+			                      ByteBufCodecs.VAR_INT, Catalog::total, ByteBufCodecs.stringUtf8(PART_SIZE),
+			                      Catalog::text, ByteBufCodecs.BOOL, Catalog::open, Catalog::new);
 		@Override
 		public Type<Catalog> type() {
 			return TYPE;
