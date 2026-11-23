@@ -38,11 +38,13 @@ public final class ShopModule {
 
 	private ShopModule(MinecraftServer server) { this.server = server; }
 	public static ShopCatalog catalog() { return current.catalog; }
-	public static boolean open(ServerPlayer player) {
+	public static boolean open(ServerPlayer player) { return open(player, true); }
+	public static boolean open(ServerPlayer player, boolean open) {
 		if (!refresh())
 			return false;
-		player.closeContainer();
-		return current.sessions.open(player);
+		if (open)
+			player.closeContainer();
+		return current.sessions.open(player, open);
 	}
 	private void publish(JsonObject json) throws IOException {
 		ShopCatalog candidate = ShopCatalog.parse(json, server.registryAccess());

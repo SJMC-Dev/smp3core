@@ -1,10 +1,11 @@
-package club.sjmc.smp3.ui;
+package club.sjmc.smp3.ui.widget;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
 import club.sjmc.smp3.notice.NoticePayloads;
+import club.sjmc.smp3.ui.themes.PaperStyle;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -12,19 +13,21 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
 
-final class BookText {
-	static final float TEXT_SCALE = .85F;
-	private static final Pattern INLINE = Pattern.compile("\\*\\*(.+?)\\*\\*|`([^`]+)`|\\[([^\\]]+)\\]\\(([^)]+)\\)");
+public final class BookText {
+	public static final float TEXT_SCALE = .85F;
+	private static final Pattern INLINE = Pattern.compile("\\*\\*(.+?)\\*\\*|`([^`]+)`|\\[([^]]+)]\\(([^)]+)\\)");
 	private static final Pattern LIST = Pattern.compile("^([ \\t]*)-[ \\t]+");
+	private static final Pattern NUMBERED = Pattern.compile("^([ \\t]*\\d+[.)、])[ \\t]+");
 	private BookText() {}
 
-	static Layout layout(NoticePayloads.Body body, Font font, int width) {
+	public static Layout layout(NoticePayloads.Body body, Font font, int width) {
 		var result = new ArrayList<Line>();
 		int top = 0;
 		for (String line : body.text().split("\n", -1)) {
 			float scale = TEXT_SCALE;
 			MutableComponent text;
 			if (!body.markdown()) {
+				line = NUMBERED.matcher(line).replaceFirst("$1\u00A0");
 				text = Component.literal(line);
 			} else {
 				boolean heading = line.matches("#{1,4} .*");
@@ -36,8 +39,10 @@ final class BookText {
 						default -> 1.125F;
 					};
 					line = line.substring(line.indexOf(' ') + 1);
-				} else
-					line = LIST.matcher(line).replaceFirst("$1• ");
+				} else {
+					line = LIST.matcher(line).replaceFirst("$1•\u00A0");
+					line = NUMBERED.matcher(line).replaceFirst("$1\u00A0");
+				}
 				text = inline(line);
 				if (heading)
 					text.withStyle(style -> style.withBold(true).withColor(0x6B4326));
@@ -53,12 +58,12 @@ final class BookText {
 		return new Layout(List.copyOf(result), top);
 	}
 
-	record Line(FormattedCharSequence text, int top, float scale) {}
+	public record Line(FormattedCharSequence text, int top, float scale) {}
 
-	record Layout(List<Line> lines, int height) {
-		static final Layout EMPTY = new Layout(List.of(), 0);
+	public record Layout(List<Line> lines, int height) {
+		public static final Layout EMPTY = new Layout(List.of(), 0);
 
-		void render(GuiGraphicsExtractor graphics, Font font, int left, int top, int bottom, int scroll) {
+		public void render(GuiGraphicsExtractor graphics, Font font, int left, int top, int bottom, int scroll) {
 			int low = 0, high = lines.size();
 			while (low < high) {
 				int mid = (low + high) >>> 1;

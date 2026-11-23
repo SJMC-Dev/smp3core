@@ -25,6 +25,12 @@ import club.sjmc.smp3.item.ui.PackGui;
 import club.sjmc.smp3.notice.NoticeFixture;
 import club.sjmc.smp3.notice.NoticeModule;
 import club.sjmc.smp3.notice.NoticePayloads;
+import club.sjmc.smp3.ui.hud.HudLayout;
+import club.sjmc.smp3.ui.panel.NoticePanel;
+import club.sjmc.smp3.ui.screen.HudSettingsScreen;
+import club.sjmc.smp3.ui.screen.MenuScreen;
+import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
+import club.sjmc.smp3.ui.widget.BookText;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -33,6 +39,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
@@ -102,15 +109,14 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.runOnClient(client -> {
 				var connection = client.getConnection();
 				var commands = connection.getCommands();
-				for (String root : List.of("smp3 dailyquest", "smp3 dailyquests")) {
-					var suggestions =
-					    commands
-					        .getCompletionSuggestions(commands.parse(root + " ", connection.getSuggestionsProvider()))
-					        .join();
-					if (suggestions.getList().stream().noneMatch(
-					        s -> s.getText().equals(client.player.getName().getString())))
-						throw new AssertionError("Client OP player completion missing: " + root);
-				}
+				String root = "smp3 dailyquest";
+				var suggestions =
+				    commands
+				        .getCompletionSuggestions(commands.parse(root + " ", connection.getSuggestionsProvider()))
+				        .join();
+				if (suggestions.getList().stream().noneMatch(
+				        s -> s.getText().equals(client.player.getName().getString())))
+					throw new AssertionError("Client OP player completion missing: " + root);
 			});
 			context.runOnClient(client -> client.options.guiScale().set(2));
 			context.takeScreenshot("quest-hud-active");
@@ -205,10 +211,12 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				Smp3Client.layout = new HudLayout();
 				Smp3Client.BOOK.clear();
 			});
-			context.getInput().pressKey(options -> options.keyChat);
-			context.getInput().typeChars("/smp3 info");
-			context.getInput().pressKey(InputConstants.KEY_RETURN);
-			context.waitForScreen(ServerBookScreen.class);
+			context.runOnClient(client -> {
+				var menu = new MenuScreen();
+				client.gui.setScreen(menu);
+				menu.openNotices();
+			});
+			waitForNotice(context);
 			context.takeScreenshot("server-book-empty");
 			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
 			context.waitFor(client -> client.gui.screen() == null);
@@ -309,7 +317,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			                           .orElseThrow()
 			                           .setValue("正文\n".repeat(2200) + "🌿"));
 			context.clickScreenButton("发布公告");
-			context.waitForScreen(ServerBookScreen.class);
+			waitForNotice(context);
 			context.waitFor(client
 			                -> Smp3Client.BOOK.messages.size() == 1 &&
 			                       Smp3Client.BOOK.messages.getFirst().id().equals("editor-test"));
@@ -348,16 +356,16 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			});
 			context.clickScreenButton("删除公告");
 			context.clickScreenButton("确认删除");
-			context.waitForScreen(ServerBookScreen.class);
+			waitForNotice(context);
 			context.waitFor(client
 			                -> Smp3Client.BOOK.messages.isEmpty() && Smp3Client.BOOK.unreadCount() == 0 &&
-			                       !Smp3Client.BOOK.noticeVisible());
+			                       !Smp3Client.noticeHud().visible());
 			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
 			context.waitFor(client -> client.gui.screen() == null);
 			world.getServer().runOnServer(server -> NoticeFixture.join(world.getConnection().getServerPlayer()));
 			context.waitTicks(2);
 			context.runOnClient(client -> {
-				if (Smp3Client.BOOK.pendingOpen != null || client.gui.screen() instanceof ServerBookScreen)
+				if (Smp3Client.BOOK.pendingOpen != null || notice(client) != null)
 					throw new AssertionError("Deleted announcement prompted on join");
 			});
 			context.getInput().resizeWindow(1280, 800);
@@ -378,7 +386,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			});
 			hudControls(context);
 			world.getServer().runOnServer(server -> NoticeFixture.join(world.getConnection().getServerPlayer()));
-			context.waitForScreen(ServerBookScreen.class);
+			waitForNotice(context);
 			context.waitFor(
 			    client -> Smp3Client.BOOK.bodies.containsKey("rules") && Smp3Client.BALANCES.coins.received);
 			context.takeScreenshot("server-book-join-confirmation");
@@ -389,8 +397,8 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 					throw new AssertionError("Closing required notice marked it read");
 			});
 			world.getServer().runOnServer(server -> NoticeFixture.join(world.getConnection().getServerPlayer()));
-			context.waitForScreen(ServerBookScreen.class);
-			context.clickScreenButton("我已阅读并确认");
+			waitForNotice(context);
+			context.runOnClient(client -> notice(client).acknowledge());
 			context.waitFor(client -> !Smp3Client.BOOK.unread(0));
 			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
 			context.waitFor(client -> client.gui.screen() == null);
@@ -404,7 +412,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("hud-notice");
 			context.runOnClient(client -> {
 				Smp3Client.BOOK.selected = 2;
-				client.gui.setScreen(new ServerBookScreen());
+				openNoticePanel(client);
 			});
 			context.waitFor(client -> !Smp3Client.BOOK.unread(2) && Smp3Client.BALANCES.coins.value == 12450);
 			context.takeScreenshot("server-book");
@@ -418,7 +426,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("server-book-balances");
 			context.runOnClient(client -> {
 				Smp3Client.BOOK.selected = 1;
-				client.gui.setScreen(new ServerBookScreen());
+				openNoticePanel(client);
 			});
 			context.waitTicks(2);
 			context.takeScreenshot("server-book-rules");
@@ -426,36 +434,29 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.runOnClient(client -> {
 				client.options.guiScale().set(0);
 				client.resizeGui();
-				client.gui.setScreen(new ServerBookScreen());
+				openNoticePanel(client);
 			});
 			context.waitTicks(3);
 			context.takeScreenshot("server-book-laptop");
 			context.runOnClient(client -> {
-				if (client.gui.screen().children().stream().noneMatch(
-				        child
-				        -> child instanceof Button button && button.visible &&
-				               button.getMessage().getString().equals("我已阅读并确认")))
+				if (notice(client) == null || !notice(client).acknowledgeVisible())
 					throw new AssertionError("Laptop margins hid the announcement detail pane");
 				client.options.guiScale().set(2);
 				client.resizeGui();
 			});
 			context.getInput().resizeWindow(640, 480);
-			context.runOnClient(client -> client.gui.setScreen(new ServerBookScreen()));
+			context.runOnClient(QuestHudClientGameTest::openNoticePanel);
 			context.waitTicks(3);
 			context.takeScreenshot("server-book-narrow");
-			context.clickScreenButton("帮助");
+			context.runOnClient(client -> notice(client).selectCategory("帮助"));
 			context.waitTicks(2);
 			context.takeScreenshot("server-book-empty-category");
-			context.clickScreenButton("服规");
+			context.runOnClient(client -> notice(client).selectCategory("服规"));
 			context.getInput().setCursorPos(80, 290);
 			context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
-			context.waitFor(client
-			                -> client.gui.screen().children().stream().anyMatch(
-			                    child
-			                    -> child instanceof Button button && button.visible &&
-			                           button.getMessage().getString().equals("我已阅读并确认")));
+			context.waitFor(client -> notice(client) != null && notice(client).acknowledgeVisible());
 			context.takeScreenshot("server-book-narrow-detail");
-			context.clickScreenButton("我已阅读并确认");
+			context.runOnClient(client -> notice(client).acknowledge());
 			context.waitFor(client -> !Smp3Client.BOOK.unread(1));
 			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
 			context.waitFor(client -> client.gui.screen() == null);
@@ -494,10 +495,24 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			world.getConnection().waitForChunksRender();
 			context.waitFor(client -> Smp3Client.BOOK.messages.size() == 3);
 			context.runOnClient(client -> {
-				if (Smp3Client.BOOK.unreadCount() != 0 || client.gui.screen() instanceof ServerBookScreen)
+				if (Smp3Client.BOOK.unreadCount() != 0 || notice(client) != null)
 					throw new AssertionError("Read state lost after server restart");
 			});
 		}
+	}
+
+	private static NoticePanel notice(Minecraft client) {
+		return client.gui.screen() instanceof MenuScreen menu ? menu.noticePanel() : null;
+	}
+
+	private static void openNoticePanel(Minecraft client) {
+		var menu = new MenuScreen();
+		client.gui.setScreen(menu);
+		menu.openNotices();
+	}
+
+	private static void waitForNotice(ClientGameTestContext context) {
+		context.waitFor(client -> notice(client) != null);
 	}
 
 	private static void hudControls(ClientGameTestContext context) {
@@ -509,9 +524,9 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			KeyMapping.resetMapping();
 		});
 		context.getInput().pressKey(InputConstants.KEY_J);
-		context.waitFor(client -> !Smp3Client.HUD.visible && !Smp3Client.BOOK.noticeVisible());
+		context.waitFor(client -> !Smp3Client.HUD.visible && !Smp3Client.noticeHud().visible());
 		context.getInput().pressKey(InputConstants.KEY_J);
-		context.waitFor(client -> Smp3Client.HUD.visible && Smp3Client.BOOK.noticeVisible());
+		context.waitFor(client -> Smp3Client.HUD.visible && Smp3Client.noticeHud().visible());
 		context.runOnClient(client -> {
 			KeyMapping.get("key.smp3.quest_hud").setKey(InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_K));
 			KeyMapping.resetMapping();

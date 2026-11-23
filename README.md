@@ -29,6 +29,20 @@ Minecraft 26.3 / Fabric Loader 0.19.5 / Java 25 SMP3 核心模组，提供商店
 
 
 
+## 界面结构
+
+游戏内界面由客户端 `src/client/java/club/sjmc/smp3/ui` 提供：`MenuScreen` 以标签页承载公告、签到、任务、商店、称号，HUD 与显示设置分别位于 `hud` 与 `screen`。
+
+服务端 `src/main/java/club/sjmc/smp3/*/ui` 只保留三类内容：
+
+- 数据与命令：`*View` 组装并下发 payload，`*Command` 提供管理员或玩家命令。
+- 旧客户端回退 GUI：`SignGui`、`DailyQuestGui`（含 `QuestDetailsGui`、`QuestRewardsGui`）与 Fuji 称号菜单，仅在客户端不支持对应 payload 时使用；最低客户端版本提升后删除。
+- 物品右键 GUI：`PackGui`、`EnchantBookGui` 有意保留在服务端，不迁移到菜单。
+
+玩家入口为 `/smp3 menu`、登录公告与 HUD 通知条。以下旧入口已移除：`/dailyquests`、`/info`、`/smp3 sign`、`/smp3 shop <player>`；命令与配置以 Wiki 为准。
+
+`GachaCommand` 属于管理员命令而非界面代码，随抽奖功能保留。
+
 ## 构建与测试
 
 ```bash
@@ -48,8 +62,8 @@ Java 格式配置为 `.clang-format`，使用 clang-format 23；执行 `./gradle
 | --- | --- |
 | `src/main` | 服务端功能、公共消息与发布资源 |
 | `src/client` | 客户端 HUD、动画状态与显示设置 |
-| `src/test` | Java 原生断言：任务规则、经济恢复、HUD 快照及动画状态转换、模块依赖边界 |
-| `src/gametest` | Fabric 服务端与客户端集成测试：事件、GUI、存档、HUD 同步与实际截图 |
+| `src/test` | Java 原生断言：任务规则、经济恢复、日期与公告校验、模块依赖边界 |
+| `src/gametest` | Fabric 服务端与客户端集成测试：事件、GUI、存档、HUD 同步、面板交互与实际截图 |
 
 测试代码和测试模组元数据不进入发布 JAR。
 

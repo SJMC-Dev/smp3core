@@ -1,8 +1,11 @@
-package club.sjmc.smp3.ui;
+package club.sjmc.smp3.ui.hud;
 
 import java.util.List;
 
 import club.sjmc.smp3.daily.QuestDefinition;
+import club.sjmc.smp3.ui.Smp3Client;
+import club.sjmc.smp3.ui.state.QuestHudState;
+import club.sjmc.smp3.ui.state.ServerBookState;
 
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -10,11 +13,11 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.world.item.ItemStack;
 
-final class QuestHud {
-	final QuestHudState state = new QuestHudState();
-	boolean visible = true;
+public final class QuestHud {
+	public final QuestHudState state = new QuestHudState();
+	public boolean visible = true;
 
-	void render(GuiGraphicsExtractor graphics, DeltaTracker delta) {
+	public void render(GuiGraphicsExtractor graphics, DeltaTracker delta) {
 		Minecraft client = Minecraft.getInstance();
 		if (client.player == null || client.gui.hud.isHidden())
 			return;
@@ -31,19 +34,19 @@ final class QuestHud {
 		return editing ? Math.max(1, state.rows.size()) * 22 : visible || state.hiding() ? state.rows.size() * 22 : 0;
 	}
 
-	private int noticeWidth() { return Smp3Client.BOOK.unreadCount() > 0 ? Smp3Client.BOOK.noticeWidth() : 100; }
+	private int noticeWidth() { return Smp3Client.book().unreadCount() > 0 ? Smp3Client.noticeHud().width() : 100; }
 
-	HudLayout.Box box(int width, int height, boolean editing) {
-		boolean attached = Smp3Client.layout.followQuests && (editing || Smp3Client.BOOK.noticeVisible() ||
-		                                                      state.hiding() && Smp3Client.BOOK.unreadCount() > 0);
-		return Smp3Client.layout.quests.box(
+	public HudLayout.Box box(int width, int height, boolean editing) {
+		boolean attached = Smp3Client.layout().followQuests && (editing || Smp3Client.noticeHud().visible() ||
+		                                                      state.hiding() && Smp3Client.book().unreadCount() > 0);
+		return Smp3Client.layout().quests.box(
 		    width, height, Math.max(questWidth(), attached ? noticeWidth() : 0),
 		    Math.max(20, questHeight(editing) + (attached ? ServerBookState.NOTICE_HEIGHT + 4 : 0)));
 	}
 
-	HudLayout.Box noticeBox(int width, int height, boolean editing) {
-		if (!Smp3Client.layout.followQuests)
-			return Smp3Client.layout.notices.box(width, height, noticeWidth(), ServerBookState.NOTICE_HEIGHT);
+	public HudLayout.Box noticeBox(int width, int height, boolean editing) {
+		if (!Smp3Client.layout().followQuests)
+			return Smp3Client.layout().notices.box(width, height, noticeWidth(), ServerBookState.NOTICE_HEIGHT);
 		var group = box(width, height, editing);
 		int w = Math.round(noticeWidth() * group.scale());
 		return new HudLayout.Box(group.x() + group.width() - w,
@@ -55,12 +58,12 @@ final class QuestHud {
 		Minecraft client = Minecraft.getInstance();
 		if (visible || state.hiding())
 			state.advance(seconds);
-		if (Smp3Client.BOOK.noticeVisible()) {
+		if (Smp3Client.noticeHud().visible()) {
 			var notice = noticeBox(graphics.guiWidth(), graphics.guiHeight(), false);
 			graphics.pose().pushMatrix();
 			graphics.pose().translate(notice.x(), notice.y());
 			graphics.pose().scale(notice.scale(), notice.scale());
-			Smp3Client.BOOK.renderNotice(graphics, noticeWidth(), 0);
+			Smp3Client.noticeHud().render(graphics, noticeWidth(), 0);
 			graphics.pose().popMatrix();
 		}
 		int height = questHeight(false), width = questWidth();

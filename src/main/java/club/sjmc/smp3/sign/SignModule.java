@@ -1,15 +1,23 @@
 package club.sjmc.smp3.sign;
 
 import java.io.IOException;
+import java.time.DateTimeException;
+import java.time.LocalDate;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.config.JsonConfig;
+import club.sjmc.smp3.sign.ui.SignGui;
+import club.sjmc.smp3.sign.ui.SignView;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 
 public final class SignModule {
 	private static SignConfig config;
@@ -28,6 +36,18 @@ public final class SignModule {
 	}
 
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(SignPayloads.State.TYPE, SignPayloads.State.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(SignPayloads.Request.TYPE, SignPayloads.Request.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(SignPayloads.Request.TYPE, (request, context) -> {
+			ServerPlayer player = context.player();
+			try {
+				LocalDate date = LocalDate.of(request.year(), request.month(), request.day());
+				SignService.sign(player, date).stream().map(SignGui::message).forEach(player::sendSystemMessage);
+			} catch (DateTimeException error) {
+				player.sendSystemMessage(Component.literal("签到日期无效"));
+			}
+			SignView.refresh(player);
+		});
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			try {
 				reload(server);

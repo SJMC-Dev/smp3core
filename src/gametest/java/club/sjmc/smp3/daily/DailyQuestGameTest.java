@@ -307,21 +307,20 @@ public final class DailyQuestGameTest {
 			var commands = server.getCommands().getDispatcher();
 			String playerName = player.getGameProfile().name();
 			var console = server.createCommandSourceStack();
-			for (String root : List.of("smp3 dailyquest", "smp3 dailyquests")) {
-				for (String prefix : List.of("", playerName.substring(0, 2))) {
-					var parsed = commands.parse(root + " " + prefix, console);
-					var suggestions = commands.getCompletionSuggestions(parsed).join().getList();
-					test.assertTrue(suggestions.stream().anyMatch(s -> s.getText().equals(playerName)),
-					                "Online player completion missing: " + root);
-				}
-				var completions = Map.of(root + " " + playerName + " r", List.of("reroll", "reset"),
-				                         root + " " + playerName + " reset ", List.of("1", "2", "3", "4"));
-				for (var entry : completions.entrySet()) {
-					var parsed = commands.parse(entry.getKey(), console);
-					var suggestions = commands.getCompletionSuggestions(parsed).join().getList();
-					test.assertTrue(suggestions.stream().map(s -> s.getText()).toList().equals(entry.getValue()),
-					                "Command argument completion missing: " + entry.getKey());
-				}
+			String root = "smp3 dailyquest";
+			for (String prefix : List.of("", playerName.substring(0, 2))) {
+				var parsed = commands.parse(root + " " + prefix, console);
+				var suggestions = commands.getCompletionSuggestions(parsed).join().getList();
+				test.assertTrue(suggestions.stream().anyMatch(s -> s.getText().equals(playerName)),
+				                "Online player completion missing: " + root);
+			}
+			var completions = Map.of(root + " " + playerName + " r", List.of("reroll", "reset"),
+			                         root + " " + playerName + " reset ", List.of("1", "2", "3", "4"));
+			for (var entry : completions.entrySet()) {
+				var parsed = commands.parse(entry.getKey(), console);
+				var suggestions = commands.getCompletionSuggestions(parsed).join().getList();
+				test.assertTrue(suggestions.stream().map(s -> s.getText()).toList().equals(entry.getValue()),
+				                "Command argument completion missing: " + entry.getKey());
 			}
 			String reset = "smp3 dailyquest " + player.getGameProfile().name() + " reroll";
 			for (String invalid : List.of(reset + " 0", reset + " 5", "smp3 dailyquest nobody-online reset")) {
@@ -331,12 +330,10 @@ public final class DailyQuestGameTest {
 				} catch (CommandSyntaxException expected) {
 				}
 			}
-			for (String root : List.of("smp3 dailyquest", "smp3 dailyquests")) {
-				try {
-					commands.execute(root + " " + playerName + " reset", player.createCommandSourceStack());
-					throw new AssertionError("未授权玩家能执行管理命令");
-				} catch (CommandSyntaxException expected) {
-				}
+			try {
+				commands.execute("smp3 dailyquest " + playerName + " reset", player.createCommandSourceStack());
+				throw new AssertionError("未授权玩家能执行管理命令");
+			} catch (CommandSyntaxException expected) {
 			}
 			var old = day.assignments.get(2);
 			var operator = player.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER);
@@ -345,7 +342,7 @@ public final class DailyQuestGameTest {
 			                "指定刷新修改了其他槽位");
 			test.assertTrue(!service.reroll(player, day.date, 2, old.token, false).success(), "过期任务回调被接受");
 			test.assertTrue(
-			    commands.execute("smp3 dailyquests " + playerName + " reroll", server.createCommandSourceStack()) == 2,
+			    commands.execute("smp3 dailyquest " + playerName + " reroll", server.createCommandSourceStack()) == 2,
 			    "批量刷新未正确跳过已完成任务");
 			test.assertTrue(day.assignments.getFirst() == task && day.assignments.get(1) == completed,
 			                "刷新改动已领取或已完成任务");
@@ -368,7 +365,6 @@ public final class DailyQuestGameTest {
 			                                                  overview);
 			player.closeContainer();
 			test.assertTrue(day.rerollsUsed == 0 && day.assignments.get(2) == old, "关闭确认页消耗额度");
-			commands.execute("smp3 dailyquest", player.createCommandSourceStack());
 			player.closeContainer();
 			player.closeContainer();
 			SignGui.open(player);

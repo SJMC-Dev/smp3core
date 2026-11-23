@@ -25,10 +25,14 @@ final class ShopSessions {
 	private static final ShopService.Quote UNAVAILABLE = new ShopService.Quote(-1, 0, 0, 0, 0, false, false);
 	private static final class Session {
 		final long id;
+		final boolean open;
 		String selected = "";
 		long version;
 		ShopService.Quote quote = UNAVAILABLE;
-		Session(long id) { this.id = id; }
+		Session(long id, boolean open) {
+			this.id = id;
+			this.open = open;
+		}
 	}
 	private final Map<UUID, Session> viewers = new HashMap<>();
 	private long serial;
@@ -83,11 +87,12 @@ final class ShopSessions {
 			}
 		}
 	}
-	boolean open(ServerPlayer player) {
+	boolean open(ServerPlayer player) { return open(player, true); }
+	boolean open(ServerPlayer player, boolean open) {
 		if (!ServerPlayNetworking.canSend(player, ShopPayloads.Catalog.TYPE))
 			return false;
 		ShopTitles.deliver(player);
-		Session session = new Session(++serial);
+		Session session = new Session(++serial, open);
 		viewers.put(player.getUUID(), session);
 		sendCatalog(player, session);
 		BalanceSync.subscribe(player, BalanceSync.View.SHOP, true);
@@ -95,7 +100,8 @@ final class ShopSessions {
 	}
 	private void sendCatalog(ServerPlayer player, Session session) {
 		for (int i = 0; i < parts.size(); i++)
-			ServerPlayNetworking.send(player, new ShopPayloads.Catalog(session.id, i, parts.size(), parts.get(i)));
+			ServerPlayNetworking.send(
+			    player, new ShopPayloads.Catalog(session.id, i, parts.size(), parts.get(i), session.open));
 	}
 	void close(ServerPlayer player) {
 		viewers.remove(player.getUUID());

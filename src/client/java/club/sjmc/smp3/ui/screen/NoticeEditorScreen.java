@@ -1,12 +1,18 @@
-package club.sjmc.smp3.ui;
+package club.sjmc.smp3.ui.screen;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.notice.NoticeCatalog;
 import club.sjmc.smp3.notice.NoticeEditing;
 import club.sjmc.smp3.notice.NoticePayloads;
+import club.sjmc.smp3.ui.Smp3Client;
+import club.sjmc.smp3.ui.themes.PaperStyle;
+import club.sjmc.smp3.ui.widget.BookText;
+import club.sjmc.smp3.ui.widget.PaperButton;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -21,6 +27,7 @@ public final class NoticeEditorScreen extends Screen {
 	private final String session;
 	private final List<NoticeCatalog.Category> categories;
 	private final NoticeEditing.Draft original;
+	private final boolean draftValid;
 	private final String[] fields;
 	private String body, status = "";
 	private boolean markdown, pinned, notify, acknowledgement, publishing, discard, confirmDelete;
@@ -32,11 +39,13 @@ public final class NoticeEditorScreen extends Screen {
 	private int renderedWidth;
 	private boolean renderedMarkdown;
 
-	NoticeEditorScreen(NoticePayloads.Editor payload) {
+	public NoticeEditorScreen(NoticePayloads.Editor payload) {
 		super(Component.literal("编辑公告"));
 		session = payload.session();
 		categories = payload.categories();
-		original = NoticeEditing.JSON.fromJson(payload.draft(), NoticeEditing.Draft.class);
+		var parsed = parseDraft(payload);
+		draftValid = parsed != null;
+		original = draftValid ? parsed : blankDraft(payload);
 		fields = new String[] {original.id(), original.title(), original.category(), original.categoryName(),
 		                       original.date()};
 		body = original.body();
@@ -44,6 +53,28 @@ public final class NoticeEditorScreen extends Screen {
 		pinned = original.pinned();
 		notify = original.notifyUnread();
 		acknowledgement = original.acknowledgement();
+		if (!draftValid)
+			status = "公告数据未加载，无法发布";
+	}
+
+	private static NoticeEditing.Draft parseDraft(NoticePayloads.Editor payload) {
+		try {
+			var parsed = NoticeEditing.JSON.fromJson(payload.draft(), NoticeEditing.Draft.class);
+			if (parsed != null && parsed.id() != null && parsed.title() != null && parsed.category() != null &&
+			    parsed.categoryName() != null && parsed.date() != null && parsed.body() != null)
+				return parsed;
+			Smp3Core.LOGGER.error("[SMP3] 公告编辑器草稿不完整 session={}", payload.session());
+		} catch (RuntimeException error) {
+			Smp3Core.LOGGER.error("[SMP3] 公告编辑器草稿解析失败 session={}", payload.session(), error);
+		}
+		return null;
+	}
+
+	private static NoticeEditing.Draft blankDraft(NoticePayloads.Editor payload) {
+		var category = payload.categories().isEmpty() ? new NoticeCatalog.Category("news", "公告")
+		                                              : payload.categories().getFirst();
+		return new NoticeEditing.Draft("", "", category.id(), category.name(), LocalDate.now().toString(), "", true,
+		                               false, true, false);
 	}
 
 	private NoticeEditing.Draft draft() {
@@ -88,10 +119,12 @@ public final class NoticeEditorScreen extends Screen {
 			String[] tabs = {"信息", "正文", "预览"};
 			for (int i = 0; i < tabs.length; i++) {
 				int selected = i;
-				addRenderableWidget(new PaperButton(left + i * 70, y + 28, 64, tabs[i], true, () -> {
+				PaperButton button = addRenderableWidget(new PaperButton(left + i * 70, y + 28, 64, tabs[i], true, () -> {
 					tab = selected;
 					rebuildWidgets();
-				})).active = tab != i;
+				}));
+				button.setSelected(tab == i);
+				button.active = tab != i;
 			}
 		}
 		if (!narrow || tab == 1)
@@ -185,6 +218,11 @@ public final class NoticeEditorScreen extends Screen {
 	}
 
 	private void publish() {
+		if (!draftValid) {
+			status = "公告数据未加载，请关闭后重试";
+			rebuildWidgets();
+			return;
+		}
 		if (body.getBytes(StandardCharsets.UTF_8).length > 32768) {
 			status = "正文超过 32768 UTF-8 字节，请缩短内容";
 			return;
@@ -205,13 +243,13 @@ public final class NoticeEditorScreen extends Screen {
 			ClientPlayNetworking.send(new NoticePayloads.Publish(session, i, parts.size(), parts.get(i)));
 	}
 
-	void result(NoticePayloads.Editor payload) {
+	public void result(NoticePayloads.Editor payload) {
 		if (!session.equals(payload.session()))
 			return;
 		publishing = false;
 		confirmDelete = false;
 		if (payload.message().isEmpty()) {
-			minecraft.gui.setScreen(new ServerBookScreen());
+			Smp3Client.openBook();
 		} else {
 			status = payload.message();
 			rebuildWidgets();
@@ -263,7 +301,7 @@ public final class NoticeEditorScreen extends Screen {
 			int left = x + 16 + (i % 2) * (half + 8), top = y + (narrow ? 50 : 24) + (i / 2) * 32;
 			graphics.text(font, labels[i], left, top, 0xFF827058, false);
 			graphics.horizontalLine(left, left + (i == 4 ? Math.min(108, (panelWidth - 32) / 3) : half), top + 29,
-			                        0xFFB7A17D);
+			                        PaperStyle.LINE);
 		}
 		if (!narrow || tab == 2) {
 			if (!body.equals(renderedBody) || renderedWidth != previewWidth || renderedMarkdown != markdown) {

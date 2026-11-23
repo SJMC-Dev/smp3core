@@ -15,15 +15,6 @@ public final class SignCommand {
 
 	public static LiteralArgumentBuilder<CommandSourceStack> command() {
 		return Commands.literal("sign")
-		    .executes(context -> {
-			    ServerPlayer player = context.getSource().getPlayer();
-			    if (player == null) {
-				    context.getSource().sendFailure(Component.literal("只有玩家可以使用 /smp3 sign"));
-				    return 0;
-			    }
-			    SignGui.open(player);
-			    return 1;
-		    })
 		    .then(Commands.literal("reload")
 		              .requires(source -> Permissions.isAdmin(source, "smp.sign.admin"))
 		              .executes(context -> {

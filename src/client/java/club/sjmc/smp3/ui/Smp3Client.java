@@ -3,16 +3,31 @@ package club.sjmc.smp3.ui;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.Consumer;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.Smp3Core;
+import club.sjmc.smp3.daily.DailyQuestPayloads;
 import club.sjmc.smp3.daily.QuestHudPayload;
 import club.sjmc.smp3.economy.BalanceSync;
+import club.sjmc.smp3.menu.MenuPayloads;
 import club.sjmc.smp3.notice.NoticePayloads;
 import club.sjmc.smp3.shop.ShopPayloads;
+import club.sjmc.smp3.sign.SignPayloads;
+import club.sjmc.smp3.title.TitlePayloads;
+import club.sjmc.smp3.ui.hud.CurrencyHud;
+import club.sjmc.smp3.ui.hud.HudLayout;
+import club.sjmc.smp3.ui.hud.NoticeHud;
+import club.sjmc.smp3.ui.hud.QuestHud;
+import club.sjmc.smp3.ui.screen.HudSettingsScreen;
+import club.sjmc.smp3.ui.screen.MenuScreen;
+import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
+import club.sjmc.smp3.ui.state.CurrencyState;
+import club.sjmc.smp3.ui.state.ServerBookState;
+import club.sjmc.smp3.ui.state.ShopState;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -30,9 +45,25 @@ import net.minecraft.resources.Identifier;
 public final class Smp3Client implements ClientModInitializer {
 	static final QuestHud HUD = new QuestHud();
 	static final ServerBookState BOOK = new ServerBookState();
-	static final CurrencyDisplay BALANCES = new CurrencyDisplay();
+	static final NoticeHud NOTICE = new NoticeHud(BOOK);
+	static final CurrencyState BALANCES = new CurrencyState();
+	static final CurrencyHud CURRENCY = new CurrencyHud(BALANCES);
 	static final ShopState SHOP = new ShopState();
 	static HudLayout layout = new HudLayout();
+
+	public static QuestHud hud() { return HUD; }
+
+	public static ServerBookState book() { return BOOK; }
+
+	public static NoticeHud noticeHud() { return NOTICE; }
+
+	public static CurrencyState balances() { return BALANCES; }
+
+	public static CurrencyHud currencyHud() { return CURRENCY; }
+
+	public static ShopState shop() { return SHOP; }
+
+	public static HudLayout layout() { return layout; }
 	private static boolean pendingSettings;
 	private static NoticePayloads.Editor pendingEditor;
 	private static final Path SETTINGS = FabricLoader.getInstance().getConfigDir().resolve("smp3/client.json");
@@ -61,13 +92,34 @@ public final class Smp3Client implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Catalog.TYPE,
 		                                            (catalog, context) -> BOOK.accept(catalog));
 		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Body.TYPE, (body, context) -> BOOK.accept(body));
-		ClientPlayNetworking.registerGlobalReceiver(BalanceSync.Payload.TYPE, (balance, context) -> {
-			BALANCES.accept(balance);
-			if (context.client().gui.screen() instanceof ServerBookScreen screen)
-				screen.contentChanged();
-			else if (context.client().gui.screen() instanceof ShopScreen screen)
-				screen.balancesChanged();
+		ClientPlayNetworking.registerGlobalReceiver(SignPayloads.State.TYPE, (state, context) -> {
+			var client = context.client();
+			if (state.open())
+				openMenu(1, menu -> menu.acceptSign(state));
+			else if (client.gui.screen() instanceof MenuScreen menu)
+				menu.acceptSign(state);
 		});
+		ClientPlayNetworking.registerGlobalReceiver(TitlePayloads.Catalog.TYPE, (catalog, context) -> {
+			var client = context.client();
+			if (catalog.open())
+				openMenu(4, menu -> menu.acceptTitles(catalog));
+			else if (client.gui.screen() instanceof MenuScreen menu)
+				menu.acceptTitles(catalog);
+		});
+		ClientPlayNetworking.registerGlobalReceiver(DailyQuestPayloads.Catalog.TYPE, (catalog, context) -> {
+			var client = context.client();
+			if (catalog.open())
+				openMenu(2, menu -> menu.acceptQuests(catalog));
+			else if (client.gui.screen() instanceof MenuScreen menu)
+				menu.acceptQuests(catalog);
+		});
+		ClientPlayNetworking.registerGlobalReceiver(MenuPayloads.Open.TYPE, (payload, context) -> {
+			var client = context.client();
+			if (client.player != null)
+				client.gui.setScreen(new MenuScreen());
+		});
+		ClientPlayNetworking.registerGlobalReceiver(BalanceSync.Payload.TYPE,
+		                                            (balance, context) -> BALANCES.accept(balance));
 		var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("smp3", "main"));
 		KeyMapping toggle = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.quest_hud", InputConstants.UNKNOWN.getValue(), category));
@@ -99,24 +151,18 @@ public final class Smp3Client implements ClientModInitializer {
 		KeyMapping settings = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.hud_settings", InputConstants.UNKNOWN.getValue(), category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			if (SHOP.pendingOpen && client.player != null && client.level != null &&
-			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||
-			     client.gui.screen() instanceof ServerBookScreen || client.gui.screen() instanceof ShopScreen)) {
+			if (SHOP.pendingOpen && client.player != null && client.level != null && canOpenMenu(client)) {
 				SHOP.pendingOpen = false;
-				if (client.gui.screen() instanceof ShopScreen screen)
-					screen.catalogChanged();
+				if (client.gui.screen() instanceof MenuScreen menu)
+					menu.openTab(3);
 				else
-					client.gui.setScreen(new ShopScreen());
+					openMenu(3, menu -> {});
 			}
-			if (pendingEditor != null && client.player != null && client.level != null &&
-			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||
-			     client.gui.screen() instanceof ServerBookScreen)) {
+			if (pendingEditor != null && client.player != null && client.level != null && canOpenMenu(client)) {
 				client.gui.setScreen(new NoticeEditorScreen(pendingEditor));
 				pendingEditor = null;
 			}
-			if (BOOK.pendingOpen != null && client.player != null && client.level != null &&
-			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen ||
-			     client.gui.screen() instanceof ServerBookScreen)) {
+			if (BOOK.pendingOpen != null && client.player != null && client.level != null && canOpenMenu(client)) {
 				boolean required = !BOOK.pendingOpen.equals("*");
 				if (required) {
 					BOOK.category = 0;
@@ -125,7 +171,7 @@ public final class Smp3Client implements ClientModInitializer {
 							BOOK.selected = i;
 				}
 				BOOK.pendingOpen = null;
-				client.gui.setScreen(new ServerBookScreen(required));
+				openMenu(0, menu -> {});
 			}
 			if (pendingSettings && client.player != null && client.level != null &&
 			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen)) {
@@ -146,13 +192,30 @@ public final class Smp3Client implements ClientModInitializer {
 		});
 	}
 
-	static void toggleHud() {
+	public static void toggleHud() {
 		HUD.visible = !HUD.visible;
 		HUD.state.setVisible(HUD.visible);
 		savePreferences();
 	}
 
-	static void openBook() { Minecraft.getInstance().gui.setScreen(new ServerBookScreen()); }
+	public static void openBook() { openMenu(0, menu -> {}); }
+
+	private static void openMenu(int tab, Consumer<MenuScreen> action) {
+		var client = Minecraft.getInstance();
+		if (client.player == null)
+			return;
+		var menu = new MenuScreen();
+		client.gui.setScreen(menu);
+		menu.openTab(tab);
+		action.accept(menu);
+		if (ClientPlayNetworking.canSend(MenuPayloads.Request.TYPE))
+			ClientPlayNetworking.send(MenuPayloads.Request.INSTANCE);
+	}
+
+	private static boolean canOpenMenu(Minecraft client) {
+		var screen = client.gui.screen();
+		return screen == null || screen instanceof ChatScreen || screen instanceof MenuScreen;
+	}
 
 	private static void loadPreferences() {
 		if (!Files.exists(SETTINGS))
@@ -170,7 +233,7 @@ public final class Smp3Client implements ClientModInitializer {
 		}
 	}
 
-	static void savePreferences() {
+	public static void savePreferences() {
 		try {
 			Files.createDirectories(SETTINGS.getParent());
 			Files.writeString(SETTINGS, JSON.toJson(new Preferences(HUD.visible, layout)));

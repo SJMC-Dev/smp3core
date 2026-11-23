@@ -14,11 +14,14 @@ import club.sjmc.smp3.shop.ShopCatalog;
 import club.sjmc.smp3.shop.ShopModule;
 import club.sjmc.smp3.shop.ShopPayloads;
 import club.sjmc.smp3.shop.ShopService;
+import club.sjmc.smp3.ui.panel.ShopPanel;
+import club.sjmc.smp3.ui.screen.MenuScreen;
 
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 
 final class ShopClientChecks {
@@ -36,38 +39,23 @@ final class ShopClientChecks {
 				if (!ShopModule.open(player))
 					throw new AssertionError("Shop client protocol unavailable");
 			});
-			context.waitForScreen(ShopScreen.class);
-			context.clickScreenButton("下一页");
-			context.clickScreenButton("上一页");
+			context.waitFor(client -> shop(client) != null);
 			context.runOnClient(client -> {
-				var screen = (ShopScreen)client.gui.screen();
+				var screen = shop(client);
 				screen.selectNode("trades", true);
 				screen.selectEntry("test.buy");
 			});
 			context.waitFor(client -> Smp3Client.SHOP.quote != null && !Smp3Client.SHOP.pending);
-			context.clickScreenButton("下一页");
-			context.runOnClient(client -> {
-				if (!Smp3Client.SHOP.selected.isEmpty())
-					throw new AssertionError("Hidden product remained selected");
-			});
-			context.clickScreenButton("上一页");
-			context.runOnClient(client -> ((ShopScreen)client.gui.screen()).selectEntry("test.buy"));
-			context.waitFor(client -> Smp3Client.SHOP.quote != null && !Smp3Client.SHOP.pending);
 			var request = context.computeOnClient(client -> {
 				if (Smp3Client.SHOP.quote.maximum() != 2)
 					throw new AssertionError("Wrong maximum batch count");
-				var input = (EditBox)client.gui.screen()
-				                .children()
-				                .stream()
-				                .filter(EditBox.class ::isInstance)
-				                .findFirst()
-				                .orElseThrow();
+				var input = shop(client).quantityInput();
 				input.setValue("2");
 				return new ShopPayloads.Request(Smp3Client.SHOP.session, ShopPayloads.Action.TRADE, "test.buy",
 				                                Smp3Client.SHOP.version, 2);
 			});
 			context.takeScreenshot("shop-parchment");
-			context.clickScreenButton("花费 4 通宝");
+			context.runOnClient(client -> shop(client).confirmTrade());
 			context.waitFor(client -> Smp3Client.SHOP.quote.used() == 64 && !Smp3Client.SHOP.pending);
 			context.runOnClient(client -> ClientPlayNetworking.send(request));
 			context.waitFor(client -> Smp3Client.SHOP.message.contains("变化"));
@@ -79,13 +67,10 @@ final class ShopClientChecks {
 			});
 			context.getInput().resizeWindow(640, 480);
 			context.takeScreenshot("shop-parchment-narrow");
-			context.clickScreenButton("下一页");
-			context.clickScreenButton("上一页");
-			context.clickScreenButton("Test shop");
-			context.clickScreenButton("商店");
+			context.runOnClient(client -> (shop(client)).selectNode("", true));
 			context.takeScreenshot("shop-root-narrow");
 			context.runOnClient(client -> {
-				var screen = (ShopScreen)client.gui.screen();
+				var screen = shop(client);
 				screen.selectNode("trades", true);
 				screen.selectEntry("test.buy");
 			});
@@ -124,13 +109,13 @@ final class ShopClientChecks {
 			reload(context, world, true);
 			context.waitFor(
 			    client -> Smp3Client.SHOP.entries.containsKey("test.title") && !Smp3Client.SHOP.pendingOpen);
-			context.runOnClient(client -> ((ShopScreen)client.gui.screen()).selectEntry("test.title"));
+			context.runOnClient(client -> (shop(client)).selectEntry("test.title"));
 			context.waitFor(client -> Smp3Client.SHOP.quote != null && !Smp3Client.SHOP.pending);
 			context.runOnClient(client -> {
 				if (!Smp3Client.SHOP.entries.get("test.title").title() || Smp3Client.SHOP.quote.maximum() != 1)
 					throw new AssertionError("Title offer did not synchronize single-purchase state");
 			});
-			context.clickScreenButton("花费 1 通宝");
+			context.runOnClient(client -> shop(client).confirmTrade());
 			context.waitFor(client -> {
 				if (!Smp3Client.SHOP.pending && !Smp3Client.SHOP.quote.pendingTitle() &&
 				    !Smp3Client.SHOP.message.isEmpty())
@@ -145,6 +130,11 @@ final class ShopClientChecks {
 			throw new UncheckedIOException(error);
 		}
 	}
+	private static ShopPanel shop(Minecraft client) {
+		return client.gui.screen() instanceof MenuScreen menu &&
+		       menu.activePanel() instanceof ShopPanel panel ? panel : null;
+	}
+
 	private static void reload(ClientGameTestContext context, TestSingleplayerContext world, boolean valid) {
 		var result = new AtomicReference<Boolean>();
 		world.getServer().runOnServer(server -> {

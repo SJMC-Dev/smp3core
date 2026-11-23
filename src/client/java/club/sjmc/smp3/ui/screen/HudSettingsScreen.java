@@ -1,20 +1,26 @@
-package club.sjmc.smp3.ui;
+package club.sjmc.smp3.ui.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
+
+import club.sjmc.smp3.ui.Smp3Client;
+import club.sjmc.smp3.ui.hud.HudLayout;
+import club.sjmc.smp3.ui.widget.PaperButton;
+import club.sjmc.smp3.ui.widget.Rect;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.NotNull;
 
-final class HudSettingsScreen extends Screen {
+public final class HudSettingsScreen extends Screen {
 	private HudLayout.Placement dragging;
 	private HudLayout.Box dragBox;
 	private double grabX, grabY;
 	private int panelX, panelY;
 
-	HudSettingsScreen() { super(Component.translatable("smp3.hud.settings")); }
+	public HudSettingsScreen() { super(Component.translatable("smp3.hud.settings")); }
 
 	@Override
 	protected void init() {
@@ -22,20 +28,20 @@ final class HudSettingsScreen extends Screen {
 		panelX = (width - 296) / 2;
 		panelY = height - 126;
 		addRenderableWidget(new PaperButton(panelX + 10, panelY + 38, 134,
-		                                    text(Smp3Client.HUD.visible ? "smp3.hud.hide" : "smp3.hud.show"), false,
+		                                    text(Smp3Client.hud().visible ? "smp3.hud.hide" : "smp3.hud.show"), false,
 		                                    () -> {
 			                                    Smp3Client.toggleHud();
 			                                    rebuildWidgets();
 		                                    }));
 		addRenderableWidget(
 		    new PaperButton(panelX + 152, panelY + 38, 134,
-			                text(Smp3Client.layout.followQuests ? "smp3.hud.detach" : "smp3.hud.attach"), false, () -> {
-			                    if (Smp3Client.layout.followQuests) {
-				                    var notice = Smp3Client.HUD.noticeBox(width, height, true);
-				                    Smp3Client.layout.notices.scale = Smp3Client.layout.quests.scale;
-				                    Smp3Client.layout.notices.move(notice.x(), notice.y(), notice, width, height);
+			                text(Smp3Client.layout().followQuests ? "smp3.hud.detach" : "smp3.hud.attach"), false, () -> {
+			                    if (Smp3Client.layout().followQuests) {
+				                    var notice = Smp3Client.hud().noticeBox(width, height, true);
+				                    Smp3Client.layout().notices.scale = Smp3Client.layout().quests.scale;
+				                    Smp3Client.layout().notices.move(notice.x(), notice.y(), notice, width, height);
 			                    }
-			                    Smp3Client.layout.followQuests = !Smp3Client.layout.followQuests;
+			                    Smp3Client.layout().followQuests = !Smp3Client.layout().followQuests;
 			                    Smp3Client.savePreferences();
 			                    rebuildWidgets();
 		                    }));
@@ -44,9 +50,9 @@ final class HudSettingsScreen extends Screen {
 			                () -> minecraft.gui.setScreen(new KeyBindsScreen(this, minecraft.options))));
 		addRenderableWidget(new PaperButton(panelX + 152, panelY + 64, 134, text("smp3.hud.reset"), false, () -> {
 			var defaults = new HudLayout();
-			Smp3Client.layout.quests = defaults.quests;
-			Smp3Client.layout.notices = defaults.notices;
-			Smp3Client.layout.followQuests = true;
+			Smp3Client.layout().quests = defaults.quests;
+			Smp3Client.layout().notices = defaults.notices;
+			Smp3Client.layout().followQuests = true;
 			Smp3Client.savePreferences();
 			rebuildWidgets();
 		}));
@@ -61,8 +67,8 @@ final class HudSettingsScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		graphics.fill(0, 0, width, height, 0x44000000);
-		var quests = Smp3Client.HUD.box(width, height, true);
-		var notices = Smp3Client.HUD.noticeBox(width, height, true);
+		var quests = Smp3Client.hud().box(width, height, true);
+		var notices = Smp3Client.hud().noticeBox(width, height, true);
 		panel(graphics, quests, text("smp3.hud.quests"), mouseX, mouseY);
 		panel(graphics, notices, text("smp3.hud.notices"), mouseX, mouseY);
 		graphics.fill(panelX, panelY, panelX + 296, panelY + 118, 0xFFEBDDBF);
@@ -85,20 +91,20 @@ final class HudSettingsScreen extends Screen {
 	}
 
 	@Override
-	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+	public boolean mouseClicked(@NotNull MouseButtonEvent event, boolean doubleClick) {
 		if (super.mouseClicked(event, doubleClick))
 			return true;
 		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return false;
-		if (event.x() >= panelX && event.x() < panelX + 296 && event.y() >= panelY && event.y() < panelY + 118)
+		if (new Rect(panelX, panelY, 296, 118).contains(event.x(), event.y()))
 			return true;
-		var quests = Smp3Client.HUD.box(width, height, true);
-		var notices = Smp3Client.HUD.noticeBox(width, height, true);
-		if (!Smp3Client.layout.followQuests && notices.contains(event.x(), event.y())) {
-			dragging = Smp3Client.layout.notices;
+		var quests = Smp3Client.hud().box(width, height, true);
+		var notices = Smp3Client.hud().noticeBox(width, height, true);
+		if (!Smp3Client.layout().followQuests && notices.contains(event.x(), event.y())) {
+			dragging = Smp3Client.layout().notices;
 			dragBox = notices;
 		} else if (quests.contains(event.x(), event.y())) {
-			dragging = Smp3Client.layout.quests;
+			dragging = Smp3Client.layout().quests;
 			dragBox = quests;
 		} else
 			return false;
@@ -108,7 +114,7 @@ final class HudSettingsScreen extends Screen {
 	}
 
 	@Override
-	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+	public boolean mouseDragged(@NotNull MouseButtonEvent event, double dx, double dy) {
 		if (dragging == null)
 			return super.mouseDragged(event, dx, dy);
 		dragging.move(event.x() - grabX, event.y() - grabY, dragBox, width, height);
@@ -116,7 +122,7 @@ final class HudSettingsScreen extends Screen {
 	}
 
 	@Override
-	public boolean mouseReleased(MouseButtonEvent event) {
+	public boolean mouseReleased(@NotNull MouseButtonEvent event) {
 		if (dragging == null)
 			return super.mouseReleased(event);
 		dragging = null;
@@ -129,7 +135,7 @@ final class HudSettingsScreen extends Screen {
 		return false;
 	}
 	@Override
-	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {}
+	public void extractBackground(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {}
 
 	private static String text(String key) { return Component.translatable(key).getString(); }
 }

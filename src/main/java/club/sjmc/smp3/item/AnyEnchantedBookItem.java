@@ -18,6 +18,7 @@ public final class AnyEnchantedBookItem extends Item {
 		if (level.isClientSide()) {
 			return InteractionResult.PASS;
 		}
+		// 物品右键界面有意保留在服务端 GUI，不进入 MenuScreen，见 README 的“界面结构”。
 		if (player instanceof ServerPlayer serverPlayer) {
 			EnchantBookGui.open(serverPlayer, hand);
 		}

@@ -45,6 +45,8 @@ dependencies {
 	compileOnly "eu.pb4:common-economy-api:${project.common_economy_api_version}"
 	// 开发运行时加载 Fuji；发布包仍由服务器自行安装 Fuji。
 	runtimeOnly "maven.modrinth:fuji:${project.fuji_version}"
+	// 编译期使用 Fuji 的称号 API；运行时由服务器提供。
+	compileOnly "maven.modrinth:fuji:${project.fuji_version}"
 
 	// LuckPerms API：运行时由服务端 LuckPerms 提供，仅编译期需要。
 	// 坐标 net.luckperms:api 发布在 Maven Central（https://luckperms.net/wiki/Developer-API）
