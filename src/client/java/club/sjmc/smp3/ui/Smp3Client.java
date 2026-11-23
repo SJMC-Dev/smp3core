@@ -147,7 +147,7 @@ public final class Smp3Client implements ClientModInitializer {
 		});
 		HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, QuestHudPayload.TYPE.id(), HUD::render);
 		KeyMapping book = KeyMappingHelper.registerKeyMapping(
-		    new KeyMapping("key.smp3.server_info", InputConstants.UNKNOWN.getValue(), category));
+		    new KeyMapping("key.smp3.server_info", InputConstants.KEY_GRAVE, category));
 		KeyMapping settings = KeyMappingHelper.registerKeyMapping(
 		    new KeyMapping("key.smp3.hud_settings", InputConstants.UNKNOWN.getValue(), category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
