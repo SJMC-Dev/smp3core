@@ -57,7 +57,7 @@ final class QuestText {
 		return details;
 	}
 
-	static List<Component> lore(QuestDay.Assignment task) {
+	private static List<Component> lore(QuestDay.Assignment task) {
 		List<Component> parts = new ArrayList<>();
 		if (task.definition.objectives().size() > 1) {
 			if (task.definition.description() != null)
@@ -101,7 +101,7 @@ final class QuestText {
 		return wrap(parts);
 	}
 
-	static List<Component> condition(String key, JsonElement value) { return wrap(targets(key, value)); }
+	private static List<Component> condition(String key, JsonElement value) { return wrap(targets(key, value)); }
 
 	private static List<Component> targets(String key, JsonElement value) {
 		List<Component> parts = new ArrayList<>();

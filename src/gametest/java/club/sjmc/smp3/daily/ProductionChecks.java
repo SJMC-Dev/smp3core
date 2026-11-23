@@ -7,11 +7,7 @@ import java.util.Set;
 
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
-import eu.pb4.sgui.api.ClickType;
-import eu.pb4.sgui.api.SguiUtils;
-import eu.pb4.sgui.api.gui.SimpleGui;
 
-import club.sjmc.smp3.daily.ui.DailyQuestGui;
 import club.sjmc.smp3.item.ItemDelivery;
 
 import net.minecraft.core.BlockPos;
@@ -303,27 +299,6 @@ final class ProductionChecks {
 		smithing.clicked(3, 0, ContainerInput.QUICK_MOVE, player);
 		test.assertTrue(task.goalProgress(2) == 2 && task.goalProgress(3) == 1 && task.goalProgress(4) == 1,
 		                "Component, source or consumed template matching failed");
-		test.assertTrue(DailyQuestGui.show(player), "Multi-objective GUI failed to open");
-		var menu = (SimpleGui)SguiUtils.getCurrentGui(player);
-		var lore = menu.getGuiElement(19).getItemStack().get(DataComponents.LORE).lines().toString();
-		test.assertTrue(lore.contains("全部完成") && lore.contains("夜视药水 (2/100)"),
-		                "Sub-goal progress missing from GUI");
-		var summary = menu.getGuiElement(10).getItemStack().get(DataComponents.LORE).lines().toString();
-		test.assertTrue(summary.contains("完成五种加工目标。") && !summary.contains("minecraft:night_vision") &&
-		                    !summary.contains("夜视药水"),
-		                "Task description duplicates detailed conditions");
-		menu.getGuiElement(10).getGuiCallback().click(10, ClickType.MOUSE_LEFT, ContainerInput.PICKUP, menu);
-		var details = (SimpleGui)SguiUtils.getCurrentGui(player);
-		boolean hasPotion = false;
-		for (int i = 0; i < 18; i++) {
-			var lines = details.getGuiElement(i).getItemStack().get(DataComponents.LORE).lines();
-			hasPotion |= lines.toString().contains("minecraft:night_vision");
-		}
-		test.assertTrue(hasPotion, "Detailed conditions are inaccessible from the task icon");
-		details.getGuiElement(22).getGuiCallback().click(22, ClickType.MOUSE_LEFT, ContainerInput.PICKUP, details);
-		test.assertTrue(SguiUtils.getCurrentGui(player) instanceof DailyQuestGui,
-		                "Task details cannot return to the overview");
-		player.closeContainer();
 		var overviewHud = QuestHudPayload.of(service.state(player), player.registryAccess()).entries().getFirst();
 		test.assertTrue(overviewHud.target() == 5, "Multi-objective HUD target does not count goals");
 		var anyDefinition = QuestConfig.JSON.fromJson("""
@@ -365,20 +340,6 @@ final class ProductionChecks {
 		String other = selected.equals("minecraft:plains") ? "minecraft:sunflower_plains" : "minecraft:plains";
 		day.record(new QuestDefinition.Event("biome_visited", Map.of("biome", Set.of(other))));
 		test.assertTrue(!visit.complete(), "Unselected biome completed the random exploration task");
-		DailyQuestGui.show(player);
-		var visitGui = (SimpleGui)SguiUtils.getCurrentGui(player);
-		var visitLore = visitGui.getGuiElement(10).getItemStack().get(DataComponents.LORE).lines().toString();
-		test.assertTrue(visitLore.contains("biome." + selected.replace(':', '.')) &&
-		                    !visitLore.contains("biome." + other.replace(':', '.')),
-		                "Random exploration lore must show only assigned targets, preserving translation");
-		test.assertTrue(visitGui.getGuiElement(19)
-		                    .getItemStack()
-		                    .get(DataComponents.LORE)
-		                    .lines()
-		                    .toString()
-		                    .contains("item.minecraft.diamond"),
-		                "Reward lore was flattened into the server language");
-		player.closeContainer();
 		day.record(new QuestDefinition.Event("biome_visited", Map.of("biome", Set.of(selected))));
 		test.assertTrue(visit.complete(), "Selected biome did not complete exploration");
 		day.assignments.set(0, previous);

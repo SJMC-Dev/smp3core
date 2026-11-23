@@ -3,7 +3,6 @@ package club.sjmc.smp3.ui;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.function.Consumer;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
@@ -95,23 +94,17 @@ public final class Smp3Client implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(NoticePayloads.Body.TYPE, (body, context) -> BOOK.accept(body));
 		ClientPlayNetworking.registerGlobalReceiver(SignPayloads.State.TYPE, (state, context) -> {
 			var client = context.client();
-			if (state.open())
-				openMenu(1, menu -> menu.acceptSign(state));
-			else if (client.gui.screen() instanceof MenuScreen menu)
+			if (client.gui.screen() instanceof MenuScreen menu)
 				menu.acceptSign(state);
 		});
 		ClientPlayNetworking.registerGlobalReceiver(TitlePayloads.Catalog.TYPE, (catalog, context) -> {
 			var client = context.client();
-			if (catalog.open())
-				openMenu(4, menu -> menu.acceptTitles(catalog));
-			else if (client.gui.screen() instanceof MenuScreen menu)
+			if (client.gui.screen() instanceof MenuScreen menu)
 				menu.acceptTitles(catalog);
 		});
 		ClientPlayNetworking.registerGlobalReceiver(DailyQuestPayloads.Catalog.TYPE, (catalog, context) -> {
 			var client = context.client();
-			if (catalog.open())
-				openMenu(2, menu -> menu.acceptQuests(catalog));
-			else if (client.gui.screen() instanceof MenuScreen menu)
+			if (client.gui.screen() instanceof MenuScreen menu)
 				menu.acceptQuests(catalog);
 		});
 		ClientPlayNetworking.registerGlobalReceiver(MenuPayloads.Open.TYPE, (payload, context) -> {
@@ -161,7 +154,7 @@ public final class Smp3Client implements ClientModInitializer {
 				if (client.gui.screen() instanceof MenuScreen menu)
 					menu.openTab(3);
 				else
-					openMenu(3, menu -> {});
+					openMenu(3);
 			}
 			if (pendingEditor != null && client.player != null && client.level != null && canOpenMenu(client)) {
 				client.gui.setScreen(new NoticeEditorScreen(pendingEditor));
@@ -176,7 +169,7 @@ public final class Smp3Client implements ClientModInitializer {
 							BOOK.selected = i;
 				}
 				BOOK.pendingOpen = null;
-				openMenu(0, menu -> {});
+				openMenu(0);
 			}
 			if (pendingSettings && client.player != null && client.level != null &&
 			    (client.gui.screen() == null || client.gui.screen() instanceof ChatScreen)) {
@@ -203,11 +196,9 @@ public final class Smp3Client implements ClientModInitializer {
 		savePreferences();
 	}
 
-	public static void openBook() {
-		openMenu(0, menu -> {});
-	}
+	public static void openBook() { openMenu(0); }
 
-	private static void openMenu(int tab, Consumer<MenuScreen> action) {
+	private static void openMenu(int tab) {
 		var client = Minecraft.getInstance();
 		if (client.player == null)
 			return;
@@ -215,7 +206,6 @@ public final class Smp3Client implements ClientModInitializer {
 		if (client.gui.screen() != menu)
 			client.gui.setScreen(menu);
 		menu.openTab(tab);
-		action.accept(menu);
 		if (ClientPlayNetworking.canSend(MenuPayloads.Request.TYPE))
 			ClientPlayNetworking.send(MenuPayloads.Request.INSTANCE);
 	}

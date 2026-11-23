@@ -3,13 +3,13 @@ package club.sjmc.smp3.item.ui;
 import java.util.Random;
 
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
+import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.PackItem;
 import club.sjmc.smp3.item.RewardBundle;
 import club.sjmc.smp3.ui.GuiStyle;
-import club.sjmc.smp3.ui.ReturningGui;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -17,7 +17,7 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-public final class PackGui extends ReturningGui {
+public final class PackGui extends SimpleGui {
 	private final ItemStack pack;
 	private final InteractionHand hand;
 	private final boolean choice;
@@ -26,8 +26,8 @@ public final class PackGui extends ReturningGui {
 	private static final MenuType<?>[] MENUS = {MenuType.GENERIC_9x3, MenuType.GENERIC_9x4, MenuType.GENERIC_9x5,
 	                                            MenuType.GENERIC_9x6};
 	private boolean redeemed;
-	private PackGui(ServerPlayer player, ItemStack pack, InteractionHand hand, int rows, Runnable parent) {
-		super(MENUS[rows - 3], player, parent);
+	private PackGui(ServerPlayer player, ItemStack pack, InteractionHand hand, int rows) {
+		super(MENUS[rows - 3], player, false);
 		size = rows * 9;
 		capacity = size - 18;
 		this.pack = pack;
@@ -36,16 +36,11 @@ public final class PackGui extends ReturningGui {
 		setTitle(pack.getHoverName());
 	}
 	public static void open(ServerPlayer player, InteractionHand hand) {
-		show(player, player.getItemInHand(hand), hand, null);
-	}
-	public static void preview(ServerPlayer player, ItemStack pack, Runnable parent) {
-		show(player, pack, null, parent);
-	}
-	private static void show(ServerPlayer player, ItemStack pack, InteractionHand hand, Runnable parent) {
+		ItemStack pack = player.getItemInHand(hand);
 		try {
 			ItemDefinitions.validate(ItemDefinitions.json(pack, player.registryAccess()), player.registryAccess());
 			int count = pack.get(ItemDefinitions.PACK).getAsJsonArray("options").size();
-			PackGui gui = new PackGui(player, pack, hand, Math.min(6, Math.max(3, (count + 8) / 9 + 2)), parent);
+			PackGui gui = new PackGui(player, pack, hand, Math.min(6, Math.max(3, (count + 8) / 9 + 2)));
 			gui.refresh();
 			gui.open();
 		} catch (RuntimeException e) {
@@ -72,7 +67,7 @@ public final class PackGui extends ReturningGui {
 			for (var grant : RewardBundle.objects(entry.getAsJsonArray("grants")))
 				icon.addLoreLine(
 				    RewardBundle.description(grant, player.registryAccess()).copy().withStyle(GuiStyle.MUTED));
-			if (choice && hand != null)
+			if (choice)
 				icon.addLoreLine(GuiStyle.text("点击选择，消耗 1 个礼包", GuiStyle.ACTIVE));
 			if (!choice) {
 				long total = entries.asList()
@@ -85,7 +80,7 @@ public final class PackGui extends ReturningGui {
 			setSlot(9 + offset + slot, GuiStyle
 			                               .onLeftClick(icon,
 			                                            () -> {
-				                                            if (choice && hand != null)
+				                                            if (choice)
 					                                            redeem(index);
 			                                            })
 			                               .build());
@@ -100,8 +95,8 @@ public final class PackGui extends ReturningGui {
 				page++;
 				refresh();
 			}));
-		setSlot(size - 5, hand == null ? GuiStyle.back(this::back) : GuiStyle.close(this::close));
-		if (!choice && hand != null)
+		setSlot(size - 5, GuiStyle.close(this::close));
+		if (!choice)
 			setSlot(size - 7,
 			        GuiStyle.button(Items.BUNDLE,
 			                        "开启礼包（" + (definition.has("draws") ? definition.get("draws").getAsInt() : 1) +

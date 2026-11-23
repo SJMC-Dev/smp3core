@@ -16,7 +16,7 @@ public final class TitlePayloads {
 
 	public record Entry(String id, String item, Component name, List<Component> description, boolean obtained) {}
 
-	public record Catalog(List<Entry> entries, String activeId, boolean open) implements CustomPacketPayload {
+	public record Catalog(List<Entry> entries, String activeId) implements CustomPacketPayload {
 		private static final StreamCodec<ByteBuf, Entry> ENTRY =
 		    StreamCodec.composite(ByteBufCodecs.stringUtf8(128), Entry::id, ByteBufCodecs.stringUtf8(128), Entry::item,
 			                      ComponentSerialization.TRUSTED_CONTEXT_FREE_STREAM_CODEC, Entry::name,
@@ -25,7 +25,7 @@ public final class TitlePayloads {
 		public static final Type<Catalog> TYPE = new Type<>(Identifier.fromNamespaceAndPath("smp3", "title_catalog"));
 		public static final StreamCodec<ByteBuf, Catalog> CODEC =
 		    StreamCodec.composite(ENTRY.apply(ByteBufCodecs.list(256)), Catalog::entries, ByteBufCodecs.stringUtf8(128),
-			                      Catalog::activeId, ByteBufCodecs.BOOL, Catalog::open, Catalog::new);
+			                      Catalog::activeId, Catalog::new);
 
 		@Override
 		public Type<Catalog> type() {

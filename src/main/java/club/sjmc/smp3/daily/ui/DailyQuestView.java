@@ -32,32 +32,11 @@ public final class DailyQuestView {
 		                                            (request, context) -> reroll(context.player(), request));
 	}
 
-	public static boolean open(ServerPlayer player) {
-		if (!ServerPlayNetworking.canSend(player, DailyQuestPayloads.Catalog.TYPE)) {
-			// 旧客户端兼容：新客户端统一走 MenuScreen 的任务面板，最低客户端版本提升后删除。
-			return DailyQuestGui.show(player);
-		}
-		try {
-			var catalog = build(player, true);
-			if (catalog == null) {
-				player.sendSystemMessage(GuiStyle.text("每日任务不可用，请联系管理员", GuiStyle.ERROR));
-				return false;
-			}
-			player.closeContainer();
-			ServerPlayNetworking.send(player, catalog);
-			return true;
-		} catch (RuntimeException error) {
-			Smp3Core.LOGGER.error("[SMP3] 每日任务界面数据不可用 player={}", player.getUUID(), error);
-			player.sendSystemMessage(GuiStyle.text("每日任务不可用，请联系管理员", GuiStyle.ERROR));
-			return false;
-		}
-	}
-
 	public static void refresh(ServerPlayer player) {
 		if (!ServerPlayNetworking.canSend(player, DailyQuestPayloads.Catalog.TYPE))
 			return;
 		try {
-			var catalog = build(player, false);
+			var catalog = build(player);
 			if (catalog != null)
 				ServerPlayNetworking.send(player, catalog);
 		} catch (RuntimeException error) {
@@ -80,7 +59,7 @@ public final class DailyQuestView {
 		refresh(player);
 	}
 
-	private static DailyQuestPayloads.Catalog build(ServerPlayer player, boolean open) {
+	private static DailyQuestPayloads.Catalog build(ServerPlayer player) {
 		DailyQuestService service = DailyQuestModule.current();
 		if (service == null)
 			return null;
@@ -97,7 +76,7 @@ public final class DailyQuestView {
 			    conditions(task), rewards(task, player)));
 		}
 		return new DailyQuestPayloads.Catalog(day.date, day.remaining(service.config),
-		                                      service.config.dailyRerollLimit(), open, List.copyOf(tasks));
+		                                      service.config.dailyRerollLimit(), List.copyOf(tasks));
 	}
 
 	private static List<Component> conditions(QuestDay.Assignment task) {

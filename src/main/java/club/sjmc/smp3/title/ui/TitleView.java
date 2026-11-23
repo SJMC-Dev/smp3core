@@ -6,7 +6,6 @@ import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.title.TitlePayloads;
 
 import mod.fuji.core.auxiliary.minecraft.TextHelper;
-import mod.fuji.module.initializer.title.gui.ListTitlesGui;
 import mod.fuji.module.initializer.title.service.TitleService;
 import mod.fuji.module.initializer.title.structure.TitleDescriptor;
 
@@ -18,21 +17,9 @@ import net.minecraft.server.level.ServerPlayer;
 public final class TitleView {
 	private TitleView() {}
 
-	public static void open(ServerPlayer player) {
-		if (!ServerPlayNetworking.canSend(player, TitlePayloads.Catalog.TYPE)) {
-			// 旧客户端兼容：新客户端统一走 MenuScreen 的称号面板，最低客户端版本提升后删除。
-			openFujiMenu(player);
-			return;
-		}
-		send(player, true);
-	}
-
 	public static void refresh(ServerPlayer player) {
-		if (ServerPlayNetworking.canSend(player, TitlePayloads.Catalog.TYPE))
-			send(player, false);
-	}
-
-	private static void send(ServerPlayer player, boolean open) {
+		if (!ServerPlayNetworking.canSend(player, TitlePayloads.Catalog.TYPE))
+			return;
 		try {
 			var titles = TitleService.getAllTitles();
 			var obtained =
@@ -51,20 +38,9 @@ public final class TitleView {
 				                      obtained.contains(title.getId()));
 			                  })
 			                  .toList();
-			if (open)
-				player.closeContainer();
-			ServerPlayNetworking.send(player, new TitlePayloads.Catalog(entries, limit(active, 128), open));
+			ServerPlayNetworking.send(player, new TitlePayloads.Catalog(entries, limit(active, 128)));
 		} catch (RuntimeException | LinkageError error) {
 			Smp3Core.LOGGER.error("[SMP3] 称号数据不可用 player={}", player.getUUID(), error);
-			player.sendSystemMessage(Component.literal("称号数据不可用，请联系管理员"));
-		}
-	}
-
-	private static void openFujiMenu(ServerPlayer player) {
-		try {
-			ListTitlesGui.makeInstance(player, TitleService.getAllTitles()).open();
-		} catch (RuntimeException | LinkageError error) {
-			Smp3Core.LOGGER.error("[SMP3] Fuji 称号界面不可用 player={}", player.getUUID(), error);
 			player.sendSystemMessage(Component.literal("称号数据不可用，请联系管理员"));
 		}
 	}

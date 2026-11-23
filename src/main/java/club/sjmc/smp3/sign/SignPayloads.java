@@ -16,15 +16,15 @@ import net.minecraft.server.level.ServerPlayer;
 public final class SignPayloads {
 	private SignPayloads() {}
 
-	public record State(int year, int month, int today, int signedMask, boolean open, boolean pending,
-	                    List<String> rewards) implements CustomPacketPayload {
+	public record State(int year, int month, int today, int signedMask, boolean pending, List<String> rewards)
+	    implements CustomPacketPayload {
 		public static final Type<State> TYPE = new Type<>(Identifier.fromNamespaceAndPath("smp3", "sign_state"));
 		public static final StreamCodec<ByteBuf, State> CODEC = StreamCodec.composite(
 		    ByteBufCodecs.VAR_INT, State::year, ByteBufCodecs.VAR_INT, State::month, ByteBufCodecs.VAR_INT,
-		    State::today, ByteBufCodecs.VAR_INT, State::signedMask, ByteBufCodecs.BOOL, State::open, ByteBufCodecs.BOOL,
-		    State::pending, ByteBufCodecs.stringUtf8(64).apply(ByteBufCodecs.list(8)), State::rewards, State::new);
+		    State::today, ByteBufCodecs.VAR_INT, State::signedMask, ByteBufCodecs.BOOL, State::pending,
+		    ByteBufCodecs.stringUtf8(64).apply(ByteBufCodecs.list(8)), State::rewards, State::new);
 
-		public static State current(ServerPlayer player, boolean open) {
+		public static State current(ServerPlayer player) {
 			LocalDate date = ServerDates.today();
 			var data = SignService.state(player);
 			int mask = 0;
@@ -40,8 +40,8 @@ public final class SignPayloads {
 			                                 .stream()
 			                                 .map(entry -> entry.getKey().name().getString() + " x " + entry.getValue())
 			                                 .toList();
-			return new State(date.getYear(), date.getMonthValue(), date.getDayOfMonth(), mask, open,
-			                 data.hasPendingRewards(), rewards);
+			return new State(date.getYear(), date.getMonthValue(), date.getDayOfMonth(), mask, data.hasPendingRewards(),
+			                 rewards);
 		}
 
 		public boolean signed(int day) { return day >= 1 && day <= 31 && (signedMask & (1 << (day - 1))) != 0; }

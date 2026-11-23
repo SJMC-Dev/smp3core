@@ -22,7 +22,6 @@ import club.sjmc.smp3.shop.ShopChecks;
 import club.sjmc.smp3.sign.PlayerSignData;
 import club.sjmc.smp3.sign.SignFailureChecks;
 import club.sjmc.smp3.sign.SignService;
-import club.sjmc.smp3.sign.ui.SignGui;
 import club.sjmc.smp3.time.ServerDates;
 import club.sjmc.smp3.time.SignDateChecks;
 
@@ -82,13 +81,8 @@ public final class FeatureChecks implements ModInitializer {
 		PlayerSignData state = PlayerSignData.load(legacy);
 		Smp3AccountStore.commitReward(player.getUUID(), "sign", Smp3AccountStore.rewardState(player.getUUID(), "sign"),
 		                              new Gson().toJsonTree(state).getAsJsonObject(), Map.of());
-		SignGui.open(player);
-		SimpleGui sign = (SimpleGui)SguiUtils.getCurrentGui(player);
-		var click = sign.getGuiElement(8 + today.getDayOfMonth()).getGuiCallback();
-		click.click(8 + today.getDayOfMonth(), ClickType.MOUSE_RIGHT, ContainerInput.PICKUP, sign);
-		test.assertTrue(balance(player) == 0, "Right click signed in");
-		click.click(8 + today.getDayOfMonth(), ClickType.MOUSE_LEFT, ContainerInput.PICKUP, sign);
-		click.click(8 + today.getDayOfMonth(), ClickType.MOUSE_LEFT, ContainerInput.PICKUP, sign);
+		SignService.sign(player, today);
+		SignService.sign(player, today);
 		state = SignService.state(player);
 		test.assertTrue(balance(player) == 19000 && state.streak() == 3 && state.monthTotal() == 3 &&
 		                    state.serverTotal() == 3,

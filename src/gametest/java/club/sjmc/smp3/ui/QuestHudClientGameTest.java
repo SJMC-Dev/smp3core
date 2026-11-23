@@ -15,9 +15,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import club.sjmc.smp3.daily.DailyQuestModule;
 import club.sjmc.smp3.daily.QuestDefinition;
 import club.sjmc.smp3.daily.QuestHudPayload;
-import club.sjmc.smp3.daily.ui.DailyQuestGui;
-import club.sjmc.smp3.daily.ui.DailyQuestView;
-import club.sjmc.smp3.daily.ui.QuestRewardsGui;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.gacha.GachaChecks;
@@ -140,25 +137,12 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("quest-hud-active");
 			ShopClientChecks.run(context, world);
 			String token = context.computeOnClient(client -> Smp3Client.HUD.state.rows.getFirst().entry.token());
-			world.getServer().runOnServer(server -> DailyQuestView.open(world.getConnection().getServerPlayer()));
+			context.runOnClient(client -> client.getConnection().sendCommand("smp3 menu"));
+			context.waitForScreen(MenuScreen.class);
+			context.runOnClient(client -> ((MenuScreen)client.gui.screen()).openTab(2));
 			context.waitFor(
 			    client -> client.gui.screen() instanceof MenuScreen menu && menu.activePanel() instanceof QuestPanel);
 			context.takeScreenshot("quest-panel");
-
-			world.getServer().runOnServer(server -> DailyQuestGui.show(world.getConnection().getServerPlayer()));
-			context.waitForScreen(AbstractContainerScreen.class);
-			hoverSlot(context, 10);
-			context.takeScreenshot("quest-menu-description");
-			hoverSlot(context, 19);
-			context.takeScreenshot("quest-menu-progress-rewards");
-			hoverSlot(context, 10);
-			context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
-			context.waitFor(client -> client.player.containerMenu instanceof ChestMenu menu && menu.getRowCount() == 3);
-			hoverSlot(context, 1);
-			context.takeScreenshot("quest-menu-conditions");
-			hoverSlot(context, 22);
-			context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
-			context.waitFor(client -> client.player.containerMenu instanceof ChestMenu menu && menu.getRowCount() == 4);
 
 			world.getServer().runOnServer(server -> {
 				var player = world.getConnection().getServerPlayer();
@@ -176,8 +160,8 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			                -> Smp3Client.HUD.state.rows.stream().anyMatch(
 			                    row -> row.entry.token().equals(token) && row.entry.claimed()));
 			context.waitTicks(2);
-			context.takeScreenshot("quest-menu-paid");
-			world.getServer().runOnServer(server -> world.getConnection().getServerPlayer().closeContainer());
+			context.takeScreenshot("quest-panel-paid");
+			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
 			context.waitFor(client -> client.gui.screen() == null);
 			context.takeScreenshot("quest-hud-completed");
 			context.waitFor(
@@ -207,26 +191,6 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				world.getServer().runOnServer(server -> world.getConnection().getServerPlayer().closeContainer());
 				context.waitFor(client -> client.gui.screen() == null);
 			}
-			world.getServer().runOnServer(server -> {
-				var player = world.getConnection().getServerPlayer();
-				QuestRewardsGui.preview(player, List.of(player.getMainHandItem().copy()));
-			});
-			context.waitForScreen(AbstractContainerScreen.class);
-			hoverSlot(context, 0);
-			context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
-			context.waitFor(client
-			                -> client.gui.screen() != null &&
-			                       client.gui.screen().getTitle().getString().equals(
-			                           Component.translatable("item.smp3.random_pack").getString()));
-			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
-			context.waitFor(client
-			                -> client.gui.screen() != null &&
-			                       client.gui.screen().getTitle().getString().equals("任务物品奖励"));
-			context.getInput().pressKey(InputConstants.KEY_ESCAPE);
-			context.waitFor(
-			    client -> client.gui.screen() != null && client.gui.screen().getTitle().getString().equals("每日任务"));
-			world.getServer().runOnServer(server -> world.getConnection().getServerPlayer().closeContainer());
-			context.waitFor(client -> client.gui.screen() == null);
 			context.takeScreenshot("reward-pack-item");
 			context.getInput().resizeWindow(1280, 800);
 			context.runOnClient(client -> {

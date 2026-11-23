@@ -5,22 +5,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import eu.pb4.sgui.api.ClickType;
-import eu.pb4.sgui.api.SguiUtils;
-import eu.pb4.sgui.api.gui.SimpleGui;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import club.sjmc.smp3.FeatureChecks;
-import club.sjmc.smp3.daily.ui.DailyQuestGui;
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.item.ItemDelivery;
-import club.sjmc.smp3.sign.ui.SignGui;
 
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -28,10 +22,8 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.Connection;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -161,19 +153,6 @@ public final class DailyQuestGameTest {
 			inventory.getCraftSlots().setItem(0, new ItemStack(Items.OAK_LOG, 2));
 			inventory.clicked(0, 0, ContainerInput.QUICK_MOVE, player);
 			test.assertTrue(task.progress == 8, "背包批量合成重复或遗漏计数");
-			DailyQuestGui.show(player);
-			var craftingGui = (SimpleGui)SguiUtils.getCurrentGui(player);
-			String description = craftingGui.getGuiElement(10)
-			                         .getItemStack()
-			                         .get(DataComponents.LORE)
-			                         .lines()
-			                         .stream()
-			                         .map(Component::getString)
-			                         .collect(Collectors.joining());
-			test.assertTrue(description.contains("16") && description.contains("任意木材") &&
-			                    !description.contains("{count}"),
-			                "任务说明未使用目标快照替换占位符");
-			player.closeContainer();
 
 			ProductionChecks.run(test, player, pos);
 
@@ -348,27 +327,6 @@ public final class DailyQuestGameTest {
 			                "刷新改动已领取或已完成任务");
 			test.assertTrue(day.rerollsUsed == service.config.dailyRerollLimit(), "管理员改动个人额度");
 			day.rerollsUsed = 0;
-			test.assertTrue(DailyQuestGui.show(player), "每日任务 GUI 打开失败");
-			SimpleGui overview = (SimpleGui)SguiUtils.getCurrentGui(player);
-			overview.getGuiElement(32).getGuiCallback().click(32, ClickType.MOUSE_LEFT, ContainerInput.PICKUP,
-			                                                  overview);
-			SimpleGui confirmation = (SimpleGui)SguiUtils.getCurrentGui(player);
-			test.assertTrue(confirmation != overview && day.rerollsUsed == 0, "进入确认页消耗额度");
-			var staleConfirm = confirmation.getGuiElement(12);
-			commands.execute(reset + " 3", server.createCommandSourceStack());
-			old = day.assignments.get(2);
-			confirmation.onTick();
-			test.assertTrue(SguiUtils.getCurrentGui(player) == overview, "管理员刷新后确认页未返回总览");
-			staleConfirm.getGuiCallback().click(12, ClickType.MOUSE_LEFT, ContainerInput.PICKUP, confirmation);
-			test.assertTrue(day.assignments.get(2) == old && day.rerollsUsed == 0, "旧确认回调修改新任务");
-			overview.getGuiElement(32).getGuiCallback().click(32, ClickType.MOUSE_LEFT, ContainerInput.PICKUP,
-			                                                  overview);
-			player.closeContainer();
-			test.assertTrue(day.rerollsUsed == 0 && day.assignments.get(2) == old, "关闭确认页消耗额度");
-			player.closeContainer();
-			player.closeContainer();
-			SignGui.open(player);
-			player.closeContainer();
 			service.settle(player);
 			long totalBeforeReset = QuestRewards.progress(player).completed();
 			long balanceBeforeReset = Smp3AccountStore.balance(player.getUUID(), Smp3Currency.TONGBAO);

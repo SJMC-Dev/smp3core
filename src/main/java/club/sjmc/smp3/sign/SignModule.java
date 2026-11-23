@@ -6,7 +6,6 @@ import java.time.LocalDate;
 
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.config.JsonConfig;
-import club.sjmc.smp3.sign.ui.SignGui;
 import club.sjmc.smp3.sign.ui.SignView;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -42,7 +41,7 @@ public final class SignModule {
 			ServerPlayer player = context.player();
 			try {
 				LocalDate date = LocalDate.of(request.year(), request.month(), request.day());
-				SignService.sign(player, date).stream().map(SignGui::message).forEach(player::sendSystemMessage);
+				SignService.sign(player, date).stream().map(SignView::message).forEach(player::sendSystemMessage);
 			} catch (DateTimeException error) {
 				player.sendSystemMessage(Component.literal("签到日期无效"));
 			}

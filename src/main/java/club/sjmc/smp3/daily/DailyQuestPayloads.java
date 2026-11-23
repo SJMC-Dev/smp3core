@@ -20,8 +20,7 @@ public final class DailyQuestPayloads {
 	                   int target, boolean complete, boolean claimed, boolean rerollAvailable,
 	                   List<Component> conditions, List<Component> rewards) {}
 
-	public record Catalog(long date, int remaining, int limit, boolean open, List<Task> tasks)
-	    implements CustomPacketPayload {
+	public record Catalog(long date, int remaining, int limit, List<Task> tasks) implements CustomPacketPayload {
 		private static final StreamCodec<RegistryFriendlyByteBuf, Task> TASK = StreamCodec.composite(
 		    ByteBufCodecs.stringUtf8(64), Task::token, ByteBufCodecs.stringUtf8(128), Task::name,
 		    ByteBufCodecs.stringUtf8(8), Task::difficulty, ByteBufCodecs.VAR_INT, Task::tier,
@@ -32,10 +31,9 @@ public final class DailyQuestPayloads {
 		    ComponentSerialization.STREAM_CODEC.apply(ByteBufCodecs.list()), Task::rewards, Task::new);
 		public static final Type<Catalog> TYPE =
 		    new Type<>(Identifier.fromNamespaceAndPath("smp3", "dailyquest_state"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, Catalog> CODEC =
-		    StreamCodec.composite(ByteBufCodecs.VAR_LONG, Catalog::date, ByteBufCodecs.VAR_INT, Catalog::remaining,
-			                      ByteBufCodecs.VAR_INT, Catalog::limit, ByteBufCodecs.BOOL, Catalog::open,
-			                      TASK.apply(ByteBufCodecs.list(4)), Catalog::tasks, Catalog::new);
+		public static final StreamCodec<RegistryFriendlyByteBuf, Catalog> CODEC = StreamCodec.composite(
+		    ByteBufCodecs.VAR_LONG, Catalog::date, ByteBufCodecs.VAR_INT, Catalog::remaining, ByteBufCodecs.VAR_INT,
+		    Catalog::limit, TASK.apply(ByteBufCodecs.list(4)), Catalog::tasks, Catalog::new);
 
 		@Override
 		public Type<Catalog> type() {
