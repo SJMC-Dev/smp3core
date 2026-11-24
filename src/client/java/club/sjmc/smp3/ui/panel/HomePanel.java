@@ -60,9 +60,11 @@ public final class HomePanel extends AbstractPanel {
 		name = addWidget(new EditBox(font, left + 4, controls + 4, innerWidth - 8, 14, Component.literal("家园名称")));
 		name.setMaxLength(64);
 		name.setBordered(false);
+		name.setTextShadow(false);
 		name.setTextColor(PaperStyle.INK);
 		name.setTextColorUneditable(PaperStyle.MUTED);
-		name.setHint(Component.literal("输入家园名称"));
+		name.setHint(
+		    Component.literal("输入家园名称").withStyle(style -> style.withColor(PaperStyle.MUTED).withoutShadow()));
 		name.setValue(input);
 		name.setFocused(focused);
 		int cell = (innerWidth - 8) / 3;

@@ -32,6 +32,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class MenuScreen extends Screen implements NoticeWrapHost {
 	private static final String[] TABS = {"公告", "签到", "任务", "商店", "称号", "家园"};
+	private static final int MARGIN = 16;
 	private static final int TAB_DEPTH = 30;
 	private static final int TAB_ACTIVE_DEPTH = 40;
 	private static final int TAB_GAP = 6;
@@ -102,11 +103,10 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 
 	@Override
 	protected void init() {
-		panelWidth = Math.min(320, Math.max(200, width - 32 - TAB_ACTIVE_DEPTH));
-		panelHeight = Math.min(204, height - 32);
-		int totalWidth = panelWidth + TAB_ACTIVE_DEPTH;
-		x = (width - totalWidth) / 2 + TAB_ACTIVE_DEPTH;
-		y = (height - panelHeight) / 2;
+		panelWidth = width - MARGIN * 2 - TAB_ACTIVE_DEPTH;
+		panelHeight = height - MARGIN * 2;
+		x = MARGIN + TAB_ACTIVE_DEPTH;
+		y = MARGIN;
 		tabHeight = Math.min(28, (panelHeight - (TABS.length - 1) * TAB_GAP) / TABS.length);
 		int stack = TABS.length * tabHeight + (TABS.length - 1) * TAB_GAP;
 		tabTop = y + (panelHeight - stack) / 2;
