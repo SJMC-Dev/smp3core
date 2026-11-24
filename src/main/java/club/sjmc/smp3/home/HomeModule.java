@@ -5,6 +5,7 @@ import java.util.List;
 
 import club.sjmc.smp3.Smp3Core;
 
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -20,6 +21,8 @@ public final class HomeModule {
 	private HomeModule() {}
 
 	public static void register() {
+		CommandRegistrationCallback.EVENT.register(
+		    (dispatcher, registry, environment) -> HomeCommand.register(dispatcher, () -> service));
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> {
 			store = new HomeStore(FabricLoader.getInstance().getConfigDir().resolve("smp3/homes"));
 			service = new HomeService(store);
@@ -44,7 +47,7 @@ public final class HomeModule {
 			return;
 		HomePayloads.Catalog catalog;
 		try {
-			String message = service.apply(player, request);
+			String message = service.apply(player, request).message();
 			boolean available = HomeService.available(player);
 			catalog = new HomePayloads.Catalog(available ? service.entries(player) : List.of(), available, message);
 		} catch (IOException | RuntimeException error) {
