@@ -20,6 +20,7 @@ import club.sjmc.smp3.item.ui.EnchantBookGui;
 import club.sjmc.smp3.milestone.MilestoneChecks;
 import club.sjmc.smp3.shop.ShopChecks;
 import club.sjmc.smp3.sign.PlayerSignData;
+import club.sjmc.smp3.player.PlayerRidingChecks;
 import club.sjmc.smp3.sign.SignFailureChecks;
 import club.sjmc.smp3.sign.SignService;
 import club.sjmc.smp3.time.ServerDates;
@@ -67,6 +68,7 @@ public final class FeatureChecks implements ModInitializer {
 	}
 
 	public static void run(GameTestHelper test, ServerPlayer player) throws Exception {
+		PlayerRidingChecks.run(test, player);
 		ShopChecks.run(test, player);
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.COFFEE_STAMP, 0);

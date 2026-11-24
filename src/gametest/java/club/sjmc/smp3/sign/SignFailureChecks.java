@@ -4,6 +4,7 @@ import java.time.YearMonth;
 import java.nio.file.Files;
 import net.fabricmc.loader.api.FabricLoader;
 import java.util.Map;
+import java.util.UUID;
 
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
@@ -46,14 +47,18 @@ public final class SignFailureChecks {
 		legacy.putIntArray("serverClaimed", new int[] {1, 2, 3, 4});
 		PlayerSignData state = PlayerSignData.load(legacy);
 		data.commit(player.getUUID(), Smp3AccountStore.rewardState(player.getUUID(), "sign"), state, Map.of());
+		int rank = data.nextRank(today.toEpochDay());
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, Long.MAX_VALUE);
 		SignService.sign(player, today);
+		test.assertTrue(data.nextRank(today.toEpochDay()) == rank, "Failed commit consumed a check-in rank");
 		test.assertTrue(data.of(player.getUUID()).serverTotal() == 4, "Failed currency commit advanced sign-in");
 		test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == stamps,
 		                "Failed sign-in credited the other currency");
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
 		SignService.sign(player, today);
 		SignService.sign(player, today);
+		test.assertTrue(data.of(player.getUUID()).dailyRank() == rank && data.nextRank(today.toEpochDay()) == rank + 1,
+		                "Retry or duplicate check-in consumed an extra rank");
 		test.assertTrue(balance(player) == 15000 && !data.of(player.getUUID()).isServerClaimed(5),
 		                "Missing command lost pending reward or repeated money");
 		test.assertTrue(Smp3AccountStore.balance(player.getUUID(), Smp3Currency.COFFEE_STAMP) == stamps + 100,
@@ -80,6 +85,22 @@ public final class SignFailureChecks {
 		entries.put(player.getUUID().toString(), legacy);
 		var stale = new CompoundTag();
 		stale.put("players", entries);
+		var recovered = SignData.fromTag(stale);
+		test.assertTrue(recovered.nextRank(today.toEpochDay()) == data.nextRank(today.toEpochDay()),
+		                "Restart recovered rank from stale world data instead of accounts");
+		test.assertTrue(recovered.of(player.getUUID()).dailyRank() == rank &&
+		                    PlayerSignData.load(recovered.of(player.getUUID()).save()).dailyRank() == rank,
+		                "Rank was not persisted");
+		var other = UUID.randomUUID();
+		var otherState = new PlayerSignData();
+		otherState.rotateMonth(today);
+		otherState.sign(today);
+		otherState.dailyRank(recovered.nextRank(today.toEpochDay()));
+		recovered.commit(other, null, otherState, Map.of());
+		test.assertTrue(otherState.dailyRank() == rank + 1 &&
+		                    SignData.fromTag(stale).nextRank(today.toEpochDay()) == rank + 2,
+		                "Different players received the same rank");
+		test.assertTrue(recovered.nextRank(today.plusDays(1).toEpochDay()) == 1, "New day did not reset check-in rank");
 		test.assertTrue(SignData.fromTag(stale).of(player.getUUID()).serverTotal() == 5,
 		                "Stale world snapshot overrode ledger");
 		state = SignData.copy(data.of(player.getUUID()));

@@ -4,6 +4,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 
 import club.sjmc.smp3.daily.DailyQuestPayloads;
 import club.sjmc.smp3.sign.SignPayloads;
+import club.sjmc.smp3.home.HomePayloads;
+import club.sjmc.smp3.ui.panel.HomePanel;
 import club.sjmc.smp3.title.TitlePayloads;
 import club.sjmc.smp3.ui.Smp3Client;
 import club.sjmc.smp3.ui.panel.NoticePanel;
@@ -29,7 +31,7 @@ import org.jetbrains.annotations.NotNull;
  * 集成菜单：左侧标签，右侧直接嵌入 {@link Panel}。
  */
 public final class MenuScreen extends Screen implements NoticeWrapHost {
-	private static final String[] TABS = {"公告", "签到", "任务", "商店", "称号"};
+	private static final String[] TABS = {"公告", "签到", "任务", "商店", "称号", "家园"};
 	private static final int TAB_DEPTH = 30;
 	private static final int TAB_ACTIVE_DEPTH = 40;
 	private static final int TAB_GAP = 6;
@@ -38,6 +40,7 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	private SignPayloads.State sign;
 	private TitlePayloads.Catalog titles;
 	private DailyQuestPayloads.Catalog quests;
+	private HomePayloads.Catalog homes;
 	private Panel child;
 	private boolean childCaptured;
 	private int selected = -1;
@@ -45,6 +48,16 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	private PanelContext paneContext = new PanelContext(0, 0);
 
 	public MenuScreen() { super(Component.literal("菜单")); }
+
+	public void acceptHomes(HomePayloads.Catalog catalog) {
+		homes = catalog;
+		if (selected == 5) {
+			if (child instanceof HomePanel panel)
+				panel.accept(catalog);
+			else
+				selectTab(5);
+		}
+	}
 
 	public void acceptSign(SignPayloads.State state) {
 		sign = state;
@@ -94,7 +107,7 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 		int totalWidth = panelWidth + TAB_ACTIVE_DEPTH;
 		x = (width - totalWidth) / 2 + TAB_ACTIVE_DEPTH;
 		y = (height - panelHeight) / 2;
-		tabHeight = 28;
+		tabHeight = Math.min(28, (panelHeight - (TABS.length - 1) * TAB_GAP) / TABS.length);
 		int stack = TABS.length * tabHeight + (TABS.length - 1) * TAB_GAP;
 		tabTop = y + (panelHeight - stack) / 2;
 		paneX = x + 13;
@@ -117,6 +130,7 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 			case 2 -> quests == null ? null : new QuestPanel(quests);
 			case 3 -> new ShopPanel(Smp3Client.shop());
 			case 4 -> titles == null ? null : new TitlePanel(titles);
+			case 5 -> homes == null ? null : new HomePanel(homes);
 			default -> null;
 		};
 		if (previous != null && previous != child) {

@@ -1,5 +1,8 @@
 package club.sjmc.smp3;
 
+import java.time.LocalTime;
+import java.time.ZoneId;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,6 +13,7 @@ import club.sjmc.smp3.daily.ui.DailyQuestView;
 import club.sjmc.smp3.economy.Smp3EconomyProvider;
 import club.sjmc.smp3.gacha.GachaModule;
 import club.sjmc.smp3.gacha.ui.GachaCommand;
+import club.sjmc.smp3.home.HomeModule;
 import club.sjmc.smp3.item.Smp3Items;
 import club.sjmc.smp3.menu.ui.MenuCommand;
 import club.sjmc.smp3.menu.ui.MenuView;
@@ -17,6 +21,7 @@ import club.sjmc.smp3.milestone.MilestoneModule;
 import club.sjmc.smp3.milestone.ui.RewardCommand;
 import club.sjmc.smp3.notice.NoticeModule;
 import club.sjmc.smp3.notice.ui.NoticeCommand;
+import club.sjmc.smp3.player.PlayerRiding;
 import club.sjmc.smp3.shop.ShopModule;
 import club.sjmc.smp3.shop.ui.ShopCommand;
 import club.sjmc.smp3.sign.SignModule;
@@ -38,14 +43,18 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
 public final class Smp3Core implements ModInitializer {
+	private static ServerConfig serverConfig = new ServerConfig(ZoneId.of("UTC"), LocalTime.MIDNIGHT);
+
+	public static ServerConfig serverConfig() { return serverConfig; }
+
 	public static final Logger LOGGER = LoggerFactory.getLogger("SMP3-Core");
 
 	@Override
 	public void onInitialize() {
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> {
 			try {
-				ServerDates.configure(
-				    ServerConfig.load(FabricLoader.getInstance().getConfigDir().resolve("smp3/server.json")));
+				serverConfig = ServerConfig.load(FabricLoader.getInstance().getConfigDir().resolve("smp3/server.json"));
+				ServerDates.configure(serverConfig);
 			} catch (Exception e) {
 				throw new IllegalStateException("Invalid SMP3 server configuration", e);
 			}
@@ -58,6 +67,8 @@ public final class Smp3Core implements ModInitializer {
 
 		DailyQuestModule.register();
 		DailyQuestView.register();
+		HomeModule.register();
+		PlayerRiding.register();
 		MenuView.register();
 		WatchdogModule.register();
 		NoticeModule.register();

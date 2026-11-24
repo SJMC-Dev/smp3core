@@ -28,6 +28,30 @@ final class SignData extends SavedData {
 		                    DataFixTypes.SAVED_DATA_COMMAND_STORAGE);
 
 	private final Map<UUID, PlayerSignData> players = new HashMap<>();
+	private boolean accountsLoaded;
+	private long rankDay = PlayerSignData.NEVER_SIGNED;
+	private int lastRank;
+
+	int nextRank(long day) {
+		if (!accountsLoaded) {
+			Smp3AccountStore.forEachRewardState(
+			    "sign", (owner, state) -> players.put(owner, JSON.fromJson(state, PlayerSignData.class)));
+			accountsLoaded = true;
+		}
+		if (rankDay != day) {
+			rankDay = day;
+			int signedPlayers = 0;
+			lastRank = 0;
+			for (var state : players.values()) {
+				if (state.lastSignEpochDay() != day)
+					continue;
+				signedPlayers++;
+				lastRank = Math.max(lastRank, state.dailyRank());
+			}
+			lastRank = Math.max(lastRank, signedPlayers);
+		}
+		return Math.addExact(lastRank, 1);
+	}
 
 	public static SignData get(MinecraftServer server) {
 		return server.overworld().getDataStorage().computeIfAbsent(TYPE);
@@ -50,6 +74,8 @@ final class SignData extends SavedData {
 		JsonObject next = JSON.toJsonTree(state).getAsJsonObject();
 		Smp3AccountStore.commitReward(player, "sign", expected, next, credits);
 		state.receipt = next;
+		if (state.lastSignEpochDay() == rankDay)
+			lastRank = Math.max(lastRank, state.dailyRank());
 		players.put(player, state);
 		setDirty();
 	}

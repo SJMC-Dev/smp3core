@@ -1,6 +1,7 @@
 package club.sjmc.smp3.menu.ui;
 
 import club.sjmc.smp3.Smp3Core;
+import club.sjmc.smp3.home.HomeModule;
 import club.sjmc.smp3.daily.ui.DailyQuestView;
 import club.sjmc.smp3.menu.MenuPayloads;
 import club.sjmc.smp3.shop.ShopModule;
@@ -45,6 +46,7 @@ public final class MenuView {
 
 	private static void sendData(ServerPlayer player) {
 		SignView.refresh(player);
+		HomeModule.refresh(player);
 		TitleView.refresh(player);
 		DailyQuestView.refresh(player);
 		ShopModule.open(player, false);

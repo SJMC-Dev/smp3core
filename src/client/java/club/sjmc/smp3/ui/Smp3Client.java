@@ -13,6 +13,7 @@ import club.sjmc.smp3.daily.DailyQuestPayloads;
 import club.sjmc.smp3.daily.QuestHudPayload;
 import club.sjmc.smp3.economy.BalanceSync;
 import club.sjmc.smp3.menu.MenuPayloads;
+import club.sjmc.smp3.home.HomePayloads;
 import club.sjmc.smp3.notice.NoticePayloads;
 import club.sjmc.smp3.shop.ShopPayloads;
 import club.sjmc.smp3.sign.SignPayloads;
@@ -96,6 +97,10 @@ public final class Smp3Client implements ClientModInitializer {
 			var client = context.client();
 			if (client.gui.screen() instanceof MenuScreen menu)
 				menu.acceptSign(state);
+		});
+		ClientPlayNetworking.registerGlobalReceiver(HomePayloads.Catalog.TYPE, (catalog, context) -> {
+			if (context.client().gui.screen() instanceof MenuScreen screen)
+				screen.acceptHomes(catalog);
 		});
 		ClientPlayNetworking.registerGlobalReceiver(TitlePayloads.Catalog.TYPE, (catalog, context) -> {
 			var client = context.client();

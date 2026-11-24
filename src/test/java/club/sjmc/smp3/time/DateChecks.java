@@ -19,6 +19,17 @@ public final class DateChecks {
 			var defaults = ServerConfig.load(file);
 			assert defaults.timezone().equals(ZoneId.of("Asia/Shanghai"));
 			assert defaults.resetTime().equals(LocalTime.MIDNIGHT);
+			assert defaults.autoSaveIntervalSeconds() == 600 && defaults.playerStackLimit() == 3;
+			assert ServerConfig.parse("{\"timezone\":\"UTC\"}").autoSaveIntervalSeconds() == 300;
+			for (String key : new String[] {"autoSaveIntervalSeconds", "playerStackLimit"}) {
+				for (String invalid : new String[] {"0", "-1", "1.5", "true", "\"600\"", "2147483648"}) {
+					try {
+						ServerConfig.parse("{\"timezone\":\"UTC\",\"" + key + "\":" + invalid + "}");
+						throw new AssertionError("Invalid server setting accepted: " + key + "=" + invalid);
+					} catch (IllegalArgumentException expected) {
+					}
+				}
+			}
 			assert ServerConfig.parse("{\"timezone\":\"UTC\"}").resetTime().equals(LocalTime.MIDNIGHT);
 			ServerDates.configure(defaults);
 			for (String invalid : new String[] {"{}", "{\"timezone\":1}", "{\"timezone\":\"invalid\"}",

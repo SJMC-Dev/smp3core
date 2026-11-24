@@ -25,6 +25,7 @@ import club.sjmc.smp3.notice.NoticeModule;
 import club.sjmc.smp3.notice.NoticePayloads;
 import club.sjmc.smp3.ui.hud.HudLayout;
 import club.sjmc.smp3.ui.panel.NoticePanel;
+import club.sjmc.smp3.ui.panel.HomePanelChecks;
 import club.sjmc.smp3.ui.panel.QuestPanel;
 import club.sjmc.smp3.ui.screen.HudSettingsScreen;
 import club.sjmc.smp3.ui.screen.MenuScreen;
@@ -135,6 +136,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			});
 			context.runOnClient(client -> client.options.guiScale().set(2));
 			context.takeScreenshot("quest-hud-active");
+			context.runOnClient(client -> HomePanelChecks.run());
 			ShopClientChecks.run(context, world);
 			String token = context.computeOnClient(client -> Smp3Client.HUD.state.rows.getFirst().entry.token());
 			context.runOnClient(client -> client.getConnection().sendCommand("smp3 menu"));

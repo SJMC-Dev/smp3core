@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -64,6 +65,10 @@ public final class Smp3AccountStore {
 			if (amount != 0)
 				BALANCE_CHANGED.invoker().changed(owner, currency, balances.get(currency.id().getPath()));
 		});
+	}
+
+	public static void forEachRewardState(String key, BiConsumer<UUID, JsonObject> visitor) {
+		Holder.LEDGER.forEachRewardState(key, visitor);
 	}
 
 	public static void saveRewardFields(String key, Map<UUID, JsonObject> fields) {
@@ -136,6 +141,24 @@ public final class Smp3AccountStore {
 				if (!rewards.equals(account.rewards))
 					commit(owner, new Account(account.balances, rewards));
 			});
+		}
+
+		synchronized void forEachRewardState(String key, BiConsumer<UUID, JsonObject> visitor) {
+			if (!Files.exists(directory))
+				return;
+			try (var files = Files.newDirectoryStream(directory, "*.json")) {
+				for (Path file : files) {
+					UUID owner = UUID.fromString(file.getFileName().toString().replaceFirst("\\.json$", ""));
+					JsonObject rewards = accounts.containsKey(owner) ? accounts.get(owner).rewards
+					                                                 : JsonParser.parseString(Files.readString(file))
+					                                                       .getAsJsonObject()
+					                                                       .getAsJsonObject("rewardStates");
+					if (rewards.has(key))
+						visitor.accept(owner, rewards.getAsJsonObject(key).deepCopy());
+				}
+			} catch (IOException error) {
+				throw new IllegalStateException("读取玩家账本失败: " + directory, error);
+			}
 		}
 
 		private Account load(UUID owner) {

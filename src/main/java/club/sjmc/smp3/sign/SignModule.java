@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import club.sjmc.smp3.Smp3Core;
 import club.sjmc.smp3.config.JsonConfig;
 import club.sjmc.smp3.sign.ui.SignView;
+import club.sjmc.smp3.time.ServerDates;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -50,6 +51,7 @@ public final class SignModule {
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			try {
 				reload(server);
+				SignData.get(server).nextRank(ServerDates.today().toEpochDay());
 			} catch (Exception error) {
 				Smp3Core.LOGGER.error("Sign configuration failed", error);
 			}

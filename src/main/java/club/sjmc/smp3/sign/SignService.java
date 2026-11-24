@@ -19,8 +19,11 @@ import net.minecraft.server.level.ServerPlayer;
 public final class SignService {
 	public enum Status { DATE_CHANGED, SIGNED, ALREADY_SIGNED, SAVE_FAILED, REVIEW, RETRY, MILESTONE_GRANTED }
 
-	public record Outcome(Status status, int days, Map<Smp3Currency, Integer> rewards, String month) {
-		Outcome(Status status) { this(status, 0, Map.of(), ""); }
+	public record Outcome(Status status, int days, Map<Smp3Currency, Integer> rewards, String month, int rank) {
+		Outcome(Status status) { this(status, 0, Map.of(), "", 0); }
+		Outcome(Status status, int days, Map<Smp3Currency, Integer> rewards, String month) {
+			this(status, days, rewards, month, 0);
+		}
 	}
 
 	private SignService() {}
@@ -84,10 +87,11 @@ public final class SignService {
 			if (today.toEpochDay() > state.lastSignEpochDay()) {
 				PlayerSignData next = SignData.copy(state);
 				next.sign(today);
+				next.dailyRank(SignData.get(player.level().getServer()).nextRank(today.toEpochDay()));
 				var config = SignModule.config();
 				var reward = config.dailyRewards(next.streak());
 				commit(player, next, reward);
-				outcomes.add(new Outcome(Status.SIGNED, next.streak(), reward, ""));
+				outcomes.add(new Outcome(Status.SIGNED, next.streak(), reward, "", next.dailyRank()));
 				Smp3Core.LOGGER.info(
 				    "[SMP3] 签到：player={}({}) streak={} reward={} monthTotal={} serverTotal={}",
 				    player.getName().getString(), player.getUUID(), next.streak(),

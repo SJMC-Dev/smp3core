@@ -29,7 +29,7 @@ public final class SignView {
 		return switch (result.status()) {
 			case DATE_CHANGED -> GuiStyle.text("签到日期已更新，请重新操作", GuiStyle.ACTIVE);
 			case SIGNED ->
-				GuiStyle.text("签到成功，获得 " +
+				GuiStyle.text("签到成功，你是今日第 " + result.rank() + " 位签到的玩家，获得 " +
 				                  result.rewards()
 				                      .entrySet()
 				                      .stream()

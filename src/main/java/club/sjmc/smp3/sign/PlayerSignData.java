@@ -19,6 +19,7 @@ public final class PlayerSignData {
 
 	private long lastSignEpochDay = NEVER_SIGNED;
 	private int streak;
+	private int dailyRank;
 	private String monthKey = "";
 	private int monthTotal;
 	private int serverTotal;
@@ -123,6 +124,10 @@ public final class PlayerSignData {
 
 	public long lastSignEpochDay() { return lastSignEpochDay; }
 
+	public int dailyRank() { return dailyRank; }
+
+	void dailyRank(int rank) { dailyRank = rank; }
+
 	public int streak() { return streak; }
 
 	public String monthKey() { return monthKey; }
@@ -141,6 +146,7 @@ public final class PlayerSignData {
 		CompoundTag tag = new CompoundTag();
 		tag.putLong("lastSignEpochDay", lastSignEpochDay);
 		tag.putInt("streak", streak);
+		tag.putInt("dailyRank", dailyRank);
 		tag.putString("monthKey", monthKey);
 		tag.putInt("monthTotal", monthTotal);
 		tag.putInt("serverTotal", serverTotal);
@@ -155,6 +161,7 @@ public final class PlayerSignData {
 		PlayerSignData data = new PlayerSignData();
 		data.lastSignEpochDay = tag.getLongOr("lastSignEpochDay", NEVER_SIGNED);
 		data.streak = tag.getIntOr("streak", 0);
+		data.dailyRank = tag.getIntOr("dailyRank", 0);
 		data.monthKey = tag.getStringOr("monthKey", "");
 		data.monthTotal = tag.getIntOr("monthTotal", 0);
 		data.serverTotal = tag.getIntOr("serverTotal", 0);

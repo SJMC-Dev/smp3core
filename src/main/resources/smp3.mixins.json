@@ -3,6 +3,10 @@
   "package": "club.sjmc.smp3.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "AutoSaveMixin",
+    "HomeLimitMixin",
+    "PlayerRidingEntityMixin",
+    "PlayerRidingMixin",
     "AdvancementRewardMixin",
     "BlockDisplayAccess",
     "GachaCommandCallbackMixin",
@@ -40,7 +44,9 @@
     "MovementQuestMixin"
   ],
   "client": [
-    "NoticeLineBreakMixin"
+    "NoticeLineBreakMixin",
+    "PlayerRidingTargetMixin",
+    "PlayerRidingRenderMixin"
   ],
   "injectors": {
     "defaultRequire": 1
