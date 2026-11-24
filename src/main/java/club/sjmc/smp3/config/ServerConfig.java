@@ -11,8 +11,9 @@ import java.util.Set;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-public record ServerConfig(ZoneId timezone, LocalTime resetTime, int autoSaveIntervalSeconds, int playerStackLimit) {
-	public ServerConfig(ZoneId timezone, LocalTime resetTime) { this(timezone, resetTime, 300, 3); }
+public record ServerConfig(ZoneId timezone, LocalTime resetTime, int autoSaveIntervalSeconds, int playerStackLimit,
+                           int homeLimit) {
+	public ServerConfig(ZoneId timezone, LocalTime resetTime) { this(timezone, resetTime, 300, 3, 2); }
 
 	public static ServerConfig load(Path file) throws IOException {
 		JsonConfig.copyDefault(file, "/server.json");
@@ -25,12 +26,12 @@ public record ServerConfig(ZoneId timezone, LocalTime resetTime, int autoSaveInt
 
 	public static ServerConfig parse(String text) {
 		var root = JsonParser.parseString(text).getAsJsonObject();
-		if (!Set.of("timezone", "resetTime", "autoSaveIntervalSeconds", "playerStackLimit")
+		if (!Set.of("timezone", "resetTime", "autoSaveIntervalSeconds", "playerStackLimit", "homeLimit")
 		         .containsAll(root.keySet()) ||
 		    !root.has("timezone") || !root.get("timezone").isJsonPrimitive() ||
 		    !root.getAsJsonPrimitive("timezone").isString()) {
-			throw new IllegalArgumentException(
-			    "expected timezone, optional resetTime (HH:mm), autoSaveIntervalSeconds and playerStackLimit");
+			throw new IllegalArgumentException("expected timezone, optional resetTime (HH:mm), "
+			                                   + "autoSaveIntervalSeconds, playerStackLimit and homeLimit");
 		}
 		ZoneId timezone;
 		try {
@@ -47,7 +48,7 @@ public record ServerConfig(ZoneId timezone, LocalTime resetTime, int autoSaveInt
 			resetTime = LocalTime.parse(value.getAsString());
 		}
 		return new ServerConfig(timezone, resetTime, positiveInt(root, "autoSaveIntervalSeconds", 300),
-		                        positiveInt(root, "playerStackLimit", 3));
+		                        positiveInt(root, "playerStackLimit", 3), positiveInt(root, "homeLimit", 2));
 	}
 
 	private static int positiveInt(JsonObject root, String key, int fallback) {

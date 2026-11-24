@@ -14,6 +14,7 @@ import eu.pb4.sgui.api.gui.SimpleGui;
 
 import club.sjmc.smp3.economy.Smp3AccountStore;
 import club.sjmc.smp3.economy.Smp3Currency;
+import club.sjmc.smp3.home.HomeChecks;
 import club.sjmc.smp3.item.ItemDelivery;
 import club.sjmc.smp3.item.Smp3Items;
 import club.sjmc.smp3.item.ui.EnchantBookGui;
@@ -69,6 +70,7 @@ public final class FeatureChecks implements ModInitializer {
 
 	public static void run(GameTestHelper test, ServerPlayer player) throws Exception {
 		PlayerRidingChecks.run(test, player);
+		HomeChecks.run(test, player);
 		ShopChecks.run(test, player);
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.TONGBAO, 0);
 		Smp3AccountStore.setBalance(player.getUUID(), Smp3Currency.COFFEE_STAMP, 0);

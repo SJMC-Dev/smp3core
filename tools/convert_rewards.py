@@ -5,6 +5,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import math
 import os
 import struct
 import tempfile
@@ -217,8 +218,32 @@ def sign_tickets(snapshot, read, artifacts, legacy_sign, full_migration):
     return report
 
 
+def home_records(snapshot, read, artifacts):
+    players = read("config/fuji/modules/home/home.json")["name2home"]
+    total = 0
+    for owner, entries in players.items():
+        owner = str(UUID(owner))
+        if not entries:
+            continue
+        relative = f"config/smp3/homes/{owner}.json"
+        if (snapshot / relative).exists():
+            raise ValueError(f"SMP3 homes already exist for {owner}; refusing to replace them")
+        homes = {}
+        for name, value in entries.items():
+            if not 1 <= len(name) <= 64 or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in name):
+                raise ValueError(f"Invalid home name for {owner}: {name!r}")
+            location = {key: value[key] for key in ("x", "y", "z", "yaw", "pitch")}
+            if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
+                   for v in location.values()):
+                raise ValueError(f"Invalid home position for {owner}: {name!r}")
+            homes[name] = {"dimension": value["level"], **location}
+        artifacts["overlay/" + relative] = homes
+        total += len(homes)
+    return {"players": sum(bool(entries) for entries in players.values()), "homes": total}
+
+
 def convert(snapshot, configs, output, minecraft_jar, titles_only=False, migrate_shop_quotas=False, as_of=None,
-            legacy_sign=None):
+            legacy_sign=None, homes_only=False):
     sources = [snapshot / "config", snapshot / "world"]
     if configs is not None:
         sources.append(configs)
@@ -232,11 +257,18 @@ def convert(snapshot, configs, output, minecraft_jar, titles_only=False, migrate
         return json.loads(gzip.decompress(data) if relative.endswith(".gz") else data)
 
     def finish(report, full_migration=False):
+        if homes_only or full_migration:
+            report["homes"] = home_records(snapshot, read, artifacts)
+            report["notes"].append("Disable Fuji's home module after deploying the home records. SMP3 uses server.json homeLimit (default 2) and smp.home.use (allowed by default); Fuji home metadata and command wrappers no longer apply.")
         if legacy_sign is not None:
             report["signTickets"] = sign_tickets(snapshot, read, artifacts, legacy_sign, full_migration)
             report["notes"].append("One ten-draw ticket is queued per legacy five-day claimant; the compensation marker prevents repeat queuing.")
         write_result(output, artifacts, report)
         return report
+
+    if homes_only:
+        return finish({"mode": "homes-only", "sourceSHA256": hashes,
+                       "notes": ["Only home records are converted. Deploy the overlay while the server is stopped."]})
 
     if migrate_shop_quotas:
         if as_of is None:
@@ -392,6 +424,7 @@ def write_result(output, artifacts, report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", type=Path, required=True)
+    parser.add_argument("--homes-only", action="store_true", help="Convert Fuji homes to SMP3 records only; deploy while stopped, then disable Fuji home")
     parser.add_argument("--titles-only", action="store_true", help="Convert Fuji titles and LuckPerms only; preserve upgraded accounts")
     parser.add_argument("--shop-quotas", action="store_true", help="Migrate legacy shop quotas; may be combined with --titles-only")
     parser.add_argument("--sign-tickets", type=Path, metavar="LEGACY_SIGN_NBT",
@@ -401,6 +434,12 @@ def main():
     parser.add_argument("--output", type=Path, required=True, help="New directory; never an existing server directory")
     parser.add_argument("--minecraft-jar", type=Path, help="26.3 common/server JAR with vanilla advancements (full migration)")
     args = parser.parse_args()
+    if args.homes_only:
+        if any((args.titles_only, args.shop_quotas, args.sign_tickets, args.as_of, args.configs, args.minecraft_jar)):
+            parser.error("--homes-only cannot be combined with other migration modes")
+        report = convert(args.snapshot, None, args.output, None, homes_only=True)
+        print(json.dumps({"mode": report["mode"], "homes": report["homes"]}, indent=2))
+        return
     if args.shop_quotas != (args.as_of is not None):
         parser.error("--shop-quotas and --as-of must be supplied together")
     if args.titles_only or args.shop_quotas:

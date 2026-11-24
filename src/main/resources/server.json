@@ -2,5 +2,6 @@
   "timezone": "Asia/Shanghai",
   "resetTime": "00:00",
   "autoSaveIntervalSeconds": 600,
-  "playerStackLimit": 3
+  "playerStackLimit": 3,
+  "homeLimit": 2
 }

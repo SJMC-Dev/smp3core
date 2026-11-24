@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
 import net.luckperms.api.node.Node;
+import net.luckperms.api.util.Tristate;
 
 import club.sjmc.smp3.Smp3Core;
 
@@ -24,16 +25,20 @@ public final class Permissions {
 		return LuckPermsProvider.get().getUserManager().getUser(player.getUUID());
 	}
 
-	public static boolean has(ServerPlayer player, String node, boolean warn) {
+	public static boolean has(ServerPlayer player, String node, boolean warn) { return has(player, node, warn, false); }
+
+	public static boolean has(ServerPlayer player, String node, boolean warn, boolean fallback) {
 		try {
 			User user = user(player);
-			return user != null && user.getCachedData().getPermissionData().checkPermission(node).asBoolean();
+			var result =
+			    user == null ? Tristate.UNDEFINED : user.getCachedData().getPermissionData().checkPermission(node);
+			return result == Tristate.UNDEFINED ? fallback : result.asBoolean();
 		} catch (Throwable e) {
 			if (warn && !warned) {
 				warned = true;
 				Smp3Core.LOGGER.warn("[SMP3] LuckPerms 不可用，全部玩家按普通身份处理：{}", e.toString());
 			}
-			return false;
+			return fallback;
 		}
 	}
 
