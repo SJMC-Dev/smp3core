@@ -34,7 +34,8 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	private static final String[] TABS = {"公告", "签到", "任务", "商店", "称号", "家园"};
 	private static final int TAB_DEPTH = 30;
 	private static final int TAB_ACTIVE_DEPTH = 40;
-	private static final int TAB_GAP = 6;
+	private static final int TAB_GAP = 4;
+	private static final int TAB_HEIGHT = 26;
 	private static final int TAB_DIM = 0xFF6B563E;
 	private static final int EMBED_INSET = 10;
 	private SignPayloads.State sign;
@@ -44,7 +45,7 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	private Panel child;
 	private boolean childCaptured;
 	private int selected = -1;
-	private int x, y, panelWidth, panelHeight, tabTop, tabHeight, paneX, paneY, paneWidth, paneHeight;
+	private int x, y, panelWidth, panelHeight, tabTop, paneX, paneY, paneWidth, paneHeight;
 	private PanelContext paneContext = new PanelContext(0, 0);
 
 	public MenuScreen() { super(Component.literal("菜单")); }
@@ -107,8 +108,7 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 		int totalWidth = panelWidth + TAB_ACTIVE_DEPTH;
 		x = (width - totalWidth) / 2 + TAB_ACTIVE_DEPTH;
 		y = (height - panelHeight) / 2;
-		tabHeight = Math.min(28, (panelHeight - (TABS.length - 1) * TAB_GAP) / TABS.length);
-		int stack = TABS.length * tabHeight + (TABS.length - 1) * TAB_GAP;
+		int stack = TABS.length * TAB_HEIGHT + (TABS.length - 1) * TAB_GAP;
 		tabTop = y + (panelHeight - stack) / 2;
 		paneX = x + 13;
 		paneY = y + 12;
@@ -157,25 +157,25 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 		graphics.fill(0, 0, width, height, 0x66000000);
 		PaperStyle.frame(graphics, x, y, panelWidth, panelHeight);
 		for (int i = 0; i < TABS.length; i++) {
-			int top = tabTop + i * (tabHeight + TAB_GAP);
+			int top = tabTop + i * (TAB_HEIGHT + TAB_GAP);
 			boolean active = i == selected;
 			int depth = active ? TAB_ACTIVE_DEPTH : TAB_DEPTH;
 			int left = x - depth;
 			int right = x + (active ? 9 : 1);
-			boolean hovered = !active && mouseX >= left && mouseX < right && mouseY >= top && mouseY < top + tabHeight;
-			graphics.fill(left, top, right, top + tabHeight, active ? 0xFFF2E7CF : hovered ? 0xDDE0C9A2 : 0xCCB39B7D);
+			boolean hovered = !active && mouseX >= left && mouseX < right && mouseY >= top && mouseY < top + TAB_HEIGHT;
+			graphics.fill(left, top, right, top + TAB_HEIGHT, active ? 0xFFF2E7CF : hovered ? 0xDDE0C9A2 : 0xCCB39B7D);
 			int edge = active ? 0xAA8C5B38 : 0x66836B48;
 			int glow = active ? 0x448C5B38 : 0x22765A37;
 			graphics.fill(left, top, right, top + 1, edge);
 			graphics.fill(left, top + 1, right, top + 2, glow);
-			graphics.fill(left, top + tabHeight - 1, right, top + tabHeight, edge);
-			graphics.fill(left, top + tabHeight - 2, right, top + tabHeight - 1, glow);
-			graphics.fill(left, top, left + 1, top + tabHeight, edge);
-			graphics.fill(left + 1, top, left + 2, top + tabHeight, glow);
-			graphics.fill(right - 1, top, right, top + tabHeight, edge);
-			graphics.fill(right - 2, top, right - 1, top + tabHeight, glow);
+			graphics.fill(left, top + TAB_HEIGHT - 1, right, top + TAB_HEIGHT, edge);
+			graphics.fill(left, top + TAB_HEIGHT - 2, right, top + TAB_HEIGHT - 1, glow);
+			graphics.fill(left, top, left + 1, top + TAB_HEIGHT, edge);
+			graphics.fill(left + 1, top, left + 2, top + TAB_HEIGHT, glow);
+			graphics.fill(right - 1, top, right, top + TAB_HEIGHT, edge);
+			graphics.fill(right - 2, top, right - 1, top + TAB_HEIGHT, glow);
 			String label = TABS[i];
-			graphics.text(font, label, left + (depth - font.width(label)) / 2, top + (tabHeight - font.lineHeight) / 2,
+			graphics.text(font, label, left + (depth - font.width(label)) / 2, top + (TAB_HEIGHT - font.lineHeight) / 2,
 			              active ? PaperStyle.INK : TAB_DIM, false);
 		}
 		if (selected < 0) {
@@ -209,10 +209,10 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 
 	private int tabAt(double mouseX, double mouseY) {
 		for (int i = 0; i < TABS.length; i++) {
-			int top = tabTop + i * (tabHeight + TAB_GAP);
+			int top = tabTop + i * (TAB_HEIGHT + TAB_GAP);
 			int depth = i == selected ? TAB_ACTIVE_DEPTH : TAB_DEPTH;
 			int left = x - depth;
-			if (new Rect(left, top, x - left, tabHeight).contains(mouseX, mouseY))
+			if (new Rect(left, top, x - left, TAB_HEIGHT).contains(mouseX, mouseY))
 				return i;
 		}
 		return -1;
