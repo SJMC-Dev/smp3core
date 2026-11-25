@@ -1,17 +1,11 @@
 package club.sjmc.smp3.ui.hud;
 
-import java.util.List;
-import java.util.Optional;
-
 import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.ui.state.CurrencyState;
-import club.sjmc.smp3.ui.themes.PaperStyle;
-import club.sjmc.smp3.ui.widget.PanelContext;
 import club.sjmc.smp3.ui.widget.ItemIcon;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -28,29 +22,22 @@ public final class CurrencyHud {
 		return 22 + Minecraft.getInstance().font.width(counter.text);
 	}
 
-	public int height(int availableWidth) { return width() > availableWidth ? 52 : 20; }
-
-	public void render(GuiGraphicsExtractor graphics, int right, int top, int availableWidth, float seconds, int mouseX,
-	                   int mouseY, PanelContext context) {
-		boolean stacked = width() > availableWidth;
-		renderCounter(graphics, state.coins, ItemIcon.currency(Smp3Currency.TONGBAO), "铁镐通宝",
-		              stacked ? right : right - counterWidth(state.stamps) - 12, top, availableWidth, seconds, mouseX,
-		              mouseY, context);
-		renderCounter(graphics, state.stamps, ItemIcon.currency(Smp3Currency.COFFEE_STAMP), "咖啡印章", right,
-		              top + (stacked ? 32 : 0), availableWidth, seconds, mouseX, mouseY, context);
+	public void render(GuiGraphicsExtractor graphics, int right, int top, int availableWidth, float seconds) {
+		float scale = Math.min(1, (float)availableWidth / width());
+		graphics.pose().pushMatrix();
+		graphics.pose().translate(right - width() * scale, top);
+		graphics.pose().scale(scale, scale);
+		renderCounter(graphics, state.coins, ItemIcon.currency(Smp3Currency.TONGBAO), 0, seconds);
+		renderCounter(graphics, state.stamps, ItemIcon.currency(Smp3Currency.COFFEE_STAMP),
+		              counterWidth(state.coins) + 12, seconds);
+		graphics.pose().popMatrix();
 	}
 
 	private static void renderCounter(GuiGraphicsExtractor graphics, CurrencyState.Counter counter, ItemStack icon,
-	                                  String label, int right, int top, int availableWidth, float seconds, int mouseX,
-	                                  int mouseY, PanelContext context) {
+	                                  int x, float seconds) {
 		var font = Minecraft.getInstance().font;
-		String text = PaperStyle.ellipsize(font, counter.text, availableWidth - 22);
-		int left = right - 22 - font.width(text);
-		graphics.item(icon, left, top + 2);
-		graphics.text(font, text, left + 22, top + 6, PaperStyle.INK, false);
-		if (mouseX >= left && mouseX < right && mouseY >= top && mouseY < top + 20)
-			graphics.setTooltipForNextFrame(font, List.of(Component.literal(label + "：" + counter.text)),
-			                                Optional.empty(), context.toScreenX(mouseX), context.toScreenY(mouseY));
+		graphics.item(icon, x, 2);
+		graphics.text(font, counter.text, x + 22, 6, 0xFF443323, false);
 		counter.age = Math.min(CurrencyState.FLOAT_SECONDS, counter.age + seconds);
 		if (counter.change == 0 || counter.age >= CurrencyState.FLOAT_SECONDS)
 			return;
@@ -58,8 +45,8 @@ public final class CurrencyHud {
 		if (alpha < 4)
 			return;
 		int color = (alpha << 24) | (counter.change > 0 ? 0x387341 : 0xAD4434);
-		String delta = PaperStyle.ellipsize(font, (counter.change > 0 ? "+" : "") + counter.change, right - left);
-		graphics.text(font, delta, right - font.width(delta),
-		              top - 8 - Math.round(6 * counter.age / CurrencyState.FLOAT_SECONDS), color, false);
+		String delta = (counter.change > 0 ? "+" : "") + counter.change;
+		graphics.text(font, delta, x + counterWidth(counter) - font.width(delta),
+		              -8 - Math.round(6 * counter.age / CurrencyState.FLOAT_SECONDS), color, false);
 	}
 }

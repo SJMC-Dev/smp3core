@@ -33,13 +33,13 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 /**
  * 商店面板：左侧树、右侧商品网格与交易模态框。
  */
 public final class ShopPanel extends AbstractPanel implements ShopState.Listener, CurrencyState.Listener {
 	private static final int GRID_GAP = 0;
+	private static final int NAME_CENTER_OFFSET = 1;
 	private static final int MODAL_HEIGHT = 112;
 	private static final int TREE_ROW = 20;
 	private final ShopState state;
@@ -87,7 +87,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		panelWidth = width();
 		panelHeight = height();
 		narrow = panelWidth < 440;
-		sidebar = Math.max(96, panelWidth / 3 - 14);
+		sidebar = Math.max(72, panelWidth / 3 - 14);
 		contentLeft = panelX + sidebar + 24;
 		contentWidth = panelX + panelWidth - 18 - contentLeft;
 		headerHeight = headerHeight();
@@ -160,7 +160,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 				appendTree(child, depth + 1);
 	}
 
-	private int cellSize() { return narrow ? 64 : 72; }
+	private int cellSize() { return narrow ? 58 : 64; }
 
 	private int gridColumns() { return Math.max(1, (contentWidth - 8 + GRID_GAP) / (cellSize() + GRID_GAP)); }
 
@@ -285,17 +285,16 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, PanelContext context) {
 		float seconds = Math.min(.05F, (System.nanoTime() - lastFrame) / 1e9F);
 		lastFrame = System.nanoTime();
-		Smp3Client.currencyHud().render(graphics, contentLeft + contentWidth - 8, panelY + 14, contentWidth - 8,
-		                                seconds, modal ? -1 : mouseX, modal ? -1 : mouseY, context);
+		Smp3Client.currencyHud().render(graphics, panelX + panelWidth - 30, panelY + 12, panelWidth - 60, seconds);
 		graphics.horizontalLine(panelX + sidebar + 14, panelX + panelWidth - 20, bodyTop - 3, PaperStyle.LINE);
-		drawTree(graphics, mouseX, mouseY, context);
+		drawTree(graphics, mouseX, mouseY);
 		drawProducts(graphics, mouseX, mouseY, context);
 		if (modal)
 			drawModal(graphics);
 		renderWidgets(graphics, mouseX, mouseY, delta);
 	}
 
-	private void drawTree(GuiGraphicsExtractor graphics, int mouseX, int mouseY, PanelContext context) {
+	private void drawTree(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
 		var font = font();
 		int left = panelX + 20, right = panelX + 14 + sidebar, cellRight = right - 12;
 		int dividerTop = panelY + 14;
@@ -322,12 +321,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 					graphics.text(font, ">", left + indent, top + 6, PaperStyle.MUTED, false);
 			}
 			drawSmallIcon(graphics, ItemIcon.of(row.node.icon()), left + indent + 9, top + 4);
-			String label = PaperStyle.ellipsize(font, row.node.name(), cellRight - left - indent - 26);
-			graphics.text(font, label, left + indent + 22, top + 6, PaperStyle.INK, false);
-			if (!modal && !label.equals(row.node.name()) && mouseX >= left && mouseX < cellRight &&
-			    mouseY >= Math.max(top, treeTop) && mouseY < Math.min(top + TREE_ROW, treeBottom))
-				graphics.setTooltipForNextFrame(font, List.of(Component.literal(row.node.name())), Optional.empty(),
-				                                context.toScreenX(mouseX), context.toScreenY(mouseY));
+			drawTreeName(graphics, row.node.name(), left + indent + 22, top + 6, cellRight - left - indent - 26);
 		}
 		graphics.disableScissor();
 		treeScroll.render(graphics, right - 2);
@@ -338,6 +332,17 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		graphics.pose().translate(x, y);
 		graphics.pose().scale(.75F, .75F);
 		graphics.item(icon, 0, 0);
+		graphics.pose().popMatrix();
+	}
+
+	private void drawTreeName(GuiGraphicsExtractor graphics, String name, int x, int y, int maxWidth) {
+		var font = font();
+		float scale = .85F;
+		String label = font.plainSubstrByWidth(name, Math.max(1, (int)(maxWidth / scale)));
+		graphics.pose().pushMatrix();
+		graphics.pose().translate(x, y + (font.lineHeight - font.lineHeight * scale) / 2);
+		graphics.pose().scale(scale, scale);
+		graphics.text(font, label, 0, 0, PaperStyle.INK, false);
 		graphics.pose().popMatrix();
 	}
 
@@ -357,24 +362,31 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 
 	private void drawPrice(GuiGraphicsExtractor graphics, ShopPayloads.Entry entry, int px, int py, int cell) {
 		var font = font();
-		var currency = Smp3Currency.byId(entry.currency());
-		int iconSize = currency == Smp3Currency.COFFEE_STAMP ? 16 : 10;
-		String text = PaperStyle.ellipsize(font, Integer.toString(entry.price()), cell - iconSize - 10);
-		int width = iconSize + 2 + font.width(text);
+		String text = Integer.toString(entry.price());
+		int width = 12 + font.width(text);
 		int left = px + (cell - width) / 2;
-		ItemStack icon = ItemIcon.currency(currency);
+		ItemStack icon = ItemIcon.currency(Smp3Currency.byId(entry.currency()));
 		graphics.pose().pushMatrix();
-		graphics.pose().translate(left, py - (iconSize - 10) / 2);
-		graphics.pose().scale(iconSize / 16F, iconSize / 16F);
+		graphics.pose().translate(left, py);
+		graphics.pose().scale(10F / 16F, 10F / 16F);
 		graphics.item(icon, 0, 0);
 		graphics.pose().popMatrix();
-		graphics.text(font, text, left + iconSize + 2, py + 1, PaperStyle.INK, false);
+		graphics.text(font, text, left + 12, py + 1, PaperStyle.INK, false);
 	}
 
-	private void drawName(GuiGraphicsExtractor graphics, String text, int centerX, int y, int maxWidth) {
+	private void drawFittedName(GuiGraphicsExtractor graphics, String text, int centerX, int y, int maxWidth) {
 		var font = font();
-		String label = PaperStyle.ellipsize(font, text, maxWidth);
-		graphics.text(font, label, centerX - font.width(label) / 2, y, PaperStyle.INK, false);
+		int width = font.width(text);
+		float scale = Math.min(1F, maxWidth / (float)Math.max(1, width));
+		if (scale >= .995F) {
+			graphics.text(font, text, centerX - width / 2, y, PaperStyle.INK, false);
+			return;
+		}
+		graphics.pose().pushMatrix();
+		graphics.pose().translate(centerX - width * scale / 2, y + (font.lineHeight - font.lineHeight * scale) / 2);
+		graphics.pose().scale(scale, scale);
+		graphics.text(font, text, 0, 0, PaperStyle.INK, false);
+		graphics.pose().popMatrix();
 	}
 
 	private void drawProducts(GuiGraphicsExtractor graphics, int mouseX, int mouseY, PanelContext context) {
@@ -404,10 +416,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 					graphics.fill(left, top, left + cell, top + cell, 0x227F5936);
 				drawGridIcon(graphics, ItemIcon.of(child.icon()), left + (cell - 32) / 2, top + 6);
 				String name = child.name();
-				drawName(graphics, name, left + cell / 2, top + 44, cell - 8);
-				if (hovered && !modal && font.width(name) > cell - 8)
-					graphics.setTooltipForNextFrame(font, List.of(Component.literal(name)), Optional.empty(),
-					                                context.toScreenX(mouseX), context.toScreenY(mouseY));
+				drawFittedName(graphics, name, left + cell / 2 + NAME_CENTER_OFFSET, top + 44, cell - 8);
 				continue;
 			}
 			var entry = entries.get(i - folders.size());
@@ -420,12 +429,11 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 			ItemStack shown = entry.amount() > 1 && !entry.title() ? icon.copyWithCount(entry.amount()) : icon;
 			drawGridIcon(graphics, shown, iconX, iconY);
 			String name = icon.getHoverName().getString();
-			drawName(graphics, name, left + cell / 2, top + 40, cell - 8);
+			drawFittedName(graphics, name, left + cell / 2 + NAME_CENTER_OFFSET, top + 40, cell - 8);
 			drawPrice(graphics, entry, left, top + 51, cell);
 			if (hovered && !modal) {
 				var lines = new ArrayList<>(Screen.getTooltipFromItem(Minecraft.getInstance(), icon));
 				entry.description().forEach(line -> lines.add(Component.literal(line).withStyle(ChatFormatting.GRAY)));
-				lines.add(Component.literal(currency(entry) + "：" + entry.price()).withStyle(ChatFormatting.GRAY));
 				lines.add(Component.literal(entry.title() ? "解锁称号"
 				                            : entry.buy() ? "购买物品"
 				                                          : "出售物品")
