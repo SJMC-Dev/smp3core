@@ -18,7 +18,6 @@ import club.sjmc.smp3.notice.NoticePayloads;
 import club.sjmc.smp3.shop.ShopPayloads;
 import club.sjmc.smp3.sign.SignPayloads;
 import club.sjmc.smp3.title.TitlePayloads;
-import club.sjmc.smp3.ui.hud.CurrencyHud;
 import club.sjmc.smp3.ui.hud.HudLayout;
 import club.sjmc.smp3.ui.hud.NoticeHud;
 import club.sjmc.smp3.ui.hud.QuestHud;
@@ -28,6 +27,7 @@ import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
 import club.sjmc.smp3.ui.state.CurrencyState;
 import club.sjmc.smp3.ui.state.ServerBookState;
 import club.sjmc.smp3.ui.state.ShopState;
+import club.sjmc.smp3.ui.widget.CurrencyBadge;
 import club.sjmc.smp3.ui.widget.ItemIcon;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -48,7 +48,7 @@ public final class Smp3Client implements ClientModInitializer {
 	static final ServerBookState BOOK = new ServerBookState();
 	static final NoticeHud NOTICE = new NoticeHud(BOOK);
 	static final CurrencyState BALANCES = new CurrencyState();
-	static final CurrencyHud CURRENCY = new CurrencyHud(BALANCES);
+	static final CurrencyBadge CURRENCY = new CurrencyBadge(BALANCES);
 	static final ShopState SHOP = new ShopState();
 	static HudLayout layout = new HudLayout();
 
@@ -60,7 +60,7 @@ public final class Smp3Client implements ClientModInitializer {
 
 	public static CurrencyState balances() { return BALANCES; }
 
-	public static CurrencyHud currencyHud() { return CURRENCY; }
+	public static CurrencyBadge currencyBadge() { return CURRENCY; }
 
 	public static ShopState shop() { return SHOP; }
 

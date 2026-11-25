@@ -1,20 +1,19 @@
-package club.sjmc.smp3.ui.hud;
+package club.sjmc.smp3.ui.widget;
 
 import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.ui.state.CurrencyState;
-import club.sjmc.smp3.ui.widget.ItemIcon;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * 货币余额的 HUD/面板渲染，读取 {@link CurrencyState}。
+ * 货币余额的徽章渲染，读取 {@link CurrencyState}，用于商店面板标题栏。
  */
-public final class CurrencyHud {
+public final class CurrencyBadge {
 	private final CurrencyState state;
 
-	public CurrencyHud(CurrencyState state) { this.state = state; }
+	public CurrencyBadge(CurrencyState state) { this.state = state; }
 
 	public int width() { return counterWidth(state.coins) + 12 + counterWidth(state.stamps); }
 

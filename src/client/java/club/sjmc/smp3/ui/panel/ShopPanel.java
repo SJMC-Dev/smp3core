@@ -269,7 +269,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, PanelContext context) {
 		float seconds = Math.min(.05F, (System.nanoTime() - lastFrame) / 1e9F);
 		lastFrame = System.nanoTime();
-		Smp3Client.currencyHud().render(graphics, panelX + panelWidth - 30, panelY + 12, panelWidth - 60, seconds);
+		Smp3Client.currencyBadge().render(graphics, panelX + panelWidth - 30, panelY + 12, panelWidth - 60, seconds);
 		graphics.horizontalLine(panelX + sidebar + 14, panelX + panelWidth - 20, bodyTop - 3, PaperStyle.LINE);
 		drawTree(graphics, mouseX, mouseY);
 		drawProducts(graphics, mouseX, mouseY, context);
