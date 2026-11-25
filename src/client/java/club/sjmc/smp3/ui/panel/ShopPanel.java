@@ -13,7 +13,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.shop.ShopPayloads;
 import club.sjmc.smp3.ui.Smp3Client;
-import club.sjmc.smp3.ui.state.CurrencyState;
 import club.sjmc.smp3.ui.state.ShopState;
 import club.sjmc.smp3.ui.themes.PaperStyle;
 import club.sjmc.smp3.ui.widget.ItemIcon;
@@ -37,7 +36,7 @@ import net.minecraft.world.item.ItemStack;
 /**
  * 商店面板：左侧树、右侧商品网格与交易模态框。
  */
-public final class ShopPanel extends AbstractPanel implements ShopState.Listener, CurrencyState.Listener {
+public final class ShopPanel extends AbstractPanel implements ShopState.Listener {
 	private static final int GRID_GAP = 0;
 	private static final int NAME_CENTER_OFFSET = 1;
 	private static final int MODAL_HEIGHT = 112;
@@ -49,7 +48,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	private record TreeRow(ShopPayloads.Node node, int depth, boolean children) {}
 	private final List<TreeRow> tree = new ArrayList<>();
 	private int panelX, panelY, panelWidth, panelHeight, sidebar, contentLeft, contentWidth, bodyTop, bodyBottom,
-	    treeTop, treeBottom, headerHeight, gridContent, modalX, modalY, modalWidth;
+	    treeTop, treeBottom, gridContent, modalX, modalY, modalWidth;
 	private final ScrollView treeScroll = new ScrollView();
 	private final ScrollView gridScroll = new ScrollView();
 	private String current = "", quantity = "1";
@@ -61,7 +60,6 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	public ShopPanel(ShopState state) {
 		this.state = state;
 		state.addListener(this);
-		Smp3Client.balances().addListener(this);
 	}
 
 	public void catalogChanged() {
@@ -90,8 +88,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		sidebar = Math.max(72, panelWidth / 3 - 14);
 		contentLeft = panelX + sidebar + 24;
 		contentWidth = panelX + panelWidth - 18 - contentLeft;
-		headerHeight = headerHeight();
-		bodyTop = panelY + 14 + headerHeight + 8;
+		bodyTop = panelY + 38;
 		bodyBottom = panelY + panelHeight - 18;
 		treeTop = panelY + 18;
 		treeBottom = bodyBottom;
@@ -136,13 +133,6 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 	}
 
 	private static Font font() { return Minecraft.getInstance().font; }
-
-	private int headerHeight() { return Smp3Client.currencyHud().height(contentWidth - 8); }
-
-	public void balancesChanged() {
-		if (headerHeight != headerHeight())
-			onLayout();
-	}
 
 	private ShopPayloads.Node node() { return state.nodes.get(current); }
 
@@ -265,14 +255,8 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		stateChanged();
 	}
 
-	@Override
-	public void currencyChanged() {
-		balancesChanged();
-	}
-
 	public void detachListeners() {
 		state.removeListener(this);
-		Smp3Client.balances().removeListener(this);
 	}
 
 	@Override
