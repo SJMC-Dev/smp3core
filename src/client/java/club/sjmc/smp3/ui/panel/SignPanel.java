@@ -33,7 +33,7 @@ public final class SignPanel extends AbstractPanel {
 	private static final int FUTURE = DyeColor.LIGHT_GRAY.getFireworkColor() | 0xFF000000;
 	private static final int MISSED = DyeColor.GRAY.getFireworkColor() | 0xFF000000;
 	private SignPayloads.State state;
-	private int panelX, panelY, panelWidth, cellWidth, cellHeight, gridLeft, gridTop;
+	private int panelX, panelY, panelWidth, panelHeight, cellWidth, cellHeight, gridLeft, gridTop;
 
 	public SignPanel(SignPayloads.State state) { this.state = state; }
 
@@ -48,10 +48,13 @@ public final class SignPanel extends AbstractPanel {
 	protected void onLayout() {
 		int rows = rows();
 		panelWidth = width() - 8;
+		panelHeight = height();
 		panelX = x();
 		panelY = y() + 6;
-		cellWidth = Math.max(1, (panelWidth - 32) / COLUMNS);
-		cellHeight = Math.max(14, (height() - 72) / rows);
+		int baseCellWidth = Math.max(1, (panelWidth - 32) / COLUMNS);
+		cellWidth = Math.max(1, Math.round(baseCellWidth * .75F));
+		int availableHeight = Math.max(rows * 14, height() - 72);
+		cellHeight = Math.max(14, Math.min(30, availableHeight / rows));
 		gridLeft = panelX + (panelWidth - COLUMNS * cellWidth) / 2;
 		gridTop = panelY + 42;
 	}
