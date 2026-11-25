@@ -132,8 +132,7 @@ public final class TitlePanel extends AbstractPanel {
 			graphics.item(icons.get(i), iconX, iconY);
 			var lines = font.split(names.get(i), Math.max(1, cellWidth - 25));
 			if (!lines.isEmpty())
-				graphics.text(font, lines.getFirst(), left + 21,
-				              cellTop + (CELL_HEIGHT - font.lineHeight) / 2 + 1,
+				graphics.text(font, lines.getFirst(), left + 21, cellTop + (CELL_HEIGHT - font.lineHeight) / 2 + 1,
 				              entry.obtained() ? PaperStyle.INK : 0x99827058, false);
 			if (!entry.obtained())
 				graphics.fill(left, cellTop, left + cellWidth, cellTop + CELL_HEIGHT, 0x44F2E7CF);

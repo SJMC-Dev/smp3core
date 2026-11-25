@@ -255,9 +255,7 @@ public final class ShopPanel extends AbstractPanel implements ShopState.Listener
 		stateChanged();
 	}
 
-	public void detachListeners() {
-		state.removeListener(this);
-	}
+	public void detachListeners() { state.removeListener(this); }
 
 	@Override
 	public void close() {

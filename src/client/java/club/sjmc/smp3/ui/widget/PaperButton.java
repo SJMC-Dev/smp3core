@@ -44,6 +44,9 @@ public final class PaperButton extends Button {
 		String label = font.plainSubstrByWidth(getMessage().getString(), getWidth() - 8);
 		graphics.text(font, label, getX() + (getWidth() - font.width(label)) / 2 + 1,
 		              getY() + (getHeight() - font.lineHeight) / 2 + 1,
-		              dimmed ? 0x66827058 : active || isSelected ? INK : MUTED, false);
+		              dimmed                 ? 0x66827058
+		              : active || isSelected ? INK
+		                                     : MUTED,
+		              false);
 	}
 }
