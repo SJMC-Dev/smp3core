@@ -15,7 +15,6 @@ import club.sjmc.smp3.ui.panel.ShopPanel;
 import club.sjmc.smp3.ui.panel.SignPanel;
 import club.sjmc.smp3.ui.panel.TitlePanel;
 import club.sjmc.smp3.ui.themes.PaperStyle;
-import club.sjmc.smp3.ui.widget.NoticeWrapHost;
 import club.sjmc.smp3.ui.widget.PanelContext;
 import club.sjmc.smp3.ui.widget.Rect;
 
@@ -30,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * 集成菜单：左侧标签，右侧直接嵌入 {@link Panel}。
  */
-public final class MenuScreen extends Screen implements NoticeWrapHost {
+public final class MenuScreen extends Screen {
 	private static final String[] TABS = {"公告", "签到", "任务", "商店", "称号", "家园"};
 	private static final int TAB_DEPTH = 30;
 	private static final int TAB_ACTIVE_DEPTH = 40;
@@ -145,11 +144,6 @@ public final class MenuScreen extends Screen implements NoticeWrapHost {
 	private void layoutChild() {
 		if (child != null)
 			child.layout(new Rect(0, 0, paneWidth + EMBED_INSET * 2, paneHeight + EMBED_INSET * 2), paneContext);
-	}
-
-	@Override
-	public boolean usesNoticeWrapping() {
-		return child instanceof NoticePanel;
 	}
 
 	@Override
