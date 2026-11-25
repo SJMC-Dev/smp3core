@@ -11,6 +11,8 @@ import club.sjmc.smp3.ui.widget.Rect;
 import club.sjmc.smp3.ui.widget.ScrollView;
 import club.sjmc.smp3.ui.widget.WrappedText;
 
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -154,8 +156,8 @@ public final class TitlePanel extends AbstractPanel {
 		    WrappedText.draw(graphics, font, names.get(selected).copy().withStyle(style -> style.withBold(true)),
 			                 detailX, top, nameWidth, entry.obtained() ? PaperStyle.INK : 0x99827058, bottom);
 		int cursor = nameCursor + 2;
-		graphics.text(font, entry.obtained() ? "已获得" : "未获得", detailX, cursor,
-		              entry.obtained() ? OBTAINED : MISSING, false);
+		String status = !entry.obtained() ? "未获得" : entry.id().equals(catalog.activeId()) ? "已获得" : "点击佩戴";
+		graphics.text(font, status, detailX, cursor, entry.obtained() ? OBTAINED : MISSING, false);
 		cursor += font.lineHeight + 4;
 		if (entry.id().equals(catalog.activeId())) {
 			graphics.text(font, "当前佩戴", detailX, cursor, ACTIVE, false);
@@ -212,6 +214,9 @@ public final class TitlePanel extends AbstractPanel {
 		if (index < 0)
 			return false;
 		selected = index;
+		var entry = catalog.entries().get(index);
+		if (entry.obtained() && !entry.id().equals(catalog.activeId()))
+			ClientPlayNetworking.send(new TitlePayloads.Select(entry.id()));
 		return true;
 	}
 

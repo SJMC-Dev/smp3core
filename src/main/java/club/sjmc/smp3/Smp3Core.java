@@ -27,7 +27,7 @@ import club.sjmc.smp3.shop.ui.ShopCommand;
 import club.sjmc.smp3.sign.SignModule;
 import club.sjmc.smp3.sign.ui.SignCommand;
 import club.sjmc.smp3.time.ServerDates;
-import club.sjmc.smp3.title.TitlePayloads;
+import club.sjmc.smp3.title.ui.TitleView;
 import club.sjmc.smp3.ui.HudSettingsPayload;
 import club.sjmc.smp3.watchdog.WatchdogModule;
 import club.sjmc.smp3.watchdog.ui.SmpPerfCommand;
@@ -74,7 +74,7 @@ public final class Smp3Core implements ModInitializer {
 		NoticeModule.register();
 		GachaModule.register();
 		PayloadTypeRegistry.clientboundPlay().register(HudSettingsPayload.TYPE, HudSettingsPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(TitlePayloads.Catalog.TYPE, TitlePayloads.Catalog.CODEC);
+		TitleView.register();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			var root =

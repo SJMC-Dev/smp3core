@@ -16,6 +16,17 @@ public final class TitlePayloads {
 
 	public record Entry(String id, String item, Component name, List<Component> description, boolean obtained) {}
 
+	public record Select(String id) implements CustomPacketPayload {
+		public static final Type<Select> TYPE = new Type<>(Identifier.fromNamespaceAndPath("smp3", "title_select"));
+		public static final StreamCodec<ByteBuf, Select> CODEC =
+		    StreamCodec.composite(ByteBufCodecs.stringUtf8(128), Select::id, Select::new);
+
+		@Override
+		public Type<Select> type() {
+			return TYPE;
+		}
+	}
+
 	public record Catalog(List<Entry> entries, String activeId) implements CustomPacketPayload {
 		private static final StreamCodec<ByteBuf, Entry> ENTRY =
 		    StreamCodec.composite(ByteBufCodecs.stringUtf8(128), Entry::id, ByteBufCodecs.stringUtf8(128), Entry::item,

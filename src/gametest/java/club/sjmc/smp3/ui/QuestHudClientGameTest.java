@@ -144,6 +144,7 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 			context.runOnClient(client -> client.options.guiScale().set(2));
 			context.takeScreenshot("quest-hud-active");
 			context.runOnClient(client -> HomePanelChecks.run());
+			TitleClientChecks.run(context, world);
 			ShopClientChecks.run(context, world);
 			String token = context.computeOnClient(client -> Smp3Client.HUD.state.rows.getFirst().entry.token());
 			context.runOnClient(client -> client.getConnection().sendCommand("smp3 menu"));

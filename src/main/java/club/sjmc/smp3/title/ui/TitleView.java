@@ -10,12 +10,36 @@ import mod.fuji.module.initializer.title.service.TitleService;
 import mod.fuji.module.initializer.title.structure.TitleDescriptor;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class TitleView {
 	private TitleView() {}
+
+	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(TitlePayloads.Catalog.TYPE, TitlePayloads.Catalog.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(TitlePayloads.Select.TYPE, TitlePayloads.Select.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(TitlePayloads.Select.TYPE,
+		                                            (request, context) -> select(context.player(), request.id()));
+	}
+
+	private static void select(ServerPlayer player, String id) {
+		try {
+			if (TitleService.getTitle(id).isEmpty()) {
+				player.sendSystemMessage(Component.literal("称号不存在，请重新选择"));
+			} else if (!TitleService.isTitleObtained(player, id)) {
+				player.sendSystemMessage(Component.literal("尚未获得此称号"));
+			} else if (!TitleService.getActiveTitle(player).map(TitleDescriptor::getId).orElse("").equals(id)) {
+				TitleService.setActiveTitle(player, id);
+			}
+			refresh(player);
+		} catch (RuntimeException | LinkageError error) {
+			Smp3Core.LOGGER.error("[SMP3] 称号切换失败 player={} title={}", player.getUUID(), id, error);
+			player.sendSystemMessage(Component.literal("称号切换失败，请联系管理员"));
+		}
+	}
 
 	public static void refresh(ServerPlayer player) {
 		if (!ServerPlayNetworking.canSend(player, TitlePayloads.Catalog.TYPE))
