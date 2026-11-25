@@ -20,15 +20,16 @@ import net.minecraft.world.item.ItemStack;
 final class QuestText {
 	private QuestText() {}
 
-	record Detail(String name, String label, List<Component> lines) {}
-
-	static List<Detail> details(QuestDay.Assignment task) {
-		List<Detail> details = new ArrayList<>();
-		details.add(new Detail(
-		    "任务说明", "目标：" + (task.definition.completion().equals("any") ? "任选一项" : "全部完成"), lore(task)));
+	static List<Component> conditions(QuestDay.Assignment task) {
+		List<Component> lines = new ArrayList<>(lore(task));
+		boolean multiple = task.definition.objectives().size() > 1;
+		if (multiple)
+			lines.add(
+			    Component.literal(task.definition.completion().equals("any") ? "目标：任选一项" : "目标：全部完成"));
 		for (int i = 0; i < task.definition.objectives().size(); i++) {
 			var goal = task.definition.objectives().get(i);
-			String progress = goal.name() + " (" + task.goalProgress(i) + "/" + goal.count() + ")";
+			lines.add(Component.literal((multiple ? goal.name() : "进度") + " (" + task.goalProgress(i) + "/" +
+			                            goal.count() + ")"));
 			if (goal.countBy().equals("distinct")) {
 				for (String target : QuestDefinition.values(goal.target().values())
 				                         .stream()
@@ -36,14 +37,12 @@ final class QuestText {
 				                         .distinct()
 				                         .toList()) {
 					boolean done = task.completedTargets(i).contains(target);
-					details.add(new Detail(progress, done ? "已完成" : "未完成",
-					                       condition(goal.target().field(), new JsonPrimitive(target))));
+					lines.addAll(
+					    condition(done ? "已完成" : "未完成", goal.target().field(), new JsonPrimitive(target)));
 				}
 			}
 			if (goal.event().equals("entity_converted"))
-				details.add(
-				    new Detail(progress, "转化归属",
-					           List.of(GuiStyle.text("计入16格内最近的、持有对应未完成任务的玩家", GuiStyle.MUTED))));
+				lines.add(Component.literal("转化归属：计入16格内最近的、持有对应未完成任务的玩家"));
 
 			goal.objective().conditions().entrySet().forEach(condition -> {
 				if (goal.countBy().equals("distinct") && condition.getKey().equals(goal.target().field()))
@@ -51,57 +50,51 @@ final class QuestText {
 				String label = QuestField.find(condition.getKey()).label();
 				if (condition.getValue().isJsonArray() && condition.getValue().getAsJsonArray().size() > 1)
 					label += "（任选其一）";
-				details.add(new Detail(progress, label, condition(condition.getKey(), condition.getValue())));
+				lines.addAll(condition(label, condition.getKey(), condition.getValue()));
 			});
 		}
-		return details;
+		return lines;
 	}
 
 	private static List<Component> lore(QuestDay.Assignment task) {
+		String description = task.definition.description();
+		if (description == null)
+			return List.of();
 		List<Component> parts = new ArrayList<>();
 		if (task.definition.objectives().size() > 1) {
-			if (task.definition.description() != null)
-				parts.add(Component.literal(task.definition.description()));
-			else
-				parts.add(Component.literal(task.definition.completion().equals("any") ? "完成任意一个子目标。"
-				                                                                       : "完成全部子目标。"));
+			parts.add(Component.literal(description));
 			return wrap(parts);
 		}
 		var goal = task.definition.objectives().getFirst();
 		var conditions = goal.objective().conditions();
-		String description = task.definition.description();
-		if (description != null && goal.target() != null &&
-		    (goal.selection().equals("random") || goal.countBy().equals("distinct")) &&
+		if (goal.target() != null && (goal.selection().equals("random") || goal.countBy().equals("distinct")) &&
 		    !description.contains("{" + goal.target().field() + "}")) {
 			parts.add(Component.literal(goal.countBy().equals("distinct") ? "不同目标（需 " + goal.count() + " 种）："
 			                                                              : "本次目标："));
 			parts.addAll(targets(goal.target().field(), goal.target().values()));
 			parts.add(Component.literal("\n"));
 		}
-		if (description == null) {
-			conditions.entrySet().forEach(condition -> {
-				parts.add(Component.literal(QuestField.find(condition.getKey()).label() + "："));
-				parts.addAll(targets(condition.getKey(), condition.getValue()));
-				parts.add(Component.literal("\n"));
-			});
-		} else {
-			var fields = QuestDefinition.DESCRIPTION_FIELD.matcher(description);
-			int offset = 0;
-			while (fields.find()) {
-				parts.add(Component.literal(description.substring(offset, fields.start())));
-				String field = fields.group(1);
-				if (field.equals("count"))
-					parts.add(Component.literal(Integer.toString(task.target)));
-				else
-					parts.addAll(targets(field, conditions.get(field)));
-				offset = fields.end();
-			}
-			parts.add(Component.literal(description.substring(offset)));
+		var fields = QuestDefinition.DESCRIPTION_FIELD.matcher(description);
+		int offset = 0;
+		while (fields.find()) {
+			parts.add(Component.literal(description.substring(offset, fields.start())));
+			String field = fields.group(1);
+			if (field.equals("count"))
+				parts.add(Component.literal(Integer.toString(task.target)));
+			else
+				parts.addAll(targets(field, conditions.get(field)));
+			offset = fields.end();
 		}
+		parts.add(Component.literal(description.substring(offset)));
 		return wrap(parts);
 	}
 
-	private static List<Component> condition(String key, JsonElement value) { return wrap(targets(key, value)); }
+	private static List<Component> condition(String label, String key, JsonElement value) {
+		List<Component> parts = new ArrayList<>();
+		parts.add(Component.literal(label + "："));
+		parts.addAll(targets(key, value));
+		return wrap(parts);
+	}
 
 	private static List<Component> targets(String key, JsonElement value) {
 		List<Component> parts = new ArrayList<>();

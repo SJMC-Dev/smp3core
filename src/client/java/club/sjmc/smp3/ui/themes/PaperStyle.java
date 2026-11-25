@@ -1,11 +1,19 @@
 package club.sjmc.smp3.ui.themes;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.RenderPipelines;
 
 public final class PaperStyle {
 	public static final int INK = PaperTheme.INK, MUTED = PaperTheme.MUTED, LINE = PaperTheme.LINE;
 	private PaperStyle() {}
+
+	public static String ellipsize(Font font, String text, int width) {
+		if (font.width(text) <= width)
+			return text;
+		int suffix = font.width("…");
+		return width < suffix ? "" : font.plainSubstrByWidth(text, width - suffix) + "…";
+	}
 
 	public static void frame(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
 		graphics.fill(x + PaperTheme.FRAME_SHADOW_X, y + PaperTheme.FRAME_SHADOW_Y,

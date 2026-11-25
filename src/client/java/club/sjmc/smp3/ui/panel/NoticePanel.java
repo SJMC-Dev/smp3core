@@ -1,6 +1,7 @@
 package club.sjmc.smp3.ui.panel;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -27,8 +28,7 @@ import net.minecraft.network.chat.Component;
  */
 public final class NoticePanel extends AbstractPanel implements ServerBookState.Listener, CurrencyState.Listener {
 	private static final int INK = PaperStyle.INK, MUTED = PaperStyle.MUTED;
-	private static final float TITLE_SCALE = BookText.TEXT_SCALE * 1.2F;
-	private static final int TITLE_BODY_GAP = 4;
+	private static final int TITLE_BODY_GAP = 6;
 	private final ServerBookState state;
 	private boolean subscribed;
 	private int panelX, panelY, bookWidth, bookHeight, sidebar, bodyTop, bodyBottom, categoryStart;
@@ -114,7 +114,19 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 
 	private int contentWidth() { return panelX + bookWidth - 28 - contentLeft(); }
 
-	private int contentTop() { return panelY + 30; }
+	private boolean dateOnNewLine() {
+		if (entries.isEmpty())
+			return false;
+		var message = state.messages.get(state.selected);
+		var font = Minecraft.getInstance().font;
+		return !message.date().isEmpty() &&
+		    font.width(boldTitle(message.title())) + font.width(message.date()) + 12 > contentWidth();
+	}
+
+	private int contentTop() {
+		int lineHeight = Minecraft.getInstance().font.lineHeight;
+		return panelY + 16 + lineHeight + TITLE_BODY_GAP + (dateOnNewLine() ? lineHeight + 3 : 0);
+	}
 
 	private static Component boldTitle(String text) {
 		return Component.literal(text).withStyle(style -> style.withBold(true));
@@ -124,10 +136,12 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 		var font = Minecraft.getInstance().font;
 		if (font.width(boldTitle(text)) <= maxWidth)
 			return boldTitle(text);
+		if (font.width(boldTitle("…")) > maxWidth)
+			return Component.empty();
 		int end = text.length();
-		while (end > 0 && font.width(boldTitle(text.substring(0, end))) > maxWidth)
-			end--;
-		return boldTitle(text.substring(0, end));
+		while (end > 0 && font.width(boldTitle(text.substring(0, end) + "…")) > maxWidth)
+			end = text.offsetByCodePoints(end, -1);
+		return boldTitle(text.substring(0, end) + "…");
 	}
 
 	private void updateAcknowledgement() {
@@ -188,12 +202,12 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 		int dividerTop = panelY + 12;
 		graphics.fill(panelX + sidebar + 14, dividerTop, panelX + sidebar + 16, bodyBottom, 0x66836B48);
 		graphics.fill(panelX + sidebar + 16, dividerTop, panelX + sidebar + 19, bodyBottom, 0x22765A37);
-		drawList(graphics, mouseX, mouseY);
-		drawMessage(graphics);
+		drawList(graphics, mouseX, mouseY, context);
+		drawMessage(graphics, mouseX, mouseY, context);
 		renderWidgets(graphics, mouseX, mouseY, delta);
 	}
 
-	private void drawList(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+	private void drawList(GuiGraphicsExtractor graphics, int mouseX, int mouseY, PanelContext context) {
 		var font = Minecraft.getInstance().font;
 		int left = panelX + 22, right = panelX + sidebar + 7;
 		if (entries.isEmpty()) {
@@ -211,7 +225,8 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 				graphics.fill(left, top + 3, left + 2, top + 34, 0xFF8C4B30);
 			if (state.unread(index))
 				graphics.fill(right - 13, top + 9, right - 9, top + 13, 0xFFB54536);
-			graphics.text(font, font.plainSubstrByWidth(message.title(), right - left - (message.pinned() ? 34 : 23)),
+			graphics.text(font,
+			              PaperStyle.ellipsize(font, message.title(), right - left - (message.pinned() ? 34 : 23)),
 			              left + (message.pinned() ? 18 : 7), top + 7, INK, false);
 			if (message.pinned()) {
 				graphics.fill(left + 8, top + 7, left + 13, top + 9, INK);
@@ -219,36 +234,41 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 				graphics.fill(left + 7, top + 12, left + 14, top + 13, INK);
 				graphics.fill(left + 10, top + 13, left + 11, top + 17, INK);
 			}
-			graphics.text(font, state.categoryName(message.category()) + (state.unread(index) ? "  未读" : "  已读"),
-			              left + 7, top + 23, MUTED, false);
+			String status = state.categoryName(message.category()) + (state.unread(index) ? "  未读" : "  已读");
+			graphics.text(font, PaperStyle.ellipsize(font, status, right - left - 14), left + 7, top + 23, MUTED,
+			              false);
+			if ((font.width(message.title()) > right - left - (message.pinned() ? 34 : 23) ||
+			     font.width(status) > right - left - 14) &&
+			    mouseX >= left && mouseX < right && mouseY >= Math.max(top, bodyTop) &&
+			    mouseY < Math.min(top + 37, bodyBottom))
+				graphics.setTooltipForNextFrame(font,
+				                                List.of(Component.literal(message.title()), Component.literal(status)),
+				                                Optional.empty(), context.toScreenX(mouseX), context.toScreenY(mouseY));
 		}
 		graphics.disableScissor();
 		listScroll.render(graphics, right - 2);
 	}
 
-	private void drawMessage(GuiGraphicsExtractor graphics) {
+	private void drawMessage(GuiGraphicsExtractor graphics, int mouseX, int mouseY, PanelContext context) {
 		if (entries.isEmpty())
 			return;
 		var font = Minecraft.getInstance().font;
 		var message = state.messages.get(state.selected);
 		int left = contentLeft();
-		int titleTop = contentTop();
-		int top = titleTop + TITLE_BODY_GAP, bottom = bodyBottom - (message.acknowledgement() ? 30 : 0);
+		int headerTop = panelY + 16;
+		int top = contentTop(), bottom = bodyBottom - (message.acknowledgement() ? 30 : 0);
+		boolean stacked = dateOnNewLine();
 		int dateWidth = font.width(message.date());
-		int headerWidth = (int)(contentWidth() / BookText.TEXT_SCALE);
-		int titleWidth = (int)((contentWidth() - (dateWidth == 0 ? 0 : dateWidth + 12)) / TITLE_SCALE);
-		int headerTop = titleTop - 18 + 4;
-		float titleHeight = font.lineHeight * TITLE_SCALE, dateHeight = font.lineHeight * BookText.TEXT_SCALE;
-		graphics.pose().pushMatrix();
-		graphics.pose().translate(left, headerTop);
-		graphics.pose().scale(TITLE_SCALE, TITLE_SCALE);
-		graphics.text(font, boldTitle(message.title(), titleWidth), 0, 0, INK, false);
-		graphics.pose().popMatrix();
-		graphics.pose().pushMatrix();
-		graphics.pose().translate(left, headerTop + titleHeight - dateHeight);
-		graphics.pose().scale(BookText.TEXT_SCALE, BookText.TEXT_SCALE);
-		graphics.text(font, message.date(), headerWidth - dateWidth, 0, MUTED, false);
-		graphics.pose().popMatrix();
+		int titleWidth = contentWidth() - (stacked || dateWidth == 0 ? 0 : dateWidth + 12);
+		graphics.text(font, boldTitle(message.title(), titleWidth), left, headerTop, INK, false);
+		String date = PaperStyle.ellipsize(font, message.date(), contentWidth());
+		graphics.text(font, date, left + contentWidth() - font.width(date),
+		              headerTop + (stacked ? font.lineHeight + 3 : 0), MUTED, false);
+		if ((font.width(boldTitle(message.title())) > titleWidth || dateWidth > contentWidth()) && mouseX >= left &&
+		    mouseX < left + contentWidth() && mouseY >= headerTop && mouseY < top)
+			graphics.setTooltipForNextFrame(font,
+			                                List.of(boldTitle(message.title()), Component.literal(message.date())),
+			                                Optional.empty(), context.toScreenX(mouseX), context.toScreenY(mouseY));
 		var body = state.bodies.get(message.id());
 		if (body == null) {
 			graphics.text(font, "正在加载…", left, top, MUTED, false);
@@ -275,7 +295,7 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return false;
 		int bottom = bodyBottom - (acknowledge.visible ? 30 : 0);
-		textScroll.layout(contentTop() + TITLE_BODY_GAP, bottom, textLayout.height());
+		textScroll.layout(contentTop(), bottom, textLayout.height());
 		boolean listDrag = listScroll.beginDrag(event.x(), event.y(), panelX + sidebar + 5);
 		if (listDrag ||
 		    !entries.isEmpty() && textScroll.beginDrag(event.x(), event.y(), contentLeft() + contentWidth() - 3))
@@ -318,8 +338,7 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 			return false;
 		if (mouseY >= bodyTop && mouseX >= panelX + 22 && mouseX < panelX + sidebar + 7)
 			listScroll.scrollWheel(vertical, 28);
-		else if (mouseY >= contentTop() + TITLE_BODY_GAP && mouseX >= contentLeft() &&
-		         mouseX < contentLeft() + contentWidth())
+		else if (mouseY >= contentTop() && mouseX >= contentLeft() && mouseX < contentLeft() + contentWidth())
 			textScroll.scrollWheel(vertical, 28);
 		else
 			return false;

@@ -6,6 +6,7 @@ import java.util.List;
 import eu.pb4.common.economy.api.EconomyCurrency;
 import eu.pb4.common.economy.api.EconomyProvider;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
@@ -58,7 +59,10 @@ public final class Smp3Currency implements EconomyCurrency {
 
 	@Override
 	public ItemStack icon() {
-		return new ItemStack(icon);
+		var stack = new ItemStack(icon);
+		if (this == COFFEE_STAMP)
+			stack.set(DataComponents.ITEM_MODEL, id);
+		return stack;
 	}
 
 	@Override

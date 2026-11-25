@@ -73,19 +73,10 @@ public final class DailyQuestView {
 			tasks.add(new DailyQuestPayloads.Task(
 			    task.token, limit(task.definition.name(), 128), task.definition.difficulty(), task.tier(), icons,
 			    task.progress(), task.target, task.complete(), task.claimed(), day.canReroll(slot, service.config),
-			    conditions(task), rewards(task, player)));
+			    QuestText.conditions(task), rewards(task, player)));
 		}
 		return new DailyQuestPayloads.Catalog(day.date, day.remaining(service.config),
 		                                      service.config.dailyRerollLimit(), List.copyOf(tasks));
-	}
-
-	private static List<Component> conditions(QuestDay.Assignment task) {
-		List<Component> lines = new ArrayList<>();
-		for (var detail : QuestText.details(task)) {
-			lines.add(Component.literal(detail.name() + "：" + detail.label()));
-			lines.addAll(detail.lines());
-		}
-		return lines;
 	}
 
 	private static List<Component> rewards(QuestDay.Assignment task, ServerPlayer player) {

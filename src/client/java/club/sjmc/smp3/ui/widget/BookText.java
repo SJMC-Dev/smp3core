@@ -14,7 +14,6 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
 
 public final class BookText {
-	public static final float TEXT_SCALE = .85F;
 	private static final Pattern INLINE = Pattern.compile("\\*\\*(.+?)\\*\\*|`([^`]+)`|\\[([^]]+)]\\(([^)]+)\\)");
 	private static final Pattern LIST = Pattern.compile("^([ \\t]*)-[ \\t]+");
 	private static final Pattern NUMBERED = Pattern.compile("^([ \\t]*\\d+[.)、])[ \\t]+");
@@ -24,7 +23,7 @@ public final class BookText {
 		var result = new ArrayList<Line>();
 		int top = 0;
 		for (String line : body.text().split("\n", -1)) {
-			float scale = TEXT_SCALE;
+			float scale = 1F;
 			MutableComponent text;
 			if (!body.markdown()) {
 				line = NUMBERED.matcher(line).replaceFirst("$1\u00A0");
@@ -32,11 +31,10 @@ public final class BookText {
 			} else {
 				boolean heading = line.matches("#{1,4} .*");
 				if (heading) {
-					scale *= switch (line.indexOf(' ')) {
-						case 1 -> 1.75F;
-						case 2 -> 1.5F;
-						case 3 -> 1.25F;
-						default -> 1.125F;
+					scale = switch (line.indexOf(' ')) {
+						case 1 -> 1.5F;
+						case 2 -> 1.25F;
+						default -> 1F;
 					};
 					line = line.substring(line.indexOf(' ') + 1);
 				} else {
@@ -47,7 +45,7 @@ public final class BookText {
 				if (heading)
 					text.withStyle(style -> style.withBold(true).withColor(0x6B4326));
 			}
-			int height = (int)Math.ceil(14 * scale);
+			int height = (int)Math.ceil((font.lineHeight + 4) * scale);
 			var wrapped =
 			    line.isEmpty() ? List.of(FormattedCharSequence.EMPTY) : font.split(text, (int)(width / scale));
 			for (var part : wrapped) {

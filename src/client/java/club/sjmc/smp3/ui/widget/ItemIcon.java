@@ -8,6 +8,7 @@ import java.util.Objects;
 import com.google.gson.JsonObject;
 
 import club.sjmc.smp3.daily.QuestDefinition;
+import club.sjmc.smp3.economy.Smp3Currency;
 import club.sjmc.smp3.item.ItemDefinitions;
 
 import net.minecraft.client.Minecraft;
@@ -24,12 +25,14 @@ public final class ItemIcon {
 	private static final Map<String, ItemStack> BY_ID = new HashMap<>();
 	private static final Map<String, ItemStack> BY_JSON = new HashMap<>();
 	private static final Map<Item, ItemStack> BY_ITEM = new HashMap<>();
+	private static final Map<Smp3Currency, ItemStack> BY_CURRENCY = new HashMap<>();
 	private ItemIcon() {}
 
 	public static void clear() {
 		BY_ID.clear();
 		BY_JSON.clear();
 		BY_ITEM.clear();
+		BY_CURRENCY.clear();
 	}
 
 	public static ItemStack frame(List<ItemStack> icons) {
@@ -57,4 +60,8 @@ public final class ItemIcon {
 	}
 
 	public static ItemStack item(Item item) { return BY_ITEM.computeIfAbsent(item, ItemStack::new); }
+
+	public static ItemStack currency(Smp3Currency currency) {
+		return BY_CURRENCY.computeIfAbsent(currency, Smp3Currency::icon);
+	}
 }
