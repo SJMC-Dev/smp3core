@@ -42,8 +42,6 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 	public NoticePanel(ServerBookState state) {
 		this.state = state;
 		this.categoryStart = state.category;
-		state.addListener(this);
-		Smp3Client.balances().addListener(this);
 	}
 
 	@Override
@@ -51,9 +49,11 @@ public final class NoticePanel extends AbstractPanel implements ServerBookState.
 		clearWidgets();
 		var font = Minecraft.getInstance().font;
 		if (!subscribed) {
+			subscribed = true;
+			state.addListener(this);
+			Smp3Client.balances().addListener(this);
 			Smp3Client.balances().clear();
 			state.request(NoticePayloads.Action.OPEN, "", "");
-			subscribed = true;
 		}
 		bookWidth = width();
 		bookHeight = height();

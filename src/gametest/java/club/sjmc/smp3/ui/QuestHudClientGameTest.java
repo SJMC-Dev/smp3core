@@ -21,6 +21,7 @@ import club.sjmc.smp3.gacha.GachaChecks;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.ui.PackGui;
 import club.sjmc.smp3.notice.NoticeFixture;
+import club.sjmc.smp3.notice.NoticeCatalog;
 import club.sjmc.smp3.notice.NoticeModule;
 import club.sjmc.smp3.notice.NoticePayloads;
 import club.sjmc.smp3.ui.hud.HudLayout;
@@ -30,7 +31,10 @@ import club.sjmc.smp3.ui.panel.QuestPanel;
 import club.sjmc.smp3.ui.screen.HudSettingsScreen;
 import club.sjmc.smp3.ui.screen.MenuScreen;
 import club.sjmc.smp3.ui.screen.NoticeEditorScreen;
+import club.sjmc.smp3.ui.state.ServerBookState;
 import club.sjmc.smp3.ui.widget.BookText;
+import club.sjmc.smp3.ui.widget.PanelContext;
+import club.sjmc.smp3.ui.widget.Rect;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -40,6 +44,8 @@ import net.fabricmc.loader.api.FabricLoader;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
@@ -47,6 +53,7 @@ import net.minecraft.client.gui.components.MultilineTextField;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.world.InteractionHand;
@@ -200,9 +207,53 @@ public final class QuestHudClientGameTest implements FabricClientGameTest {
 				Smp3Client.BOOK.clear();
 			});
 			context.runOnClient(client -> {
+				var state = new ServerBookState();
+				var catalog = new NoticePayloads.Catalog(
+				    "Test", List.of(), List.of(new NoticeCatalog.Entry("test", "", "Notice", "", "1", 0)), "");
+				var panel = new NoticePanel(state);
+				for (boolean reopen : new boolean[] {false, true}) {
+					state.accept(catalog);
+					panel.layout(new Rect(0, 0, 300, 200), new PanelContext(0, 0));
+					if (reopen) {
+						panel.close();
+						panel.layout(new Rect(0, 0, 300, 200), new PanelContext(0, 0));
+						state.accept(new NoticePayloads.Catalog("Test", List.of(), List.of(), ""));
+					} else {
+						state.clear();
+					}
+					if (panel.mouseClicked(new MouseButtonEvent(30, 40, new MouseButtonInfo(0, 0)), false))
+						throw new AssertionError("Notice panel retained rows after its catalog was cleared");
+					panel.close();
+				}
 				var menu = new MenuScreen();
 				client.gui.setScreen(menu);
 				menu.openNotices();
+				String link = "链接：https://example.com/"
+				              + "abcdef".repeat(12);
+				for (int width : new int[] {12, 60, 120}) {
+					var plain = new StringBuilder();
+					client.font.getSplitter().splitLines(link, width, Style.EMPTY, false, (style, start, end) -> {
+						if (end <= start)
+							throw new AssertionError("URL wrapping did not advance through plain text");
+						plain.append(link, start, end);
+					});
+					var formatted = new StringBuilder();
+					var text =
+					    Component.literal("链").withStyle(style -> style.withBold(true)).append(link.substring(1));
+					client.font.getSplitter().splitLines(text, width, Style.EMPTY, (line, continued) -> {
+						if (line.getString().isEmpty())
+							throw new AssertionError("URL wrapping did not advance through formatted text");
+						formatted.append(line.getString());
+					});
+					if (!plain.toString().equals(link) || !formatted.toString().equals(link))
+						throw new AssertionError("URL wrapping lost text");
+				}
+				if (!client.font.getSplitter()
+				         .splitLines(link, 60, Style.EMPTY)
+				         .getFirst()
+				         .getString()
+				         .equals("链接："))
+					throw new AssertionError("URL wrapping split the Chinese label before its colon");
 			});
 			waitForNotice(context);
 			context.takeScreenshot("server-book-empty");

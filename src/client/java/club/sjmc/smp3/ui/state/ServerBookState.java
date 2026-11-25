@@ -118,6 +118,7 @@ public final class ServerBookState {
 		pendingOpen = null;
 		selected = -1;
 		category = 0;
+		notifyNoticeCatalogChanged();
 	}
 
 	public boolean unread(int index) { return !messages.get(index).read(); }

@@ -22,6 +22,8 @@ abstract class NoticeLineBreakMixin {
 	private Style lastSpaceStyle;
 	@Shadow
 	private int offset;
+	@Shadow
+	private boolean hadNonZeroWidthChar;
 	@Unique
 	private boolean smp3$notice;
 	@Unique
@@ -39,8 +41,8 @@ abstract class NoticeLineBreakMixin {
 			return;
 		int previousType = Character.getType(smp3$previous);
 		int type = Character.getType(codePoint);
-		// Reuse vanilla's break candidate so glyph widths, styles and cursor offsets stay consistent.
-		if ((Character.isIdeographic(smp3$previous) || Character.isIdeographic(codePoint)) &&
+		// A break at the start of a line would repeatedly emit an empty line before a long URL or word.
+		if (hadNonZeroWidthChar && (smp3$cjk(smp3$previous) || smp3$cjk(codePoint)) &&
 		    previousType != Character.START_PUNCTUATION && previousType != Character.INITIAL_QUOTE_PUNCTUATION &&
 		    type != Character.END_PUNCTUATION && type != Character.FINAL_QUOTE_PUNCTUATION &&
 		    type != Character.OTHER_PUNCTUATION) {
@@ -48,5 +50,12 @@ abstract class NoticeLineBreakMixin {
 			lastSpaceStyle = style;
 		}
 		smp3$previous = codePoint;
+	}
+
+	@Unique
+	private static boolean smp3$cjk(int codePoint) {
+		var block = Character.UnicodeBlock.of(codePoint);
+		return Character.isIdeographic(codePoint) || block == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION ||
+		    block == Character.UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS;
 	}
 }
