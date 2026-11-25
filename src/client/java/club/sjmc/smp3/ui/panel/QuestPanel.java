@@ -103,7 +103,7 @@ public final class QuestPanel extends AbstractPanel {
 		String progress = task.progress() + " / " + task.target();
 		int progressY = iconY + iconSize + 8;
 		String progressLabel = font.plainSubstrByWidth(progress, Math.max(1, cardWidth - 10));
-		graphics.text(font, progressLabel, left + (cardWidth - font.width(progressLabel)) / 2, progressY,
+		graphics.text(font, progressLabel, left + (cardWidth - font.width(progressLabel)) / 2 + 1, progressY + 1,
 		              task.complete() ? DONE : PaperStyle.MUTED, false);
 		int rerollX = left + cardWidth - 16, rerollY = cardTop + cardHeight - 16;
 		if (task.complete()) {

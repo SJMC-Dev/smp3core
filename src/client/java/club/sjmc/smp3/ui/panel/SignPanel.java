@@ -75,9 +75,9 @@ public final class SignPanel extends AbstractPanel {
 		String month = Month.of(state.month()).getDisplayName(TextStyle.FULL, Locale.ENGLISH);
 		Component title = Component.literal(month).withStyle(style -> style.withBold(true));
 		int titleWidth = Math.round(font.width(title) * MONTH_SCALE);
-		int titleX = panelX + (panelWidth - titleWidth) / 2;
+		int titleX = panelX + (panelWidth - titleWidth) / 2 + 1;
 		graphics.pose().pushMatrix();
-		graphics.pose().translate(titleX, panelY + 18);
+		graphics.pose().translate(titleX, panelY + 18 + 1);
 		graphics.pose().scale(MONTH_SCALE, MONTH_SCALE);
 		graphics.text(font, title, 0, 0, PaperStyle.INK, false);
 		graphics.pose().popMatrix();
@@ -90,8 +90,8 @@ public final class SignPanel extends AbstractPanel {
 			if (day == state.today() && hovered)
 				graphics.fill(left + 2, top + 2, left + cellWidth - 2, top + cellHeight - 2, 0x227F5936);
 			String number = Integer.toString(day);
-			graphics.text(font, number, left + (cellWidth - font.width(number)) / 2,
-			              top + (cellHeight - font.lineHeight) / 2, color(day), false);
+			graphics.text(font, number, left + (cellWidth - font.width(number)) / 2 + 1,
+			              top + (cellHeight - font.lineHeight) / 2 + 1, color(day), false);
 			if (hovered)
 				tooltip(graphics, day, mouseX, mouseY, context);
 		}

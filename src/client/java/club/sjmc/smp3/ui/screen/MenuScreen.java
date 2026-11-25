@@ -169,8 +169,8 @@ public final class MenuScreen extends Screen {
 			graphics.fill(right - 1, top, right, top + TAB_HEIGHT, edge);
 			graphics.fill(right - 2, top, right - 1, top + TAB_HEIGHT, glow);
 			String label = TABS[i];
-			graphics.text(font, label, left + (depth - font.width(label)) / 2, top + (TAB_HEIGHT - font.lineHeight) / 2,
-			              active ? PaperStyle.INK : TAB_DIM, false);
+			graphics.text(font, label, left + (depth - font.width(label)) / 2 + 1,
+			              top + (TAB_HEIGHT - font.lineHeight) / 2 + 1, active ? PaperStyle.INK : TAB_DIM, false);
 		}
 		if (selected < 0) {
 			drawCentered(graphics, "选中左侧标签以打开对应界面", PaperStyle.MUTED);
@@ -196,7 +196,7 @@ public final class MenuScreen extends Screen {
 		var lines = font.split(Component.literal(text), Math.max(1, paneWidth - 8));
 		int cursor = paneY + (paneHeight - lines.size() * (font.lineHeight + 2)) / 2;
 		for (var line : lines) {
-			graphics.text(font, line, paneX + (paneWidth - font.width(line)) / 2, cursor, color, false);
+			graphics.text(font, line, paneX + (paneWidth - font.width(line)) / 2 + 1, cursor + 1, color, false);
 			cursor += font.lineHeight + 2;
 		}
 	}
