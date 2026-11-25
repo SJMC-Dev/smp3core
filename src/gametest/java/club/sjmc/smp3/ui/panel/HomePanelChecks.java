@@ -15,7 +15,7 @@ import net.minecraft.client.input.MouseButtonInfo;
 public final class HomePanelChecks {
 	public static void run() {
 		var home = new HomePayloads.Entry("河边的家", "minecraft:overworld", 10, 64, 20);
-		var panel = new HomePanel(new HomePayloads.Catalog(List.of(home), true, ""));
+		var panel = new HomePanel(new HomePayloads.Catalog(List.of(home), true, "", 2));
 		panel.layout(new Rect(0, 0, 300, 200), new PanelContext(0, 0));
 		var left = new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0);
 		if (!panel.mouseClicked(new MouseButtonEvent(30, 40, left), false))

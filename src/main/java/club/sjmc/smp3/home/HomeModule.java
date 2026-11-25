@@ -49,10 +49,12 @@ public final class HomeModule {
 		try {
 			String message = service.apply(player, request).message();
 			boolean available = HomeService.available(player);
-			catalog = new HomePayloads.Catalog(available ? service.entries(player) : List.of(), available, message);
+			catalog = new HomePayloads.Catalog(available ? service.entries(player) : List.of(), available, message,
+			                                   Smp3Core.serverConfig().homeLimit());
 		} catch (IOException | RuntimeException error) {
 			Smp3Core.LOGGER.error("[SMP3 Home] Failed to {} for {}", request.action(), player.getUUID(), error);
-			catalog = new HomePayloads.Catalog(List.of(), true, "家园操作失败，请联系管理员检查日志");
+			catalog = new HomePayloads.Catalog(List.of(), true, "家园操作失败，请联系管理员检查日志",
+			                                   Smp3Core.serverConfig().homeLimit());
 		}
 		ServerPlayNetworking.send(player, catalog);
 	}

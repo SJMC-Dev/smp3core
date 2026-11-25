@@ -26,6 +26,7 @@ import net.minecraft.world.item.Items;
 
 public final class HomePanel extends AbstractPanel {
 	private static final int ROW = 30;
+	private static final int RIGHT_MARGIN = 12;
 	private static final ItemStack ICON = new ItemStack(Items.COMPASS);
 	private final ScrollView scrolling = new ScrollView();
 	private HomePayloads.Catalog catalog;
@@ -49,7 +50,7 @@ public final class HomePanel extends AbstractPanel {
 		boolean focused = name != null && name.isFocused();
 		clearWidgets();
 		left = x() + 18;
-		innerWidth = width() - 36;
+		innerWidth = width() - 36 - RIGHT_MARGIN;
 		listTop = y() + 32;
 		controls = bottom() - 86;
 		listBottom = controls - 8;
@@ -57,12 +58,13 @@ public final class HomePanel extends AbstractPanel {
 		if (!catalog.available())
 			return;
 		var font = Minecraft.getInstance().font;
-		name = addWidget(new EditBox(font, left + 4, controls + 4, innerWidth - 8, 14, Component.literal("家园名称")));
+		name = addWidget(new EditBox(font, left + 5, controls + 6, innerWidth - 8, 14, Component.literal("家园名称")));
 		name.setMaxLength(64);
 		name.setBordered(false);
+		name.setTextShadow(false);
 		name.setTextColor(PaperStyle.INK);
 		name.setTextColorUneditable(PaperStyle.MUTED);
-		name.setHint(Component.literal("输入家园名称"));
+		name.setHint(Component.literal("输入家园名称").withStyle(style -> style.withoutShadow()));
 		name.setValue(input);
 		name.setFocused(focused);
 		int cell = (innerWidth - 8) / 3;
@@ -109,8 +111,8 @@ public final class HomePanel extends AbstractPanel {
 		                 : confirmation == Action.DELETE ? "确认删除所选家园？"
 		                                                 : "将所选家园更新到你当前的位置？";
 		if (message.isEmpty())
-			message = "我的家园（" + catalog.entries().size() + "）";
-		graphics.text(font, font.plainSubstrByWidth(message, innerWidth), left, y() + 18, PaperStyle.INK, false);
+			message = "我的家园 (" + catalog.entries().size() + "/" + catalog.limit() + ")";
+		graphics.text(font, font.plainSubstrByWidth(message, innerWidth), left + 1, y() + 19, PaperStyle.INK, false);
 		if (mouseX >= left && mouseX < left + innerWidth && mouseY >= y() + 18 && mouseY < y() + 28)
 			graphics.setTooltipForNextFrame(font, List.of(Component.literal(message)), Optional.empty(),
 			                                context.toScreenX(mouseX), context.toScreenY(mouseY));
@@ -127,7 +129,7 @@ public final class HomePanel extends AbstractPanel {
 				graphics.fill(left, rowY, left + innerWidth - 5, rowY + ROW - 1,
 				              entry.name().equals(selected) ? 0x447F5936 : 0x227F5936);
 			graphics.item(ICON, left + 3, rowY + 6);
-			graphics.text(font, font.plainSubstrByWidth(entry.name(), innerWidth - 30), left + 24, rowY + 3,
+			graphics.text(font, font.plainSubstrByWidth(entry.name(), innerWidth - 30), left + 25, rowY + 4,
 			              PaperStyle.INK, false);
 			String dimension = switch (entry.dimension()) {
 				case "minecraft:overworld" -> "主世界";
@@ -136,7 +138,7 @@ public final class HomePanel extends AbstractPanel {
 				default -> entry.dimension();
 			};
 			String location = dimension + "  " + entry.x() + ", " + entry.y() + ", " + entry.z();
-			graphics.text(font, font.plainSubstrByWidth(location, innerWidth - 30), left + 24, rowY + 16,
+			graphics.text(font, font.plainSubstrByWidth(location, innerWidth - 30), left + 25, rowY + 17,
 			              PaperStyle.MUTED, false);
 			if (hovered && mouseY >= listTop && mouseY < listBottom)
 				graphics.setTooltipForNextFrame(font,
@@ -144,7 +146,7 @@ public final class HomePanel extends AbstractPanel {
 				                                Optional.empty(), context.toScreenX(mouseX), context.toScreenY(mouseY));
 		}
 		if (catalog.entries().isEmpty())
-			graphics.text(font, "还没有家园，可在当前位置新建", left, listTop + 8, PaperStyle.MUTED, false);
+			graphics.text(font, "还没有家园，可在当前位置新建", left + 1, listTop + 8, PaperStyle.MUTED, false);
 		graphics.disableScissor();
 		scrolling.render(graphics, left + innerWidth - 3);
 		graphics.outline(left, controls, innerWidth, 20, PaperStyle.LINE);
