@@ -1,8 +1,10 @@
 package club.sjmc.smp3.ui.panel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.cursor.CursorTypes;
 
 import club.sjmc.smp3.title.TitlePayloads;
 import club.sjmc.smp3.ui.themes.PaperStyle;
@@ -32,13 +34,17 @@ public final class TitlePanel extends AbstractPanel {
 	private static final int CELL_HEIGHT = 24;
 	private static final int OBTAINED = 0xFF55FF55;
 	private static final int MISSING = 0xFFAAAAAA;
+	private static final int MISSING_TEXT = 0x66827058;
 	private static final int ACTIVE = 0xFFFFAA00;
+	private static final int WEAR = 0xFF3B8C3B;
 	private TitlePayloads.Catalog catalog;
 	private List<ItemStack> icons;
 	private List<Component> names;
 	private List<List<Component>> descriptions;
 	private final ScrollView scrolling = new ScrollView();
 	private int selected;
+	private Rect wearRect;
+	private final List<Rect> fadedIcons = new ArrayList<>();
 	private int panelX, panelY, panelWidth, panelHeight, split, top, bottom, leftX, leftRight, leftWidth, detailX,
 	    detailWidth, cellWidth, columns;
 
@@ -108,11 +114,22 @@ public final class TitlePanel extends AbstractPanel {
 		var font = Minecraft.getInstance().font;
 		graphics.fill(split, top, split + 2, bottom, 0x66836B48);
 		graphics.fill(split + 2, top, split + 5, bottom, 0x22765A37);
+		wearRect = null;
+		fadedIcons.clear();
 		if (catalog.entries().isEmpty()) {
 			graphics.text(font, "暂无称号", leftX, top, PaperStyle.MUTED, false);
 		} else {
 			drawGrid(graphics, mouseX, mouseY);
 			drawDetail(graphics);
+		}
+		if (wearRect != null && wearRect.contains(mouseX, mouseY))
+			graphics.requestCursor(CursorTypes.POINTING_HAND);
+		if (!fadedIcons.isEmpty()) {
+			graphics.nextStratum();
+			graphics.enableScissor(leftX, top, leftRight, bottom);
+			for (var icon : fadedIcons)
+				graphics.fill(icon.x(), icon.y(), icon.right(), icon.bottom(), 0x66F2E7CF);
+			graphics.disableScissor();
 		}
 	}
 
@@ -132,12 +149,12 @@ public final class TitlePanel extends AbstractPanel {
 				              i == selected ? 0x447F5936 : 0x227F5936);
 			int iconX = left + 4, iconY = cellTop + (CELL_HEIGHT - 16) / 2;
 			graphics.item(icons.get(i), iconX, iconY);
+			if (!entry.obtained())
+				fadedIcons.add(new Rect(iconX, iconY, 16, 16));
 			var lines = font.split(names.get(i), Math.max(1, cellWidth - 25));
 			if (!lines.isEmpty())
 				graphics.text(font, lines.getFirst(), left + 21, cellTop + (CELL_HEIGHT - font.lineHeight) / 2 + 1,
-				              entry.obtained() ? PaperStyle.INK : 0x99827058, false);
-			if (!entry.obtained())
-				graphics.fill(left, cellTop, left + cellWidth, cellTop + CELL_HEIGHT, 0x44F2E7CF);
+				              entry.obtained() ? PaperStyle.INK : MISSING_TEXT, false);
 			if (entry.id().equals(catalog.activeId()))
 				graphics.outline(left, cellTop, cellWidth, CELL_HEIGHT, 0xFF8C4B30);
 		}
@@ -154,13 +171,19 @@ public final class TitlePanel extends AbstractPanel {
 		int nameWidth = Math.max(1, detailWidth);
 		int nameCursor =
 		    WrappedText.draw(graphics, font, names.get(selected).copy().withStyle(style -> style.withBold(true)),
-			                 detailX, top, nameWidth, entry.obtained() ? PaperStyle.INK : 0x99827058, bottom);
+			                 detailX, top, nameWidth, entry.obtained() ? PaperStyle.INK : MISSING_TEXT, bottom);
 		int cursor = nameCursor + 2;
-		String status = !entry.obtained() ? "未获得" : entry.id().equals(catalog.activeId()) ? "已获得" : "点击佩戴";
-		graphics.text(font, status, detailX, cursor, entry.obtained() ? OBTAINED : MISSING, false);
+		graphics.text(font, entry.obtained() ? "已获得" : "未获得", detailX, cursor,
+		              entry.obtained() ? OBTAINED : MISSING, false);
 		cursor += font.lineHeight + 4;
 		if (entry.id().equals(catalog.activeId())) {
 			graphics.text(font, "当前佩戴", detailX, cursor, ACTIVE, false);
+			cursor += font.lineHeight + 4;
+		} else if (entry.obtained()) {
+			String wear = "点击佩戴";
+			int wearWidth = font.width(wear);
+			wearRect = new Rect(detailX, cursor, wearWidth, font.lineHeight);
+			graphics.text(font, wear, detailX, cursor, WEAR, false);
 			cursor += font.lineHeight + 4;
 		}
 		for (Component line : descriptions.get(selected))
@@ -208,15 +231,16 @@ public final class TitlePanel extends AbstractPanel {
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return false;
+		if (wearRect != null && wearRect.contains(event.x(), event.y())) {
+			ClientPlayNetworking.send(new TitlePayloads.Select(catalog.entries().get(selected).id()));
+			return true;
+		}
 		if (scrolling.beginDrag(event.x(), event.y(), leftRight + 4))
 			return true;
 		int index = cellAt(event.x(), event.y());
 		if (index < 0)
 			return false;
 		selected = index;
-		var entry = catalog.entries().get(index);
-		if (entry.obtained() && !entry.id().equals(catalog.activeId()))
-			ClientPlayNetworking.send(new TitlePayloads.Select(entry.id()));
 		return true;
 	}
 
