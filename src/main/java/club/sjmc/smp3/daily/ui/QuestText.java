@@ -47,7 +47,7 @@ final class QuestText {
 			goal.objective().conditions().entrySet().forEach(condition -> {
 				if (goal.countBy().equals("distinct") && condition.getKey().equals(goal.target().field()))
 					return;
-				String label = QuestField.find(condition.getKey()).label();
+				String label = QuestField.label(condition.getKey());
 				if (condition.getValue().isJsonArray() && condition.getValue().getAsJsonArray().size() > 1)
 					label += "（任选其一）";
 				lines.addAll(condition(label, condition.getKey(), condition.getValue()));
@@ -124,8 +124,14 @@ final class QuestText {
 				}));
 				continue;
 			}
-			Identifier id = Identifier.parse(target);
 			parts.add(switch (key) {
+				case "loot" ->
+					Component.literal(switch (target) {
+						case "fish" -> "鱼类";
+						case "junk" -> "垃圾";
+						case "treasure" -> "宝藏";
+						default -> target;
+					});
 				case "dimension" ->
 					Component.literal(switch (target) {
 						case "minecraft:overworld" -> "主世界";
@@ -134,23 +140,32 @@ final class QuestText {
 						default -> target;
 					});
 				case "potion", "pattern", "structure", "variant" -> Component.literal(target);
-				case "profession" -> Component.translatable("entity.minecraft.villager." + id.getPath());
-				case "result" -> BuiltInRegistries.ENTITY_TYPE.getValue(id).getDescription();
+				case "profession" ->
+					Component.translatable("entity.minecraft.villager." + Identifier.parse(target).getPath());
+				case "result" -> BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.parse(target)).getDescription();
 				case "movement" ->
 					Component.literal(switch (target) {
 						case "sprint" -> "疾跑";
 						case "swim" -> "游泳";
 						case "elytra" -> "鞘翅滑翔";
-						default -> "爬行";
+						case "crawl" -> "爬行";
+						default -> target;
 					});
 				case "action" ->
 					Component.literal(switch (target) {
 						case "talk" -> "交谈";
 						case "repair" -> "修复";
-						default -> "刷取";
+						case "brush" -> "刷取";
+						default -> target;
 					});
-				case "item", "template" -> new ItemStack(BuiltInRegistries.ITEM.getValue(id)).getHoverName();
-				default -> Component.translatable(key + "." + id.getNamespace() + "." + id.getPath().replace('/', '.'));
+				case "item", "template" ->
+					new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(target))).getHoverName();
+				case "block", "entity", "biome", "effect" -> {
+					Identifier id = Identifier.parse(target);
+					yield Component.translatableWithFallback(
+					    key + "." + id.getNamespace() + "." + id.getPath().replace('/', '.'), target);
+				}
+				default -> Component.literal(target);
 			});
 		}
 		return parts;

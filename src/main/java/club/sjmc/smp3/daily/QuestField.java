@@ -21,6 +21,7 @@ public enum QuestField {
 	MOVEMENT("movement", "移动方式", null),
 	VARIANT("variant", "变体", null),
 	SOURCE("source", "加工方式", null),
+	LOOT("loot", "渔获类别", null),
 	DIMENSION("dimension", "维度", null),
 	BLOCK_STATE("block_state", "方块状态", null);
 
@@ -45,5 +46,10 @@ public enum QuestField {
 		throw new IllegalArgumentException("Unknown quest field: " + id);
 	}
 
-	public String label() { return label; }
+	public static String label(String id) {
+		for (var field : values())
+			if (field.id.equals(id))
+				return field.label;
+		return id;
+	}
 }

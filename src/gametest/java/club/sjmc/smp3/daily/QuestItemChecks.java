@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 
+import club.sjmc.smp3.daily.ui.QuestTextChecks;
 import club.sjmc.smp3.item.ItemDefinitions;
 import club.sjmc.smp3.item.PackItem;
 import club.sjmc.smp3.item.Smp3Items;
@@ -36,6 +38,40 @@ final class QuestItemChecks {
 		config.validateRegistries(player.registryAccess(),
 		                          Set.of("minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"));
 		config.validateLoot(player.level().getServer());
+		for (var definition : config.tasks()) {
+			for (var band : config.progression().bands()) {
+				if (!definition.supports(band.tier()))
+					continue;
+				var task =
+				    new QuestDay.Assignment(definition, band.tier(), config.rewards().get(definition.difficulty()),
+					                        Set.of(), new Random(1), player);
+				String text = QuestTextChecks.render(task);
+				test.assertTrue(!text.isBlank(), "Empty quest display: " + definition.id());
+				for (var goal : task.definition.objectives())
+					goal.objective().conditions().keySet().forEach(QuestField::find);
+			}
+		}
+		for (var entry : Map.of("fish", "鱼类", "junk", "垃圾", "treasure", "宝藏").entrySet()) {
+			var filters = JsonParser.parseString("{\"loot\":\"" + entry.getKey() + "\"}").getAsJsonObject();
+			var goal = new QuestDefinition.Goal("Fishing", "fish_caught", null, filters, new JsonPrimitive(1),
+			                                    List.of(), "amount", "any");
+			var definition = new QuestDefinition("display", "Display", "类别：{loot}", "world", "C",
+			                                     new JsonPrimitive("minecraft:fishing_rod"), List.of(goal), "all",
+			                                     List.of(), List.of(), null, 1);
+			var task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
+			String text = QuestTextChecks.render(task);
+			test.assertTrue(text.contains("类别：" + entry.getValue()) &&
+			                    text.contains("渔获类别：" + entry.getValue()),
+			                "Fishing condition or placeholder was not translated: " + entry.getKey());
+			filters.addProperty("future_field", "Future text / 中文");
+			var extended = new QuestDefinition.Goal("Fishing", "fish_caught", null, filters, new JsonPrimitive(1),
+			                                        List.of(), "amount", "any");
+			definition = new QuestDefinition("display", "Display", null, "world", "C", definition.icon(),
+			                                 List.of(extended), "all", List.of(), List.of(), null, 1);
+			task = new QuestDay.Assignment(definition, 1, new QuestReward(0, 0), Set.of(), new Random(1), player);
+			test.assertTrue(QuestTextChecks.render(task).contains("future_field：Future text / 中文"),
+			                "Unknown display field did not preserve its literal value");
+		}
 		var coral = config.tasks().stream().filter(t -> t.id().equals("coral_broken")).findFirst().orElseThrow();
 		var coralTask = new QuestDay.Assignment(coral, 3, new QuestReward(0, 0), Set.of(), new Random(1), player);
 		var day = new QuestDay(100, 0, 0, Set.of(), config, new Random(1), player);
